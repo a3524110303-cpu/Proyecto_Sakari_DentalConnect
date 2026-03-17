@@ -142,7 +142,9 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Correo enviado exitosamente.'
+            'message' => 'Correo enviado exitosamente.',
+            // Esta línea extra le mandará a Flutter el nombre del cartero real que está usando
+            'cartero_usado' => config('mail.default'), 
         ], 200);
     }
 }
