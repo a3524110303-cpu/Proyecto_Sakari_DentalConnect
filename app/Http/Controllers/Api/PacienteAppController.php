@@ -325,8 +325,9 @@ class PacienteAppController extends Controller
             if ($cita->servicio) {
                 $activos[] = [
                     'nombre' => $cita->servicio->nombre_servicio,
-                    'fecha_inicio' => Carbon::parse($cita->fecha_hora_inicio)->format('M Y'),
-                    'estado' => 'Activo'
+                    'fecha_inicio' => \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('M Y'),
+                    // ✅ ENVIAMOS EL ESTADO REAL (confirmada, atendida, etc.)
+                    'estado' => $cita->estado_cita 
                 ];
             }
         }
