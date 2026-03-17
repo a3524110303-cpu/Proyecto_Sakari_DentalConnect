@@ -193,4 +193,18 @@ class PacienteAppController extends Controller
 
         return response()->json(['success' => true, 'publicidad' => $promociones]);
     }
+    /**
+     * Retorna el catálogo de servicios/tratamientos de la clínica.
+     */
+    public function tratamientos(Request $request)
+    {
+        $idClinica = Auth::user()->id_clinica ?? 1;
+
+        // Buscamos los servicios de la clínica del paciente
+        $servicios = \App\Models\Servicio::where('id_clinica', $idClinica)
+            ->select('id_servicio', 'nombre_servicio', 'precio_base', 'categoria')
+            ->get();
+
+        return response()->json($servicios);
+    }
 }
