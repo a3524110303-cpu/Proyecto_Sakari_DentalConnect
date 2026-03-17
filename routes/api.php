@@ -57,5 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // TRATAMIENTOS / SERVICIOS
     // ==========================================
     Route::get('/tratamientos', [PacienteAppController::class, 'tratamientos']);
+
+    Route::post('/agendar-cita', [PacienteAppController::class, 'agendarCita']);
     
 });
