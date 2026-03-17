@@ -151,29 +151,40 @@ class PacienteController extends Controller
                 'email' => $request->email,
             ]);
 
-            // Lógica corregida para el Contacto de Emergencia
-            if ($request->filled('emergencia_nombre') && $request->filled('emergencia_apellido_paterno')) {
-                if ($paciente->id_contacto_emergencia) {
-                    DB::table('contacto_emergencia')
+            // Contacto de emergencia: soporta actualización parcial cuando ya existe.
+            $hayDatosEmergencia = $request->filled('emergencia_nombre')
+                || $request->filled('emergencia_apellido_paterno')
+                || $request->filled('emergencia_apellido_materno')
+                || $request->filled('emergencia_telefono');
+
+            if ($paciente->id_contacto_emergencia) {
+                if ($hayDatosEmergencia) {
+                    $contactoActual = DB::table('contacto_emergencia')
                         ->where('id_contacto_emergencia', $paciente->id_contacto_emergencia)
-                        ->update([
-                            'nombre' => $request->emergencia_nombre,
-                            'apellido_paterno' => $request->emergencia_apellido_paterno,
-                            'apellido_materno' => $request->emergencia_apellido_materno ?? '',
-                            'numero_telefono' => $request->emergencia_telefono ?? '',
-                            'updated_at' => now(),
-                        ]);
-                } else {
-                    $idCe = DB::table('contacto_emergencia')->insertGetId([
-                        'nombre' => $request->emergencia_nombre,
-                        'apellido_paterno' => $request->emergencia_apellido_paterno,
-                        'apellido_materno' => $request->emergencia_apellido_materno ?? '',
-                        'numero_telefono' => $request->emergencia_telefono ?? '',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                    $paciente->update(['id_contacto_emergencia' => $idCe]);
+                        ->first();
+
+                    if ($contactoActual) {
+                        DB::table('contacto_emergencia')
+                            ->where('id_contacto_emergencia', $paciente->id_contacto_emergencia)
+                            ->update([
+                                'nombre' => $request->emergencia_nombre ?: $contactoActual->nombre,
+                                'apellido_paterno' => $request->emergencia_apellido_paterno ?: $contactoActual->apellido_paterno,
+                                'apellido_materno' => $request->emergencia_apellido_materno ?? $contactoActual->apellido_materno,
+                                'numero_telefono' => $request->emergencia_telefono ?: $contactoActual->numero_telefono,
+                                'updated_at' => now(),
+                            ]);
+                    }
                 }
+            } elseif ($request->filled('emergencia_nombre') && $request->filled('emergencia_apellido_paterno')) {
+                $idCe = DB::table('contacto_emergencia')->insertGetId([
+                    'nombre' => $request->emergencia_nombre,
+                    'apellido_paterno' => $request->emergencia_apellido_paterno,
+                    'apellido_materno' => $request->emergencia_apellido_materno ?? '',
+                    'numero_telefono' => $request->emergencia_telefono ?? '',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                $paciente->update(['id_contacto_emergencia' => $idCe]);
             }
 
             DB::commit();

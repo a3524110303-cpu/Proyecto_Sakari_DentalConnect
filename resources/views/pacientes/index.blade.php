@@ -1135,7 +1135,7 @@
             showTab('tab-general');
 
             document.getElementById('p-name').innerText = `${paciente.nombre} ${paciente.apellido_paterno} ${paciente.apellido_materno || ''}`;
-            document.getElementById('p-email').innerText = paciente.correo_electronico || 'Sin correo';
+            document.getElementById('p-email').innerText = paciente.correo_electronico || paciente.usuario?.email || 'Sin correo';
             document.getElementById('p-tel').innerText = paciente.telefono || 'Sin teléfono';
 
             document.getElementById('view-edad').innerText = calcularEdad(paciente.fecha_nacimiento);
@@ -1145,6 +1145,22 @@
             document.getElementById('view-direccion').innerText = paciente.direccion || 'S/D';
             document.getElementById('view-ocupacion').innerText = paciente.ocupacion || 'S/D';
             document.getElementById('view-enfermedades').innerText = paciente.enfermedades_cronicas || 'Ninguna registrada';
+
+            // Alergias (texto libre): renderiza badges por coma, salto de línea o punto y coma
+            const alergiasContainer = document.getElementById('view-alergias-badges');
+            const alergiasRaw = (paciente.alergias || '').toString().trim();
+            if (!alergiasRaw || alergiasRaw.toLowerCase() === 'ninguna' || alergiasRaw.toLowerCase() === 'sin alergias') {
+                alergiasContainer.innerHTML = '<span style="color: #888; font-size: 0.9em;">Sin alergias registradas</span>';
+            } else {
+                const alergiasList = alergiasRaw
+                    .split(/[\n,;]+/)
+                    .map(item => item.trim())
+                    .filter(Boolean);
+
+                alergiasContainer.innerHTML = alergiasList.map(item =>
+                    `<span style="display:inline-block;margin:0 8px 8px 0;padding:6px 10px;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:0.8rem;font-weight:700;">${item}</span>`
+                ).join('');
+            }
 
             // Foto
             const fotoUrl = paciente.archivos ? paciente.archivos.find(a => a.tipo === 'imagen') : null;
@@ -1402,7 +1418,7 @@
             document.getElementById('edit-tipo-sangre').value = currentPaciente.tipo_sangre || '';
 
             // Campos Editables
-            document.getElementById('edit-email').value = currentPaciente.correo_electronico || '';
+            document.getElementById('edit-email').value = currentPaciente.correo_electronico || currentPaciente.usuario?.email || '';
             document.getElementById('edit-telefono').value = currentPaciente.telefono || '';
             document.getElementById('edit-peso').value = currentPaciente.peso ? parseInt(currentPaciente.peso) : '';
             document.getElementById('edit-direccion').value = currentPaciente.direccion || '';
