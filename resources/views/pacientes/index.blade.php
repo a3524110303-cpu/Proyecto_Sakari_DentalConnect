@@ -1410,6 +1410,11 @@
                 document.getElementById('edit-em-paterno').value = ce.apellido_paterno || '';
                 document.getElementById('edit-em-materno').value = ce.apellido_materno || '';
                 document.getElementById('edit-em-telefono').value = ce.numero_telefono || '';
+            } else {
+                document.getElementById('edit-em-nombre').value = '';
+                document.getElementById('edit-em-paterno').value = '';
+                document.getElementById('edit-em-materno').value = '';
+                document.getElementById('edit-em-telefono').value = '';
             }
         }
         function formatearNombre(input) {

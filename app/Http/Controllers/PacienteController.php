@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PacienteController extends Controller
 {
@@ -123,7 +124,11 @@ class PacienteController extends Controller
 
         // Validación más estricta para evitar nulos en cascada
         $request->validate([
-            'email' => 'required|email',
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('usuarios_sistema', 'email')->ignore($paciente->id_usuario, 'id_usuario'),
+            ],
             'emergencia_nombre' => 'nullable|string|max:100',
             'emergencia_apellido_paterno' => 'required_with:emergencia_nombre|nullable|string|max:100',
         ]);
@@ -132,6 +137,7 @@ class PacienteController extends Controller
             DB::beginTransaction();
 
             $paciente->update([
+                'correo_electronico' => $request->email,
                 'tipo_sangre' => $request->tipo_sangre,
                 'telefono' => $request->telefono,
                 'peso' => $request->peso,
@@ -139,6 +145,10 @@ class PacienteController extends Controller
                 'ocupacion' => $request->ocupacion,
                 'enfermedades_cronicas' => $request->enfermedades_cronicas,
                 'alergias' => $request->alergias,
+            ]);
+
+            $paciente->usuario()->update([
+                'email' => $request->email,
             ]);
 
             // Lógica corregida para el Contacto de Emergencia
