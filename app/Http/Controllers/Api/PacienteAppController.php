@@ -207,4 +207,71 @@ class PacienteAppController extends Controller
 
         return response()->json($servicios);
     }
+
+    /**
+     * Agendar una nueva cita desde la aplicación móvil.
+     */
+    public function agendarCita(Request $request)
+    {
+        $request->validate([
+            'id_servicio' => 'required|exists:catalogo_servicios,id_servicio',
+            'fecha' => 'required|date_format:Y-m-d',
+            'hora' => 'required|date_format:H:i',
+        ]);
+
+        try {
+            $user = Auth::user();
+            $idClinica = $user->id_clinica;
+            
+            // Obtenemos el ID del paciente logueado
+            $paciente = Paciente::where('id_usuario', $user->id_usuario)->first();
+            if (!$paciente) {
+                return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
+            }
+
+            // Construir las fechas
+            $fechaHora = Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora);
+            $finHora = $fechaHora->copy()->addMinutes(30); // Duración fija de 30 mins por ahora
+
+            $servicio = \App\Models\Servicio::findOrFail($request->id_servicio);
+
+            // Importamos el controlador de citas para reusar su lógica de buscar doctor disponible
+            $citaController = new \App\Http\Controllers\CitaController();
+            
+            // Usamos Reflection para acceder al método privado (o pídele a tu equipo que lo haga public en CitaController)
+            $reflection = new \ReflectionMethod($citaController, 'buscarDoctorDisponible');
+            $reflection->setAccessible(true);
+            $idDoctor = $reflection->invoke($citaController, $idClinica, $fechaHora, $finHora);
+
+            if (!$idDoctor) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'El horario seleccionado ya no está disponible.'
+                ], 400);
+            }
+
+            // Crear la cita
+            $cita = Cita::create([
+                'id_clinica' => $idClinica,
+                'id_paciente' => $paciente->id_paciente,
+                'id_doctor' => $idDoctor,
+                'id_servicio' => $request->id_servicio,
+                'fecha_hora_inicio' => $fechaHora,
+                'fecha_hora_fin' => $finHora,
+                'estado_cita' => 'pendiente',
+                'motivo' => $servicio->nombre_servicio,
+                'costo_estimado' => $servicio->precio_base,
+            ]);
+
+            return response()->json([
+                'success' => true, 
+                'message' => '¡Cita agendada correctamente!',
+                'data' => $cita
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al agendar: ' . $e->getMessage()], 500);
+        }
+    }
+    
 }
