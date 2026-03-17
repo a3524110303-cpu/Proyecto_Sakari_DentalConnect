@@ -130,7 +130,7 @@ class PacienteController extends Controller
                 Rule::unique('usuarios_sistema', 'email')->ignore($paciente->id_usuario, 'id_usuario'),
             ],
             'emergencia_nombre' => 'nullable|string|max:100',
-            'emergencia_apellido_paterno' => 'required_with:emergencia_nombre|nullable|string|max:100',
+            'emergencia_apellido_paterno' => 'nullable|string|max:100',
         ]);
 
         try {

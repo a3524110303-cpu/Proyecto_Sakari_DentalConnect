@@ -372,6 +372,13 @@
         </div>
     @endif
 
+    @if($errors->any())
+        <div
+            style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; color: #991b1b; font-weight: 600; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);">
+            <i class="fa-solid fa-triangle-exclamation"></i> {{ $errors->first() }}
+        </div>
+    @endif
+
     <div class="header-tools">
         <div class="search-pill-container">
             <input type="text" id="patient-search" class="search-pill"
@@ -1486,7 +1493,7 @@
         }
 
         // ─── Auto-abrir modal si hay errores de validación ──────────────
-        @if($errors->any())
+        @if($errors->any() && old('_method') !== 'PUT')
             openModal('modal-new-patient');
         @endif
 
