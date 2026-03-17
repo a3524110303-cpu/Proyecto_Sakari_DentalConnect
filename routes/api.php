@@ -19,6 +19,8 @@ Route::post('/recuperar-password', [AuthController::class, 'enviarCorreoRecupera
 // AGREGAR ESTA LÍNEA NUEVA PARA ACTIVAR LA CUENTA
 Route::post('/activar', [AuthController::class, 'activarCuenta']);
 
+Route::post('/recuperar-password', [AuthController::class, 'enviarCorreoRecuperacion']);
+
 Route::middleware('auth:sanctum')->group(function () {
 
     // Usuario autenticado

@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\Paciente;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 
 class AuthController extends Controller
 {
@@ -111,36 +114,35 @@ class AuthController extends Controller
      */
     public function enviarCorreoRecuperacion(Request $request)
     {
-        // Validamos que el correo venga en la petición y que exista en la tabla de usuarios
-        $request->validate([
-            'email' => 'required|email|exists:usuarios_sistema,email',
-        ], [
-            'email.exists' => 'Este correo no está registrado en el sistema.'
-        ]);
+        $request->validate(['email' => 'required|email']);
+        $user = User::where('email', $request->email)->first();
 
-        $email = $request->email;
-        // Generamos un token seguro
-        $token = \Illuminate\Support\Str::random(60);
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este correo no está registrado en el sistema.'
+            ], 404);
+        }
 
-        // Guardamos el token en la tabla nativa de Laravel
-        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $email],
-            ['token' => \Illuminate\Support\Facades\Hash::make($token), 'created_at' => now()]
+        // Crear token seguro
+        $token = Str::random(64);
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $request->email],
+            ['token' => Hash::make($token), 'created_at' => now()]
         );
 
-        // Creamos la URL a la que el paciente le dará clic para cambiar su clave
-        // (Esto lo mandará a la pantalla de resetear de tu página web administrativa)
-        $url = url("/reset-password/{$token}?email=" . urlencode($email));
+        // Crear la URL que apunta a la vista web de tu equipo
+        $url = url("/recuperar-password?token={$token}&email=" . urlencode($request->email));
 
-        try {
-            \Illuminate\Support\Facades\Mail::raw("Hola,\n\nHemos recibido una solicitud para cambiar tu contraseña en DentalConnect.\n\nHaz clic en el siguiente enlace para crear una nueva:\n$url\n\nSi no solicitaste este cambio, puedes ignorar este mensaje en tu bandeja.", function ($msg) use ($email) {
-                $msg->to($email)->subject('Recuperación de Contraseña - DentalConnect');
-            });
+        // Enviar el correo usando Mail::raw para evitar problemas de vistas
+        Mail::raw("Hola {$user->nombre_completo},\n\nHas solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para crear una nueva:\n\n{$url}\n\nSi no fuiste tú, ignora este mensaje.", function ($msg) use ($request) {
+            $msg->to($request->email)
+                ->subject('Recuperación de Contraseña - DentalConnect');
+        });
 
-            return response()->json(['success' => true, 'message' => 'Correo enviado exitosamente.']);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Error enviando el correo. Verifica tu configuración de Mail en el servidor.'], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Correo enviado exitosamente.'
+        ], 200);
     }
-
 }
