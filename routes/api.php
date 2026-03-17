@@ -53,4 +53,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // 🔴 NUEVA API → HORAS OCUPADAS (para bloquear horarios)
     Route::get('/horas-ocupadas', [CitaController::class, 'horasOcupadas']);
 
+    // ==========================================
+    // TRATAMIENTOS / SERVICIOS
+    // ==========================================
+    Route::get('/tratamientos', [PacienteAppController::class, 'tratamientos']);
+    
 });
