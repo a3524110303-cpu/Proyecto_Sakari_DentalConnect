@@ -12,6 +12,7 @@ use App\Http\Controllers\CitaController;
 
 // Login
 Route::post('/login', [AuthController::class, 'login']);
+
 // Recuperar Contraseña App Móvil
 Route::post('/recuperar-password', [AuthController::class, 'enviarCorreoRecuperacion']);
 
