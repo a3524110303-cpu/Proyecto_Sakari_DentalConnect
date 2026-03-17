@@ -274,4 +274,63 @@ class PacienteAppController extends Controller
         }
     }
     
+    /**
+     * Retorna los horarios disponibles de un día específico (ej. 09:00 AM)
+     */
+    public function horasDisponiblesDia(Request $request)
+    {
+        $fecha = $request->query('fecha');
+        $idClinica = Auth::user()->id_clinica ?? 1;
+
+        $citasOcupadas = Cita::where('id_clinica', $idClinica)
+            ->whereDate('fecha_hora_inicio', $fecha)
+            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+            ->pluck('fecha_hora_inicio')
+            ->map(function ($date) {
+                return Carbon::parse($date)->format('H:i');
+            })->toArray();
+
+        $horarios = [];
+        $inicio = Carbon::parse($fecha . ' 09:00:00');
+        $fin = Carbon::parse($fecha . ' 18:00:00');
+
+        while ($inicio < $fin) {
+            $horaStr = $inicio->format('H:i');
+            if (!in_array($horaStr, $citasOcupadas)) {
+                $horarios[] = $inicio->format('h:i A');
+            }
+            $inicio->addMinutes(30);
+        }
+
+        return response()->json(['success' => true, 'data' => $horarios]);
+    }
+
+    /**
+     * Retorna los tratamientos en los que el paciente está actualmente
+     */
+    public function tratamientosActivos(Request $request)
+    {
+        $paciente = Paciente::where('id_usuario', Auth::id())->first();
+        if (!$paciente) return response()->json(['success' => false, 'data' => []], 404);
+
+        $citas = Cita::with('servicio')
+            ->where('id_paciente', $paciente->id_paciente)
+            ->where('fecha_hora_inicio', '>=', now()->subDays(60))
+            ->orderBy('fecha_hora_inicio', 'desc')
+            ->get()
+            ->unique('id_servicio');
+
+        $activos = [];
+        foreach ($citas as $cita) {
+            if ($cita->servicio) {
+                $activos[] = [
+                    'nombre' => $cita->servicio->nombre_servicio,
+                    'fecha_inicio' => Carbon::parse($cita->fecha_hora_inicio)->format('M Y'),
+                    'estado' => 'Activo'
+                ];
+            }
+        }
+        return response()->json(['success' => true, 'data' => array_values($activos)]);
+    }
+    
 }
