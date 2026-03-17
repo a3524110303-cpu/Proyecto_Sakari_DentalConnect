@@ -105,4 +105,42 @@ class AuthController extends Controller
             'message' => 'Cuenta activada exitosamente. Ya puedes iniciar sesión.'
         ], 200);
     }
+
+    /**
+     * Enviar correo de recuperación de contraseña desde la App Móvil
+     */
+    public function enviarCorreoRecuperacion(Request $request)
+    {
+        // Validamos que el correo venga en la petición y que exista en la tabla de usuarios
+        $request->validate([
+            'email' => 'required|email|exists:usuarios_sistema,email',
+        ], [
+            'email.exists' => 'Este correo no está registrado en el sistema.'
+        ]);
+
+        $email = $request->email;
+        // Generamos un token seguro
+        $token = \Illuminate\Support\Str::random(60);
+
+        // Guardamos el token en la tabla nativa de Laravel
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $email],
+            ['token' => \Illuminate\Support\Facades\Hash::make($token), 'created_at' => now()]
+        );
+
+        // Creamos la URL a la que el paciente le dará clic para cambiar su clave
+        // (Esto lo mandará a la pantalla de resetear de tu página web administrativa)
+        $url = url("/reset-password/{$token}?email=" . urlencode($email));
+
+        try {
+            \Illuminate\Support\Facades\Mail::raw("Hola,\n\nHemos recibido una solicitud para cambiar tu contraseña en DentalConnect.\n\nHaz clic en el siguiente enlace para crear una nueva:\n$url\n\nSi no solicitaste este cambio, puedes ignorar este mensaje en tu bandeja.", function ($msg) use ($email) {
+                $msg->to($email)->subject('Recuperación de Contraseña - DentalConnect');
+            });
+
+            return response()->json(['success' => true, 'message' => 'Correo enviado exitosamente.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error enviando el correo. Verifica tu configuración de Mail en el servidor.'], 500);
+        }
+    }
+
 }

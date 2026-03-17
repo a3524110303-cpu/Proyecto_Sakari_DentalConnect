@@ -65,5 +65,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // ==========================================
     Route::get('/horas-disponibles', [PacienteAppController::class, 'horasDisponiblesDia']);
     Route::get('/tratamientos-activos', [PacienteAppController::class, 'tratamientosActivos']);
-    
+    // Recuperar Contraseña App Móvil
+    Route::post('/recuperar-password', [AuthController::class, 'enviarCorreoRecuperacion']);
 });
