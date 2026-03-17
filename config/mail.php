@@ -48,7 +48,6 @@ return [
          'password' => env('MAIL_PASSWORD', 'AQUI_PON_LAS_16_LETRAS'), // <-- ¡Pega tu contraseña aquí!
          'timeout' => null,
          'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
-     ],
         ],
 
         'ses' => [
