@@ -70,4 +70,5 @@ Route::middleware('auth:sanctum')->group(function () {
     // ==========================================
     Route::get('/horas-disponibles', [PacienteAppController::class, 'horasDisponiblesDia']);
     Route::get('/tratamientos-activos', [PacienteAppController::class, 'tratamientosActivos']);
+    Route::get('/dias-bloqueados', [PacienteAppController::class, 'diasBloqueados']);
 });
