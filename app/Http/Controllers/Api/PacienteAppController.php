@@ -278,32 +278,39 @@ class PacienteAppController extends Controller
      * Retorna los horarios disponibles de un día específico (ej. 09:00 AM)
      */
     public function horasDisponiblesDia(Request $request)
-    {
-        $fecha = $request->query('fecha');
-        $idClinica = Auth::user()->id_clinica ?? 1;
+{
+    $fecha = $request->query('fecha');
+    $paciente = Paciente::where('id_usuario', Auth::id())->first();
+    $idClinica = $paciente ? $paciente->id_clinica : 1;
 
-        $citasOcupadas = Cita::where('id_clinica', $idClinica)
-            ->whereDate('fecha_hora_inicio', $fecha)
-            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
-            ->pluck('fecha_hora_inicio')
-            ->map(function ($date) {
-                return Carbon::parse($date)->format('H:i');
-            })->toArray();
+    // 1. Buscamos a qué horas ya hay citas ese día (Pendientes o Confirmadas)
+    $citasOcupadas = Cita::where('id_clinica', $idClinica)
+        ->whereDate('fecha_hora_inicio', $fecha)
+        ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+        ->get()
+        ->map(function ($cita) {
+            // Extraemos solo la hora en formato 24h (Ej: "14:30")
+            return \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('H:i');
+        })->toArray();
 
-        $horarios = [];
-        $inicio = Carbon::parse($fecha . ' 09:00:00');
-        $fin = Carbon::parse($fecha . ' 18:00:00');
+    // 2. Generamos el horario laboral normal (Ej: 09:00 a 18:00)
+    $horarios = [];
+    $inicio = \Carbon\Carbon::parse($fecha . ' 09:00:00');
+    $fin = \Carbon\Carbon::parse($fecha . ' 18:00:00');
 
-        while ($inicio < $fin) {
-            $horaStr = $inicio->format('H:i');
-            if (!in_array($horaStr, $citasOcupadas)) {
-                $horarios[] = $inicio->format('h:i A');
-            }
-            $inicio->addMinutes(30);
+    while ($inicio < $fin) {
+        $horaStr24 = $inicio->format('H:i'); // Hora para comparar
+        $horaStr12 = $inicio->format('h:i A'); // Hora bonita para el móvil
+
+        // ✅ MAGIA: Solo mandamos la hora al móvil si NO está en $citasOcupadas
+        if (!in_array($horaStr24, $citasOcupadas)) {
+            $horarios[] = $horaStr12;
         }
-
-        return response()->json(['success' => true, 'data' => $horarios]);
+        $inicio->addMinutes(30); // O el tiempo que dure cada consulta
     }
+
+    return response()->json(['success' => true, 'data' => $horarios]);
+}
 
     /**
      * Retorna los tratamientos en los que el paciente está actualmente
@@ -334,4 +341,20 @@ class PacienteAppController extends Controller
         return response()->json(['success' => true, 'data' => array_values($activos)]);
     }
     
+    public function diasBloqueados(Request $request)
+    {
+        $paciente = Paciente::where('id_usuario', Auth::id())->first();
+        $idClinica = $paciente ? $paciente->id_clinica : 1;
+
+        // Extraemos las fechas de tu tabla HorarioBloqueado del mes actual en adelante
+        $diasBloqueados = HorarioBloqueado::where('id_clinica', $idClinica)
+            ->whereDate('fecha_inicio', '>=', now()->startOfMonth())
+            ->pluck('fecha_inicio')
+            ->map(function($date) {
+                return \Carbon\Carbon::parse($date)->format('Y-m-d');
+            })->toArray();
+
+        return response()->json(['success' => true, 'data' => $diasBloqueados]);
+    }
+
 }
