@@ -344,7 +344,7 @@ class PacienteAppController extends Controller
         $user = Auth::user();
         $idClinica = $user ? $user->id_clinica : 1;
 
-        // 1. Fechas específicas (vacaciones, festivos)
+        // 1. Fechas específicas de vacaciones o feriados
         $fechasBloqueadas = \App\Models\HorarioBloqueado::where('id_clinica', $idClinica)
             ->whereDate('fecha_inicio', '>=', now()->startOfMonth())
             ->pluck('fecha_inicio')
@@ -352,32 +352,50 @@ class PacienteAppController extends Controller
                 return \Carbon\Carbon::parse($date)->format('Y-m-d');
             })->toArray();
 
-        // 2. Días de la semana cerrados
-        $diasCerradosBD = \App\Models\HorarioClinica::where('id_clinica', $idClinica)
-            ->where('activo', 0) // Si tu BD usa otro nombre como 'estado', cámbialo aquí
-            ->pluck('dia_semana')
-            ->toArray();
-
-        // 🔥 TRADUCTOR UNIVERSAL: Convierte palabras a números para Flutter 🔥
-        $diasSemanaMapeados = [];
+        // 2. BUSCAMOS LOS DÍAS DE LA SEMANA QUE SÍ ESTÁN ABIERTOS
+        $horariosConfigurados = \App\Models\HorarioClinica::where('id_clinica', $idClinica)->get();
+        
+        $diasAbiertosNumeros = [];
         $mapaDias = [
             'lunes' => 1, 'martes' => 2, 'miercoles' => 3, 'miércoles' => 3,
             'jueves' => 4, 'viernes' => 5, 'sabado' => 6, 'sábado' => 6, 'domingo' => 7,
-            '1' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6, '7' => 7, '0' => 7
+            '1' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6, '7' => 7
         ];
 
-        foreach ($diasCerradosBD as $dia) {
-            $diaKey = strtolower(trim((string)$dia));
-            if (isset($mapaDias[$diaKey])) {
-                $diasSemanaMapeados[] = $mapaDias[$diaKey];
+        foreach ($horariosConfigurados as $horario) {
+            // Verificamos que no esté marcado como inactivo explícitamente (si existe la columna)
+            $esActivo = true;
+            if (isset($horario->activo) && $horario->activo == 0) {
+                $esActivo = false;
+            } elseif (isset($horario->estado) && $horario->estado === 'inactivo') {
+                $esActivo = false;
+            }
+            
+            // Si está activo, lo guardamos en la lista de "días abiertos"
+            if ($esActivo && isset($horario->dia_semana)) {
+                $diaKey = strtolower(trim((string)$horario->dia_semana));
+                if (isset($mapaDias[$diaKey])) {
+                    $diasAbiertosNumeros[] = $mapaDias[$diaKey];
+                }
             }
         }
+        
+        // Si por alguna razón la tabla está vacía en tu SaaS, por precaución abrimos Lunes a Viernes
+        if (empty($diasAbiertosNumeros)) {
+            $diasAbiertosNumeros = [1, 2, 3, 4, 5];
+        }
+
+        // 🔥 MAGIA MATEMÁTICA: Los días cerrados son TODOS los demás que no estén abiertos
+        $todosLosDias = [1, 2, 3, 4, 5, 6, 7];
+        $diasSemanaCerrados = array_diff($todosLosDias, $diasAbiertosNumeros);
 
         return response()->json([
             'success' => true, 
             'data' => [
                 'fechas_bloqueadas' => array_values($fechasBloqueadas),
-                'dias_semana_cerrados' => array_values(array_unique($diasSemanaMapeados)) // Mandamos números puros
+                
+                // array_values asegura que se mande como arreglo a Flutter (Ej: [5, 6, 7])
+                'dias_semana_cerrados' => array_values($diasSemanaCerrados) 
             ]
         ]);
     }
