@@ -344,58 +344,74 @@ class PacienteAppController extends Controller
         $user = Auth::user();
         $idClinica = $user ? $user->id_clinica : 1;
 
-        // 1. Fechas específicas de vacaciones o feriados
-        $fechasBloqueadas = \App\Models\HorarioBloqueado::where('id_clinica', $idClinica)
-            ->whereDate('fecha_inicio', '>=', now()->startOfMonth())
-            ->pluck('fecha_inicio')
-            ->map(function($date) {
-                return \Carbon\Carbon::parse($date)->format('Y-m-d');
-            })->toArray();
+        $fechasBloqueadas = [];
+        $diasSemanaCerrados = [];
 
-        // 2. BUSCAMOS LOS DÍAS DE LA SEMANA QUE SÍ ESTÁN ABIERTOS
-        $horariosConfigurados = \App\Models\HorarioClinica::where('id_clinica', $idClinica)->get();
-        
-        $diasAbiertosNumeros = [];
-        $mapaDias = [
-            'lunes' => 1, 'martes' => 2, 'miercoles' => 3, 'miércoles' => 3,
-            'jueves' => 4, 'viernes' => 5, 'sabado' => 6, 'sábado' => 6, 'domingo' => 7,
-            '1' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6, '7' => 7
-        ];
+        // 1. BUSCAR FECHAS ESPECÍFICAS (Vacaciones, Feriados)
+        try {
+            $fechasBloqueadas = \Illuminate\Support\Facades\DB::table('horario_bloqueados')
+                ->where('id_clinica', $idClinica)
+                ->whereDate('fecha_inicio', '>=', now()->startOfMonth())
+                ->pluck('fecha_inicio')
+                ->map(function($date) {
+                    return \Carbon\Carbon::parse($date)->format('Y-m-d');
+                })->toArray();
+        } catch (\Exception $e) {
+            // Ignoramos si la tabla de vacaciones está vacía o no existe
+        }
 
-        foreach ($horariosConfigurados as $horario) {
-            // Verificamos que no esté marcado como inactivo explícitamente (si existe la columna)
-            $esActivo = true;
-            if (isset($horario->activo) && $horario->activo == 0) {
-                $esActivo = false;
-            } elseif (isset($horario->estado) && $horario->estado === 'inactivo') {
-                $esActivo = false;
-            }
-            
-            // Si está activo, lo guardamos en la lista de "días abiertos"
-            if ($esActivo && isset($horario->dia_semana)) {
-                $diaKey = strtolower(trim((string)$horario->dia_semana));
-                if (isset($mapaDias[$diaKey])) {
-                    $diasAbiertosNumeros[] = $mapaDias[$diaKey];
+        // 2. BUSCAR DÍAS DE LA SEMANA
+        try {
+            $horarios = \Illuminate\Support\Facades\DB::table('horario_clinicas')
+                ->where('id_clinica', $idClinica)
+                ->get();
+
+            $diasAbiertos = [];
+            $mapaDias = [
+                'lunes' => 1, 'martes' => 2, 'miercoles' => 3, 'miércoles' => 3,
+                'jueves' => 4, 'viernes' => 5, 'sabado' => 6, 'sábado' => 6, 'domingo' => 7,
+                '1' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6, '7' => 7
+            ];
+
+            foreach ($horarios as $h) {
+                $estaAbierto = true;
+                
+                // Verificamos si el día está marcado como cerrado en la BD
+                if (isset($h->activo) && $h->activo == 0) $estaAbierto = false;
+                if (isset($h->estado) && $h->estado === 'inactivo') $estaAbierto = false;
+                if (isset($h->hora_inicio) && $h->hora_inicio == '00:00:00') $estaAbierto = false;
+
+                if ($estaAbierto) {
+                    // Soportar si la columna se llama dia_semana o dia
+                    $dia = isset($h->dia_semana) ? $h->dia_semana : (isset($h->dia) ? $h->dia : null);
+                    
+                    if ($dia) {
+                        $diaStr = strtolower(trim((string)$dia));
+                        if (isset($mapaDias[$diaStr])) {
+                            $diasAbiertos[] = $mapaDias[$diaStr];
+                        }
+                    }
                 }
             }
-        }
-        
-        // Si por alguna razón la tabla está vacía en tu SaaS, por precaución abrimos Lunes a Viernes
-        if (empty($diasAbiertosNumeros)) {
-            $diasAbiertosNumeros = [1, 2, 3, 4, 5];
-        }
 
-        // 🔥 MAGIA MATEMÁTICA: Los días cerrados son TODOS los demás que no estén abiertos
-        $todosLosDias = [1, 2, 3, 4, 5, 6, 7];
-        $diasSemanaCerrados = array_diff($todosLosDias, $diasAbiertosNumeros);
+            if (!empty($diasAbiertos)) {
+                // MATEMÁTICA: Los días cerrados son la diferencia entre los 7 días y los abiertos
+                $diasSemanaCerrados = array_values(array_diff([1, 2, 3, 4, 5, 6, 7], $diasAbiertos));
+            } else {
+                // Si no hay nada en la BD, bloqueamos sábado y domingo por seguridad
+                $diasSemanaCerrados = [6, 7];
+            }
+
+        } catch (\Exception $e) {
+            $diasSemanaCerrados = [6, 7];
+        }
 
         return response()->json([
-            'success' => true, 
+            'success' => true,
             'data' => [
+                // Usamos array_values para asegurar que se mande como arreglo limpio a Flutter
                 'fechas_bloqueadas' => array_values($fechasBloqueadas),
-                
-                // array_values asegura que se mande como arreglo a Flutter (Ej: [5, 6, 7])
-                'dias_semana_cerrados' => array_values($diasSemanaCerrados) 
+                'dias_semana_cerrados' => array_values($diasSemanaCerrados)
             ]
         ]);
     }
