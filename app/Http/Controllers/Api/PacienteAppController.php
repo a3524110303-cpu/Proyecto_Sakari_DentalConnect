@@ -342,19 +342,33 @@ class PacienteAppController extends Controller
     }
     
     public function diasBloqueados(Request $request)
-    {
-        $paciente = Paciente::where('id_usuario', Auth::id())->first();
-        $idClinica = $paciente ? $paciente->id_clinica : 1;
+{
+    $paciente = Paciente::where('id_usuario', Auth::id())->first();
+    $idClinica = $paciente ? $paciente->id_clinica : 1;
 
-        // Extraemos las fechas de tu tabla HorarioBloqueado del mes actual en adelante
-        $diasBloqueados = HorarioBloqueado::where('id_clinica', $idClinica)
-            ->whereDate('fecha_inicio', '>=', now()->startOfMonth())
-            ->pluck('fecha_inicio')
-            ->map(function($date) {
-                return \Carbon\Carbon::parse($date)->format('Y-m-d');
-            })->toArray();
+    // 1. Fechas específicas (vacaciones, días festivos)
+    $fechasBloqueadas = HorarioBloqueado::where('id_clinica', $idClinica)
+        ->whereDate('fecha_inicio', '>=', now()->startOfMonth())
+        ->pluck('fecha_inicio')
+        ->map(function($date) {
+            return \Carbon\Carbon::parse($date)->format('Y-m-d');
+        })->toArray();
 
-        return response()->json(['success' => true, 'data' => $diasBloqueados]);
-    }
+    // 2. Días de la semana cerrados (Viernes, Sábado, Domingo)
+    // *OJO: Si tu columna no se llama 'activo', cámbiala por 'estado' u 'hora_apertura'*
+    $diasSemanaCerrados = HorarioClinica::where('id_clinica', $idClinica)
+        ->where('activo', 0) // Buscamos los días que el SaaS marcó como cerrados
+        ->pluck('dia_semana') // Ej: Lunes=1, Viernes=5, Sabado=6, Domingo=7
+        ->toArray();
+
+    // Enviamos ambos datos al móvil
+    return response()->json([
+        'success' => true, 
+        'data' => [
+            'fechas_bloqueadas' => $fechasBloqueadas,
+            'dias_semana_cerrados' => $diasSemanaCerrados
+        ]
+    ]);
+}
 
 }
