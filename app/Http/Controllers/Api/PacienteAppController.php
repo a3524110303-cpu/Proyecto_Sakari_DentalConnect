@@ -278,39 +278,37 @@ class PacienteAppController extends Controller
      * Retorna los horarios disponibles de un día específico (ej. 09:00 AM)
      */
     public function horasDisponiblesDia(Request $request)
-{
-    $fecha = $request->query('fecha');
-    $paciente = Paciente::where('id_usuario', Auth::id())->first();
-    $idClinica = $paciente ? $paciente->id_clinica : 1;
+    {
+        $fecha = $request->query('fecha');
+        $user = Auth::user();
+        $idClinica = $user ? $user->id_clinica : 1;
 
-    // 1. Buscamos a qué horas ya hay citas ese día (Pendientes o Confirmadas)
-    $citasOcupadas = Cita::where('id_clinica', $idClinica)
-        ->whereDate('fecha_hora_inicio', $fecha)
-        ->whereIn('estado_cita', ['pendiente', 'confirmada'])
-        ->get()
-        ->map(function ($cita) {
-            // Extraemos solo la hora en formato 24h (Ej: "14:30")
-            return \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('H:i');
-        })->toArray();
+        $horariosLibres = [];
+        // Define la hora en la que abre y cierra tu clínica
+        $inicio = \Carbon\Carbon::parse($fecha . ' 09:00:00');
+        $finDia = \Carbon\Carbon::parse($fecha . ' 18:00:00'); 
+        
+        // 🔥 MAGIA: Usamos la misma regla inteligente que usas al Agendar 🔥
+        $citaController = new \App\Http\Controllers\CitaController();
+        $reflection = new \ReflectionMethod($citaController, 'buscarDoctorDisponible');
+        $reflection->setAccessible(true);
 
-    // 2. Generamos el horario laboral normal (Ej: 09:00 a 18:00)
-    $horarios = [];
-    $inicio = \Carbon\Carbon::parse($fecha . ' 09:00:00');
-    $fin = \Carbon\Carbon::parse($fecha . ' 18:00:00');
-
-    while ($inicio < $fin) {
-        $horaStr24 = $inicio->format('H:i'); // Hora para comparar
-        $horaStr12 = $inicio->format('h:i A'); // Hora bonita para el móvil
-
-        // ✅ MAGIA: Solo mandamos la hora al móvil si NO está en $citasOcupadas
-        if (!in_array($horaStr24, $citasOcupadas)) {
-            $horarios[] = $horaStr12;
+        while ($inicio < $finDia) {
+            $finHora = $inicio->copy()->addMinutes(30); // Tramos de 30 mins
+            
+            // Preguntamos: ¿Hay algún doctor disponible para este bloque?
+            $idDoctor = $reflection->invoke($citaController, $idClinica, $inicio, $finHora);
+            
+            if ($idDoctor) {
+                // Si sí hay un doctor libre, la hora se manda a la app móvil
+                $horariosLibres[] = $inicio->format('h:i A');
+            }
+            
+            $inicio->addMinutes(30);
         }
-        $inicio->addMinutes(30); // O el tiempo que dure cada consulta
-    }
 
-    return response()->json(['success' => true, 'data' => $horarios]);
-}
+        return response()->json(['success' => true, 'data' => $horariosLibres]);
+    }
 
     /**
      * Retorna los tratamientos en los que el paciente está actualmente
@@ -342,33 +340,46 @@ class PacienteAppController extends Controller
     }
     
     public function diasBloqueados(Request $request)
-{
-    $paciente = Paciente::where('id_usuario', Auth::id())->first();
-    $idClinica = $paciente ? $paciente->id_clinica : 1;
+    {
+        $user = Auth::user();
+        $idClinica = $user ? $user->id_clinica : 1;
 
-    // 1. Fechas específicas (vacaciones, días festivos)
-    $fechasBloqueadas = HorarioBloqueado::where('id_clinica', $idClinica)
-        ->whereDate('fecha_inicio', '>=', now()->startOfMonth())
-        ->pluck('fecha_inicio')
-        ->map(function($date) {
-            return \Carbon\Carbon::parse($date)->format('Y-m-d');
-        })->toArray();
+        // 1. Fechas específicas (vacaciones, festivos)
+        $fechasBloqueadas = \App\Models\HorarioBloqueado::where('id_clinica', $idClinica)
+            ->whereDate('fecha_inicio', '>=', now()->startOfMonth())
+            ->pluck('fecha_inicio')
+            ->map(function($date) {
+                return \Carbon\Carbon::parse($date)->format('Y-m-d');
+            })->toArray();
 
-    // 2. Días de la semana cerrados (Viernes, Sábado, Domingo)
-    // *OJO: Si tu columna no se llama 'activo', cámbiala por 'estado' u 'hora_apertura'*
-    $diasSemanaCerrados = HorarioClinica::where('id_clinica', $idClinica)
-        ->where('activo', 0) // Buscamos los días que el SaaS marcó como cerrados
-        ->pluck('dia_semana') // Ej: Lunes=1, Viernes=5, Sabado=6, Domingo=7
-        ->toArray();
+        // 2. Días de la semana cerrados
+        $diasCerradosBD = \App\Models\HorarioClinica::where('id_clinica', $idClinica)
+            ->where('activo', 0) // Si tu BD usa otro nombre como 'estado', cámbialo aquí
+            ->pluck('dia_semana')
+            ->toArray();
 
-    // Enviamos ambos datos al móvil
-    return response()->json([
-        'success' => true, 
-        'data' => [
-            'fechas_bloqueadas' => $fechasBloqueadas,
-            'dias_semana_cerrados' => $diasSemanaCerrados
-        ]
-    ]);
-}
+        // 🔥 TRADUCTOR UNIVERSAL: Convierte palabras a números para Flutter 🔥
+        $diasSemanaMapeados = [];
+        $mapaDias = [
+            'lunes' => 1, 'martes' => 2, 'miercoles' => 3, 'miércoles' => 3,
+            'jueves' => 4, 'viernes' => 5, 'sabado' => 6, 'sábado' => 6, 'domingo' => 7,
+            '1' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6, '7' => 7, '0' => 7
+        ];
+
+        foreach ($diasCerradosBD as $dia) {
+            $diaKey = strtolower(trim((string)$dia));
+            if (isset($mapaDias[$diaKey])) {
+                $diasSemanaMapeados[] = $mapaDias[$diaKey];
+            }
+        }
+
+        return response()->json([
+            'success' => true, 
+            'data' => [
+                'fechas_bloqueadas' => array_values($fechasBloqueadas),
+                'dias_semana_cerrados' => array_values(array_unique($diasSemanaMapeados)) // Mandamos números puros
+            ]
+        ]);
+    }
 
 }
