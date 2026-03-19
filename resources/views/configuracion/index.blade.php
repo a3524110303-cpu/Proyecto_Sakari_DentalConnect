@@ -37,30 +37,56 @@
                         required oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div>
                         <label>Teléfono</label>
                         <input type="text" name="numero_telefono" value="{{ $clinica->numero_telefono }}"
                             class="modern-input" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                     </div>
                     <div>
-                        <label>Localidad</label>
-                        <input type="text" name="localidad" value="{{ $clinica->localidad }}" class="modern-input"
+                        <label>Código Postal</label>
+                        <input type="text" name="codigo_postal" value="{{ $clinica->codigo_postal }}"
+                            class="modern-input" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>Calle y Número</label>
+                    <input type="text" name="calle" id="campo_calle" value="{{ $clinica->calle }}" class="modern-input"
+                        placeholder="Ej. Av. Reforma 123">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label>Ciudad</label>
+                        <input type="text" name="ciudad" id="campo_ciudad" value="{{ $clinica->ciudad }}" class="modern-input"
+                            oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
+                    </div>
+                    <div>
+                        <label>Municipio / Alcaldía</label>
+                        <input type="text" name="municipio" id="campo_municipio" value="{{ $clinica->municipio }}" class="modern-input"
                             oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-                    <div>
-                        <label>Estado / Provincia</label>
-                        <input type="text" name="estado" value="{{ $clinica->estado }}" class="modern-input"
-                            oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
-                    </div>
-                    <div>
-                        <label>Código Postal</label>
-                        <input type="text" name="codigo_postal" value="{{ $clinica->codigo_postal }}" class="modern-input"
-                            maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                    </div>
+                <div style="margin-bottom: 15px;">
+                    <label>Estado / Provincia</label>
+                    <input type="text" name="estado" id="campo_estado" value="{{ $clinica->estado }}" class="modern-input"
+                        oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
+                </div>
+
+                {{-- Mapa de Google Maps --}}
+                <div style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 5px;">
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span>Ubicación en Mapa</span>
+                        <button type="button" onclick="buscarUbicacionEnMapa()" style="background: #eef6fb; color: #0077b6; padding: 5px 14px; font-size: 0.8rem; border-radius: 6px; border: 1px solid #cce5f5; cursor: pointer;">
+                            <i class="fa-solid fa-map-location-dot"></i> Buscar por dirección
+                        </button>
+                    </label>
+                    <div id="mapa-clinica" style="width: 100%; height: 280px; background: #f0f0f0; border-radius: 8px;"></div>
+                    <p style="color: #999; font-size: 0.78rem; margin-top: 6px;">Arrastra el pin para mayor precisión.</p>
+                    <input type="hidden" name="latitud"  id="latitud"  value="{{ $clinica->latitud }}">
+                    <input type="hidden" name="longitud" id="longitud" value="{{ $clinica->longitud }}">
                 </div>
 
                 <div style="margin-top: 15px;">
@@ -384,7 +410,70 @@
                 fin.value = lunesFin;
             }
         }
+
+        // ── Google Maps ──
+        let map, marker, geocoder;
+
+        function initMap() {
+            const latVal = document.getElementById('latitud')  ? document.getElementById('latitud').value  : '';
+            const lngVal = document.getElementById('longitud') ? document.getElementById('longitud').value : '';
+
+            const center    = (latVal && lngVal)
+                ? { lat: parseFloat(latVal), lng: parseFloat(lngVal) }
+                : { lat: 19.4326, lng: -99.1332 }; // CDMX por defecto
+            const zoomLevel = (latVal && lngVal) ? 16 : 12;
+
+            map = new google.maps.Map(document.getElementById('mapa-clinica'), {
+                zoom: zoomLevel,
+                center: center,
+                mapTypeControl: false,
+            });
+
+            geocoder = new google.maps.Geocoder();
+
+            marker = new google.maps.Marker({
+                map: map,
+                position: center,
+                draggable: true,
+                animation: google.maps.Animation.DROP,
+            });
+
+            // Al arrastrar el pin se actualizan los inputs ocultos
+            marker.addListener('dragend', function (event) {
+                document.getElementById('latitud').value  = event.latLng.lat();
+                document.getElementById('longitud').value = event.latLng.lng();
+            });
+        }
+
+        function buscarUbicacionEnMapa() {
+            const calle    = (document.getElementById('campo_calle')     || {}).value || '';
+            const ciudad   = (document.getElementById('campo_ciudad')    || {}).value || '';
+            const municipio= (document.getElementById('campo_municipio') || {}).value || '';
+            const estado   = (document.getElementById('campo_estado')    || {}).value || '';
+            const cp       = document.querySelector('input[name="codigo_postal"]')     ? document.querySelector('input[name="codigo_postal"]').value : '';
+
+            const partes = [calle, ciudad, municipio, estado, 'México', cp].filter(Boolean);
+            if (!partes.length) { alert('Ingresa al menos la calle y ciudad.'); return; }
+
+            geocoder.geocode({ address: partes.join(', ') }, function (results, status) {
+                if (status === 'OK') {
+                    const loc = results[0].geometry.location;
+                    map.setCenter(loc); map.setZoom(16); marker.setPosition(loc);
+                    document.getElementById('latitud').value  = loc.lat();
+                    document.getElementById('longitud').value = loc.lng();
+                } else {
+                    alert('No pudimos ubicar la dirección. Arrastra el pin manualmente.');
+                }
+            });
+        }
     </script>
+
+    {{-- Google Maps JS API (se carga último para no bloquear el render) --}}
+    @if(config('services.google.maps_key'))
+        <script async defer
+            src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google.maps_key') }}&callback=initMap">
+        </script>
+    @endif
 
     <style>
         .modern-input {

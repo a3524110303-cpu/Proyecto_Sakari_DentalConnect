@@ -19,20 +19,27 @@ class UpdateClinicaRequest extends FormRequest
     {
         $this->merge([
             'nombre_comercial' => StringHelper::capitalizeName($this->nombre_comercial),
-            'localidad' => StringHelper::capitalizeName($this->localidad),
-            'estado' => StringHelper::capitalizeName($this->estado),
+            'calle'            => $this->calle,
+            'ciudad'           => StringHelper::capitalizeName($this->ciudad),
+            'municipio'        => StringHelper::capitalizeName($this->municipio),
+            'estado'           => StringHelper::capitalizeName($this->estado),
+            'pais'             => StringHelper::capitalizeName($this->pais ?? 'México'),
         ]);
     }
 
     public function rules(): array
     {
         return [
-            'nombre_comercial' => ['required', 'string', 'max:150', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/u'],
-            'numero_telefono' => 'nullable|string|max:20|regex:/^[0-9]+$/',
-            'localidad' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/u'],
-            'estado' => ['nullable', 'string', 'max:50', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/u'],
-            // Nuevos campos
-            'codigo_postal' => ['nullable', 'string', 'max:10', 'regex:/^[0-9]+$/'],
+            'nombre_comercial'    => ['required', 'string', 'max:150', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/u'],
+            'numero_telefono'     => 'nullable|string|max:20|regex:/^[0-9]+$/',
+            'calle'               => ['nullable', 'string', 'max:150'],
+            'ciudad'              => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/u'],
+            'municipio'           => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/u'],
+            'estado'              => ['nullable', 'string', 'max:50',  'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/u'],
+            'pais'                => ['nullable', 'string', 'max:50'],
+            'codigo_postal'       => ['nullable', 'string', 'max:10', 'regex:/^[0-9]+$/'],
+            'latitud'             => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud'            => ['nullable', 'numeric', 'between:-180,180'],
             'config_anticipo_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ];
     }

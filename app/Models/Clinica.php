@@ -8,14 +8,20 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * Modelo que representa una clínica dental.
  *
- * Almacena la información institucional de la clínica, como nombre, RFC y dirección.
+ * Almacena la información institucional de la clínica, incluyendo
+ * dirección normalizada por campos y coordenadas GPS.
  *
  * @property int $id_clinica
  * @property string $nombre_comercial
  * @property string|null $numero_telefono
- * @property string|null $localidad
+ * @property string|null $calle
+ * @property string|null $ciudad
+ * @property string|null $municipio
  * @property string|null $estado
+ * @property string|null $pais
  * @property string|null $codigo_postal
+ * @property float|null $latitud
+ * @property float|null $longitud
  * @property float|null $config_anticipo_pct
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -30,10 +36,15 @@ class Clinica extends Model
     protected $fillable = [
         'nombre_comercial',
         'numero_telefono',
-        'localidad',
+        'calle',
+        'ciudad',
+        'municipio',
         'estado',
+        'pais',
         'codigo_postal',
-        'config_anticipo_pct'
+        'latitud',
+        'longitud',
+        'config_anticipo_pct',
     ];
 
     public function usuarios()

@@ -19,7 +19,7 @@ Route::post('/recuperar-password', [AuthController::class, 'enviarCorreoRecupera
 // AGREGAR ESTA LÍNEA NUEVA PARA ACTIVAR LA CUENTA
 Route::post('/activar', [AuthController::class, 'activarCuenta']);
 
-Route::post('/recuperar-password', [AuthController::class, 'enviarCorreoRecuperacion']);
+// Ruta duplicada eliminada — ya existe en línea 17
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -71,4 +71,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/horas-disponibles', [PacienteAppController::class, 'horasDisponiblesDia']);
     Route::get('/tratamientos-activos', [PacienteAppController::class, 'tratamientosActivos']);
     Route::get('/dias-bloqueados', [PacienteAppController::class, 'diasBloqueados']);
+
+    // ==========================================
+    // REAGENDAR CITA (App Móvil)
+    // ==========================================
+    Route::post('/citas/{id}/reagendar', [PacienteAppController::class, 'solicitarReagenda']);
 });
