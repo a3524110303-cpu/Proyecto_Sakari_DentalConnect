@@ -18,95 +18,86 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration {
     public function up(): void
     {
-        // ──────────────────────────────────────────
-        // 1. citas → agregar columna `notas`
-        // ──────────────────────────────────────────
-        if (!Schema::hasColumn('citas', 'notas')) {
+        // 1. CITAS: Agregar columna notas
+        if (Schema::hasTable('citas') && !Schema::hasColumn('citas', 'notas')) {
             Schema::table('citas', function (Blueprint $table) {
-                $table->text('notas')->nullable()->after('motivo');
+                $table->text('notas')->nullable();
             });
         }
 
-        // ──────────────────────────────────────────
-        // 2. notificaciones → timestamps + nuevos valores de enums
-        // ──────────────────────────────────────────
-        if (!Schema::hasColumn('notificaciones', 'created_at')) {
+        // 2. NOTIFICACIONES: Timestamps y expansión de ENUMs
+        if (Schema::hasTable('notificaciones')) {
+            // Timestamps si faltan
+            if (!Schema::hasColumn('notificaciones', 'created_at')) {
+                Schema::table('notificaciones', function (Blueprint $table) {
+                    $table->timestamps();
+                });
+            }
+
+            // Cambiar ENUMs usando sintaxis nativa de Laravel 12
             Schema::table('notificaciones', function (Blueprint $table) {
-                $table->timestamps();
+                $table->enum('tipo', [
+                    'recordatorio', 'confirmacion', 'cancelacion', 'push', 'reagenda'
+                ])->nullable()->change();
+
+                $table->enum('estado', [
+                    'pendiente', 'enviado', 'leido', 'no_leida'
+                ])->nullable()->change();
             });
         }
 
-        // MySQL no soporta ALTER COLUMN sobre enums con Blueprint,
-        // así que usamos DB::statement para ampliar los valores permitidos.
-        DB::statement("ALTER TABLE notificaciones MODIFY COLUMN tipo ENUM(
-            'recordatorio','confirmacion','cancelacion','push','reagenda'
-        ) NULL");
-
-        DB::statement("ALTER TABLE notificaciones MODIFY COLUMN estado ENUM(
-            'pendiente','enviado','leido','no_leida'
-        ) NULL");
-
-        // ──────────────────────────────────────────
-        // 3. clinicas → dirección normalizada + GPS
-        // ──────────────────────────────────────────
-        Schema::table('clinicas', function (Blueprint $table) {
-            if (!Schema::hasColumn('clinicas', 'calle')) {
-                $table->string('calle', 150)->nullable()->after('numero_telefono');
-            }
-            if (!Schema::hasColumn('clinicas', 'ciudad')) {
-                $table->string('ciudad', 100)->nullable()->after('calle');
-            }
-            if (!Schema::hasColumn('clinicas', 'municipio')) {
-                $table->string('municipio', 100)->nullable()->after('ciudad');
-            }
-            if (!Schema::hasColumn('clinicas', 'pais')) {
-                $table->string('pais', 50)->default('México')->after('estado');
-            }
-            if (!Schema::hasColumn('clinicas', 'latitud')) {
-                $table->decimal('latitud', 10, 8)->nullable()->after('codigo_postal');
-            }
-            if (!Schema::hasColumn('clinicas', 'longitud')) {
-                $table->decimal('longitud', 11, 8)->nullable()->after('latitud');
-            }
-        });
+        // 3. CLINICAS: Dirección normalizada y GPS
+        if (Schema::hasTable('clinicas')) {
+            Schema::table('clinicas', function (Blueprint $table) {
+                if (!Schema::hasColumn('clinicas', 'calle')) {
+                    $table->string('calle', 150)->nullable();
+                }
+                if (!Schema::hasColumn('clinicas', 'ciudad')) {
+                    $table->string('ciudad', 100)->nullable();
+                }
+                if (!Schema::hasColumn('clinicas', 'municipio')) {
+                    $table->string('municipio', 100)->nullable();
+                }
+                if (!Schema::hasColumn('clinicas', 'pais')) {
+                    $table->string('pais', 50)->default('Mexico'); // Evitamos acento por si acaso
+                }
+                if (!Schema::hasColumn('clinicas', 'latitud')) {
+                    $table->decimal('latitud', 10, 8)->nullable();
+                }
+                if (!Schema::hasColumn('clinicas', 'longitud')) {
+                    $table->decimal('longitud', 11, 8)->nullable();
+                }
+            });
+        }
     }
 
     public function down(): void
     {
-        // Revertir columnas de citas
-        if (Schema::hasColumn('citas', 'notas')) {
+        if (Schema::hasTable('clinicas')) {
+            Schema::table('clinicas', function (Blueprint $table) {
+                $cols = ['calle', 'ciudad', 'municipio', 'pais', 'latitud', 'longitud'];
+                foreach ($cols as $col) {
+                    if (Schema::hasColumn('clinicas', $col)) {
+                        $table->dropColumn($col);
+                    }
+                }
+            });
+        }
+
+        if (Schema::hasTable('notificaciones')) {
+            // No revertimos timestamps para evitar pérdida de datos si ya se usaron
+            
+            // Revertir ENUMs
+            Schema::table('notificaciones', function (Blueprint $table) {
+                $table->enum('tipo', ['recordatorio', 'confirmacion', 'cancelacion', 'push'])->nullable()->change();
+                $table->enum('estado', ['pendiente', 'enviado', 'leido'])->nullable()->change();
+            });
+        }
+
+        if (Schema::hasTable('citas') && Schema::hasColumn('citas', 'notas')) {
             Schema::table('citas', function (Blueprint $table) {
                 $table->dropColumn('notas');
             });
         }
-
-        // Revertir timestamps de notificaciones
-        if (Schema::hasColumn('notificaciones', 'created_at')) {
-            Schema::table('notificaciones', function (Blueprint $table) {
-                $table->dropColumn(['created_at', 'updated_at']);
-            });
-        }
-
-        // Revertir enums de notificaciones a sus valores originales
-        DB::statement("ALTER TABLE notificaciones MODIFY COLUMN tipo ENUM(
-            'recordatorio','confirmacion','cancelacion','push'
-        ) NULL");
-
-        DB::statement("ALTER TABLE notificaciones MODIFY COLUMN estado ENUM(
-            'pendiente','enviado','leido'
-        ) NULL");
-
-        // Revertir columnas de clinicas
-        Schema::table('clinicas', function (Blueprint $table) {
-            $drop = [];
-            foreach (['calle', 'ciudad', 'municipio', 'pais', 'latitud', 'longitud'] as $col) {
-                if (Schema::hasColumn('clinicas', $col)) {
-                    $drop[] = $col;
-                }
-            }
-            if (!empty($drop)) {
-                $table->dropColumn($drop);
-            }
-        });
     }
 };
