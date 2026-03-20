@@ -298,7 +298,7 @@ class PacienteAppController extends Controller
                 'fecha_hora_fin' => $finHora,
                 'estado_cita' => 'pendiente',
                 'motivo' => $servicio->nombre_servicio,
-                'costo_estimado' => $servicio->precio,
+                'costo_estimado' => $servicio->precio_base ?? 0,
             ]);
 
             return response()->json([
