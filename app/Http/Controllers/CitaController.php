@@ -80,7 +80,7 @@ class CitaController extends Controller
         }
     }
 
-    private function buscarDoctorDisponible(int $idClinica, Carbon $inicio, Carbon $fin): ?int
+    public function buscarDoctorDisponible(int $idClinica, Carbon $inicio, Carbon $fin): ?int
     {
         $doctores = DB::table('doctores')
             ->join('usuarios_sistema', 'doctores.id_usuario', '=', 'usuarios_sistema.id_usuario')

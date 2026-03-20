@@ -332,6 +332,7 @@
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
+                    <span id="error-match" class="error-text" style="display:none;">Las contraseñas no coinciden.</span>
                 </div>
             </div>
 
@@ -419,22 +420,20 @@
             });
 
             // ===== Validación de coincidencia de contraseñas =====
+            const errorMatch = document.getElementById('error-match');
+
             function validatePasswordMatch() {
                 if (passwordInput.value && confirmInput.value) {
                     if (passwordInput.value !== confirmInput.value) {
                         confirmInput.classList.add('is-invalid');
-                        if (!confirmInput.nextElementSibling || !confirmInput.nextElementSibling.classList.contains('error-text')) {
-                            const errorSpan = document.createElement('span');
-                            errorSpan.className = 'error-text';
-                            errorSpan.innerText = 'Las contraseñas no coinciden.';
-                            confirmInput.parentNode.appendChild(errorSpan);
-                        }
+                        errorMatch.style.display = 'block';
                     } else {
                         confirmInput.classList.remove('is-invalid');
-                        if (confirmInput.nextElementSibling && confirmInput.nextElementSibling.classList.contains('error-text')) {
-                            confirmInput.nextElementSibling.remove();
-                        }
+                        errorMatch.style.display = 'none';
                     }
+                } else {
+                    confirmInput.classList.remove('is-invalid');
+                    errorMatch.style.display = 'none';
                 }
             }
 

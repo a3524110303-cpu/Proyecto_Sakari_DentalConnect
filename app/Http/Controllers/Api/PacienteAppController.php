@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\CitaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Paciente;
@@ -10,6 +11,7 @@ use App\Models\Cita;
 use App\Models\HorarioBloqueado;
 use App\Models\Clinica;
 use App\Models\Doctor;
+use App\Models\Notificacion;
 use App\Models\Publicidad;
 use Carbon\Carbon;
 
@@ -153,12 +155,26 @@ class PacienteAppController extends Controller
      */
     public function clinicasYDoctores()
     {
-        // En este SaaS, el paciente pertenece a un Auth User y ese a una clínica
         $idClinica = Auth::user()->id_clinica;
+        $clinica   = Clinica::find($idClinica);
 
-        $clinica = Clinica::find($idClinica);
+        // Construir dirección legible para la app móvil
+        $partesDireccion = array_filter([
+            $clinica->calle,
+            $clinica->ciudad,
+            $clinica->municipio,
+            $clinica->estado,
+            $clinica->codigo_postal,
+        ]);
+        $clinica->direccion_completa = implode(', ', $partesDireccion);
 
-        // Cargar usuarios con rol doctor en esa clinica
+        // URL de Google Maps: coordenadas exactas si las tiene, texto si no
+        if (!empty($clinica->latitud) && !empty($clinica->longitud)) {
+            $clinica->map_url = "https://www.google.com/maps/search/?api=1&query={$clinica->latitud},{$clinica->longitud}";
+        } else {
+            $clinica->map_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode($clinica->direccion_completa);
+        }
+
         $doctores = \App\Models\User::where('id_clinica', $idClinica)
             ->where('rol', 'doctor')
             ->where('is_active', true)
@@ -166,9 +182,9 @@ class PacienteAppController extends Controller
             ->get();
 
         return response()->json([
-            'success' => true,
-            'clinica' => $clinica,
-            'doctores' => $doctores
+            'success'  => true,
+            'clinica'  => $clinica,
+            'doctores' => $doctores,
         ]);
     }
 
@@ -225,26 +241,26 @@ class PacienteAppController extends Controller
             
             // Obtenemos el ID del paciente logueado
             $paciente = Paciente::where('id_usuario', $user->id_usuario)->first();
-            $user = Auth::user();
-        $idClinica = $user->id_clinica;
-        
-        $paciente = Paciente::where('id_usuario', $user->id_usuario)->first();
-        if (!$paciente) {
-            return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
-        }
+            if (!$paciente) {
+                return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
+            }
 
-        // ✅ NUEVA BARRERA DE SEGURIDAD: Comprobar si ya tiene cita ese mismo día
-        $tieneCitaHoy = \App\Models\Cita::where('id_paciente', $paciente->id_paciente)
-            ->whereDate('fecha_hora_inicio', $request->fecha)
-            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
-            ->exists();
+            // Construir las fechas
+            $fechaHora = Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora);
+            $finHora = $fechaHora->copy()->addMinutes(30); // Duración fija de 30 mins por ahora
 
-        if ($tieneCitaHoy) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Solo puedes agendar una cita por día. Por favor elige otra fecha.'
-            ], 400);
-        }
+            $servicio = \App\Models\Servicio::findOrFail($request->id_servicio);
+
+            // Llamada directa al método público de CitaController
+            $citaController = new CitaController();
+            $idDoctor = $citaController->buscarDoctorDisponible($idClinica, $fechaHora, $finHora);
+
+            if (!$idDoctor) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'El horario seleccionado ya no está disponible.'
+                ], 400);
+            }
 
             // Crear la cita
             $cita = Cita::create([
@@ -279,78 +295,22 @@ class PacienteAppController extends Controller
         $user = Auth::user();
         $idClinica = $user ? $user->id_clinica : 1;
 
-        // 1. Averiguar qué día de la semana es la fecha que nos piden (1 = Lunes, 7 = Domingo)
-        $fechaCarbon = \Carbon\Carbon::parse($fecha);
-        $diaSemanaNumero = $fechaCarbon->dayOfWeekIso; 
-
-        // 2. Mapear ese número con los textos que podrían estar en tu Base de Datos
-        $mapaDias = [
-            1 => ['lunes', '1'],
-            2 => ['martes', '2'],
-            3 => ['miercoles', 'miércoles', '3'],
-            4 => ['jueves', '4'],
-            5 => ['viernes', '5'],
-            6 => ['sabado', 'sábado', '6'],
-            7 => ['domingo', '7']
-        ];
-
-        // 3. Valores por defecto por si el SaaS no tiene nada configurado
-        $horaInicioBd = '09:00:00';
-        $horaFinBd = '18:00:00';
-
-        // 4. Buscar en la Base de Datos a qué hora abren y cierran ESE DÍA ESPECÍFICO
-        try {
-            $horariosClinica = \Illuminate\Support\Facades\DB::table('horario_clinicas')
-                ->where('id_clinica', $idClinica)
-                ->get();
-
-            foreach ($horariosClinica as $h) {
-                // Soportar diferentes nombres de columna (dia_semana o dia)
-                $diaBD = isset($h->dia_semana) ? $h->dia_semana : (isset($h->dia) ? $h->dia : null);
-                
-                if ($diaBD) {
-                    $diaStr = strtolower(trim((string)$diaBD));
-                    // Si el día de la BD coincide con el día de la fecha solicitada...
-                    if (in_array($diaStr, $mapaDias[$diaSemanaNumero])) {
-                        if (isset($h->hora_inicio) && $h->hora_inicio != null) {
-                            $horaInicioBd = $h->hora_inicio;
-                        }
-                        if (isset($h->hora_fin) && $h->hora_fin != null) {
-                            $horaFinBd = $h->hora_fin;
-                        }
-                        break; // Ya encontramos el horario de ese día, salimos del ciclo
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            // Si hay un error, usará los valores por defecto (09:00 a 18:00)
-        }
-
-        // 🔥 AHORA SÍ: Usamos las horas dinámicas que vienen de tu SaaS 🔥
         $horariosLibres = [];
-        $inicio = \Carbon\Carbon::parse($fecha . ' ' . $horaInicioBd);
-        $finDia = \Carbon\Carbon::parse($fecha . ' ' . $horaFinBd); 
+        // Define la hora en la que abre y cierra tu clínica
+        $inicio = \Carbon\Carbon::parse($fecha . ' 09:00:00');
+        $finDia = \Carbon\Carbon::parse($fecha . ' 18:00:00'); 
         
-        $citaController = new \App\Http\Controllers\CitaController();
-        $reflection = new \ReflectionMethod($citaController, 'buscarDoctorDisponible');
-        $reflection->setAccessible(true);
+        // Llamada directa al método público de CitaController
+        $citaController = new CitaController();
 
-        $ahora = \Carbon\Carbon::now();
-
-        // Armar los bloques de media hora
         while ($inicio < $finDia) {
-            $finHora = $inicio->copy()->addMinutes(30); 
-            
-            // REGLA: Si la fecha seleccionada es HOY, y la hora ya pasó, lo saltamos
-            if ($fecha === $ahora->toDateString() && $inicio <= $ahora) {
-                $inicio->addMinutes(30);
-                continue; 
-            }
+            $finHora = $inicio->copy()->addMinutes(30); // Tramos de 30 mins
 
-            // Preguntamos si hay doctores libres en ese bloque
-            $idDoctor = $reflection->invoke($citaController, $idClinica, $inicio, $finHora);
+            // Preguntamos: ¿Hay algún doctor disponible para este bloque?
+            $idDoctor = $citaController->buscarDoctorDisponible($idClinica, $inicio, $finHora);
             
             if ($idDoctor) {
+                // Si sí hay un doctor libre, la hora se manda a la app móvil
                 $horariosLibres[] = $inicio->format('h:i A');
             }
             
@@ -397,37 +357,17 @@ class PacienteAppController extends Controller
         $fechasBloqueadas = [];
         $diasSemanaCerrados = [];
 
-        // 1. BUSCAR FECHAS ESPECÍFICAS Y CITAS DEL PACIENTE
+        // 1. BUSCAR FECHAS ESPECÍFICAS (Vacaciones, Feriados)
         try {
-            // A) Vacaciones de la clínica
-            $vacaciones = \Illuminate\Support\Facades\DB::table('horario_bloqueados')
+            $fechasBloqueadas = \Illuminate\Support\Facades\DB::table('horarios_bloqueados')
                 ->where('id_clinica', $idClinica)
                 ->whereDate('fecha_inicio', '>=', now()->startOfMonth())
                 ->pluck('fecha_inicio')
                 ->map(function($date) {
                     return \Carbon\Carbon::parse($date)->format('Y-m-d');
                 })->toArray();
-            
-            $fechasBloqueadas = $vacaciones;
-
-            // ✅ B) NUEVO: Buscamos si el paciente actual ya tiene citas activas y bloqueamos ESOS días
-            $paciente = \App\Models\Paciente::where('id_usuario', $user->id_usuario)->first();
-            if ($paciente) {
-                $misCitas = \Illuminate\Support\Facades\DB::table('citas')
-                    ->where('id_paciente', $paciente->id_paciente)
-                    ->whereIn('estado_cita', ['pendiente', 'confirmada'])
-                    ->whereDate('fecha_hora_inicio', '>=', now()->toDateString())
-                    ->pluck('fecha_hora_inicio')
-                    ->map(function($date) {
-                        return \Carbon\Carbon::parse($date)->format('Y-m-d');
-                    })->toArray();
-
-                // Fusionamos las vacaciones con los días que el paciente ya apartó
-                $fechasBloqueadas = array_unique(array_merge($fechasBloqueadas, $misCitas));
-            }
-
         } catch (\Exception $e) {
-            // Ignoramos si hay error
+            // Ignoramos si la tabla de vacaciones está vacía o no existe
         }
 
         // 2. BUSCAR DÍAS DE LA SEMANA
@@ -484,6 +424,58 @@ class PacienteAppController extends Controller
                 'dias_semana_cerrados' => array_values($diasSemanaCerrados)
             ]
         ]);
+    }
+
+    /**
+     * Recibe la solicitud de reagenda desde la app móvil.
+     * Guarda una nota en la cita y crea una notificación para el doctor.
+     */
+    public function solicitarReagenda(Request $request, $id)
+    {
+        $request->validate([
+            'fecha'  => 'required|date_format:Y-m-d',
+            'hora'   => 'required|date_format:H:i',
+            'motivo' => 'nullable|string|max:500',
+        ]);
+
+        $cita = Cita::with(['doctor.usuario', 'paciente'])->where('id_cita', $id)->first();
+
+        if (!$cita) {
+            return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
+        }
+
+        // Verificar que la cita pertenezca al paciente autenticado
+        $paciente = Paciente::where('id_usuario', Auth::id())->first();
+        if (!$paciente || $cita->id_paciente !== $paciente->id_paciente) {
+            return response()->json(['success' => false, 'message' => 'No tienes permiso para modificar esta cita.'], 403);
+        }
+
+        // 1. Añadir nota de reagenda al historial de la cita
+        $notaReagenda = "⚠️ SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
+            . $request->fecha . " a las " . $request->hora
+            . ". Motivo: " . ($request->motivo ?? 'No especificado');
+        $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
+        $cita->save();
+
+        // 2. Crear notificación para el doctor asignado
+        $idUsuarioDoctor = optional($cita->doctor)->id_usuario;
+        if ($idUsuarioDoctor) {
+            $fechaCitaOriginal = Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
+            $nombrePaciente    = optional($paciente)->nombre . ' ' . optional($paciente)->apellido_paterno;
+
+            Notificacion::create([
+                'id_usuario' => $idUsuarioDoctor,
+                'tipo'       => 'reagenda',
+                'mensaje'    => "El paciente {$nombrePaciente} ha solicitado reagendar su cita del "
+                    . "{$fechaCitaOriginal} para el {$request->fecha} a las {$request->hora}.",
+                'estado'     => 'no_leida',
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Solicitud de reagenda enviada a la clínica con éxito.',
+        ], 200);
     }
 
 }
