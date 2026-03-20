@@ -229,7 +229,7 @@ class PacienteAppController extends Controller
      */
     public function agendarCita(Request $request)
     {
-        // 1. Validamos que lleguen los datos correctos desde Flutter
+        // 1. Validamos que lleguen los datos
         $request->validate([
             'id_servicio' => 'required|exists:catalogo_servicios,id_servicio',
             'fecha' => 'required|date_format:Y-m-d',
@@ -238,41 +238,49 @@ class PacienteAppController extends Controller
 
         try {
             $user = Auth::user();
-            $idClinica = $user->id_clinica;
             
-            // 2. Buscamos el perfil de paciente asociado al usuario
+            // 2. Buscamos al paciente PRIMERO (Así es más seguro)
             $paciente = \App\Models\Paciente::where('id_usuario', $user->id_usuario)->first();
             if (!$paciente) {
                 return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
             }
 
-            // ✅ 3. NUEVA BARRERA DE SEGURIDAD: Comprobar si ya tiene una cita activa ese mismo día
+            // ✅ EXTRAEMOS LA CLÍNICA DEL PACIENTE (Esto evita el error)
+            $idClinica = $paciente->id_clinica ?? ($user->id_clinica ?? 1); 
+
+            // 3. Comprobar si ya tiene una cita ese mismo día
             $tieneCitaHoy = \App\Models\Cita::where('id_paciente', $paciente->id_paciente)
                 ->whereDate('fecha_hora_inicio', $request->fecha)
-                ->whereIn('estado_cita', ['pendiente', 'confirmada']) // Ignoramos si tiene canceladas
+                ->whereIn('estado_cita', ['pendiente', 'confirmada'])
                 ->exists();
 
             if ($tieneCitaHoy) {
                 return response()->json([
                     'success' => false, 
                     'message' => 'Solo puedes agendar una cita por día. Por favor elige otra fecha.'
-                ], 400); // 400 le dirá a Flutter que muestre el mensaje de error en rojo
+                ], 400); 
             }
 
-            // 4. Preparamos las horas exactas para guardarlas
+            // 4. Preparamos fechas
             $fechaHora = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora);
             $finHora = $fechaHora->copy()->addMinutes(30);
+            
+            // Asegurarnos de que no esté agendando en el pasado (por si alguien es muy rápido con los dedos)
+            if ($fechaHora->isPast()) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'No puedes agendar una cita en una hora que ya pasó.'
+                ], 400);
+            }
 
             $servicio = \App\Models\Servicio::findOrFail($request->id_servicio);
 
-            // 5. Buscamos inteligentemente a un doctor que esté libre a esa hora
+            // 5. Buscamos doctor libre
             $citaController = new \App\Http\Controllers\CitaController();
-            
             $reflection = new \ReflectionMethod($citaController, 'buscarDoctorDisponible');
             $reflection->setAccessible(true);
             $idDoctor = $reflection->invoke($citaController, $idClinica, $fechaHora, $finHora);
 
-            // Si un segundo antes alguien más le ganó el último doctor libre, lo bloqueamos
             if (!$idDoctor) {
                 return response()->json([
                     'success' => false, 
@@ -280,7 +288,7 @@ class PacienteAppController extends Controller
                 ], 400);
             }
 
-            // 6. ¡Todo en orden! Creamos la cita en la base de datos
+            // 6. Creamos la cita
             $cita = \App\Models\Cita::create([
                 'id_clinica' => $idClinica,
                 'id_paciente' => $paciente->id_paciente,
@@ -300,9 +308,10 @@ class PacienteAppController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            // ✅ SI ALGO FALLA, TE DIRÁ EXACTAMENTE QUÉ LÍNEA O VARIABLE FUE:
             return response()->json([
                 'success' => false, 
-                'message' => 'Error al agendar la cita: ' . $e->getMessage()
+                'message' => 'Error en el servidor: ' . $e->getMessage()
             ], 500);
         }
     }
