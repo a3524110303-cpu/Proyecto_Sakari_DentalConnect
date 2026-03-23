@@ -61,9 +61,10 @@ class PacienteAppController extends Controller
             return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
         }
 
-        // Usamos 'with' para traer los datos relacionales del doctor y el servicio real de la BD
-        $citas = Cita::with(['doctor.usuario', 'detalles.servicio'])
+        // Solo pedimos el doctor, para evitar errores de relaciones complejas
+        $citas = Cita::with(['doctor.usuario'])
             ->where('id_paciente', $paciente->id_paciente)
+            // Filtramos las que ya pasaron
             ->whereNotIn('estado_cita', ['cancelada', 'completada'])
             ->orderBy('fecha_hora_inicio', 'asc')
             ->get();
