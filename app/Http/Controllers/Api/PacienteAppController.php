@@ -53,21 +53,26 @@ class PacienteAppController extends Controller
     /**
      * Retorna citas del paciente ordenadas a futuro.
      */
-    public function citasProximas(Request $request)
+    public function citasProximas()
     {
         $paciente = Paciente::where('id_usuario', Auth::id())->first();
 
-        if (!$paciente)
-            return response()->json(['success' => false, 'data' => []], 404);
+        if (!$paciente) {
+            return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
+        }
 
-        $citas = Cita::with(['servicio:id_servicio,nombre_servicio', 'doctor:id_doctor,id_usuario,cedula_profesional'])
+        // Solo pedimos el doctor, para evitar errores de relaciones complejas
+        $citas = Cita::with(['doctor.usuario'])
             ->where('id_paciente', $paciente->id_paciente)
-            ->where('fecha_hora_inicio', '>=', now())
-            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+            // Filtramos las que ya pasaron
+            ->whereNotIn('estado_cita', ['cancelada', 'completada'])
             ->orderBy('fecha_hora_inicio', 'asc')
             ->get();
 
-        return response()->json(['success' => true, 'data' => $citas]);
+        return response()->json([
+            'success' => true,
+            'data' => $citas
+        ], 200);
     }
 
     /**
@@ -193,21 +198,14 @@ class PacienteAppController extends Controller
      */
     public function publicidad()
     {
-        $idClinica = Auth::user()->id_clinica ?? 1;
+        // Leemos TODAS las promociones reales que hayas guardado en tu base de datos
+        $promociones = \App\Models\Publicidad::all();
 
-        $promociones = Publicidad::whereHas('usuario', function ($q) use ($idClinica) {
-            $q->where('id_clinica', $idClinica);
-        })
-            ->where('activo', 1)
-            ->where(function ($q) {
-                $q->whereNull('fecha_inicio')->orWhere('fecha_inicio', '<=', now());
-            })
-            ->where(function ($q) {
-                $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now());
-            })
-            ->get();
-
-        return response()->json(['success' => true, 'publicidad' => $promociones]);
+        // Le enviamos la lista completa a la aplicación de Flutter
+        return response()->json([
+            'success' => true,
+            'data' => $promociones
+        ], 200);
     }
     /**
      * Retorna el catálogo de servicios/tratamientos de la clínica.
@@ -536,12 +534,11 @@ class PacienteAppController extends Controller
      * Recibe la solicitud de reagenda desde la app móvil.
      * Guarda una nota en la cita y crea una notificación para el doctor.
      */
-    public function solicitarReagenda(Request $request, $id)
+    public function reagendarCita(Request $request, $id)
     {
         $request->validate([
-            'fecha'  => 'required|date_format:Y-m-d',
-            'hora'   => 'required|date_format:H:i',
-            'motivo' => 'nullable|string|max:500',
+            'fecha'  => 'required|date',
+            'hora'   => 'required|string',
         ]);
 
         $cita = Cita::with(['doctor.usuario', 'paciente'])->where('id_cita', $id)->first();
@@ -550,12 +547,15 @@ class PacienteAppController extends Controller
             return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
         }
 
-        // Verificar que la cita pertenezca al paciente autenticado
-        $paciente = Paciente::where('id_usuario', Auth::id())->first();
-        if (!$paciente || $cita->id_paciente !== $paciente->id_paciente) {
-            return response()->json(['success' => false, 'message' => 'No tienes permiso para modificar esta cita.'], 403);
+        // CANDADO 1: No reagendar si ya está confirmada
+        if (strtolower($cita->estado_cita) === 'confirmada') {
+            return response()->json([
+                'success' => false, 
+                'message' => 'No es posible reagendar una cita que ya ha sido confirmada.'
+            ], 400);
         }
 
+<<<<<<< HEAD
         if (!in_array($cita->estado_cita, ['pendiente', 'confirmada'], true)) {
             return response()->json([
                 'success' => false,
@@ -581,19 +581,41 @@ class PacienteAppController extends Controller
         $notaReagenda = "SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
             . $request->fecha . " a las " . $request->hora
             . ". Motivo: " . ($request->motivo ?? 'No especificado');
+=======
+        // CANDADO 2 (EL TRUCO): Validar si ya fue reagendada leyendo el historial de notas
+        if ($cita->notas && strpos($cita->notas, '⚠️ REAGENDADA POR PACIENTE') !== false) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Límite alcanzado. Solo puedes reagendar tu cita una vez.'
+            ], 400);
+        }
+
+        $fechaCitaOriginal = \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
+
+        // ACTUALIZAMOS LOS DATOS SEGUROS
+        $nuevaFechaHora = $request->fecha . ' ' . $request->hora . ':00';
+        $cita->fecha_hora_inicio = $nuevaFechaHora;
+        $cita->estado_cita = 'pendiente'; // Lo regresamos al estado por defecto para evitar errores de ENUM
+
+        // Usamos la nota como nuestra "Bandera" eterna de que ya se reagendó
+        $notaReagenda = "⚠️ REAGENDADA POR PACIENTE: La cita original era el " . $fechaCitaOriginal . ".";
+>>>>>>> 4f77b79af23ec045e416aed9ee7b8676b23505a5
         $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
+        
+        // AHORA SÍ GUARDARÁ PERFECTAMENTE
         $cita->save();
 
-        // 2. Crear notificación para el doctor asignado
+        // Notificar al Doctor
+        $paciente = Paciente::where('id_usuario', Auth::id())->first();
         $idUsuarioDoctor = optional($cita->doctor)->id_usuario;
+        
         if ($idUsuarioDoctor) {
-            $fechaCitaOriginal = Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
-            $nombrePaciente    = optional($paciente)->nombre . ' ' . optional($paciente)->apellido_paterno;
+            $nombrePaciente = optional($paciente)->nombre . ' ' . optional($paciente)->apellido_paterno;
 
             Notificacion::create([
                 'id_usuario' => $idUsuarioDoctor,
                 'tipo'       => 'reagenda',
-                'mensaje'    => "El paciente {$nombrePaciente} ha solicitado reagendar su cita del "
+                'mensaje'    => "El paciente {$nombrePaciente} ha reagendado su cita del "
                     . "{$fechaCitaOriginal} para el {$request->fecha} a las {$request->hora}.",
                 'estado'     => 'no_leida',
             ]);
@@ -601,8 +623,35 @@ class PacienteAppController extends Controller
 
         return response()->json([
             'success' => true,
+<<<<<<< HEAD
             'message' => 'Solicitud de reagenda enviada. La clinica debe aplicarla el mismo dia de la solicitud.',
+=======
+            'message' => 'Cita reagendada correctamente a las ' . $request->hora,
+>>>>>>> 4f77b79af23ec045e416aed9ee7b8676b23505a5
         ], 200);
+    }
+
+    public function confirmarCita($id)
+    {
+        try {
+            $cita = Cita::find($id);
+
+            if (!$cita) {
+                return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
+            }
+
+            // Cambiamos el estado a 'confirmada'
+            $cita->estado_cita = 'confirmada';
+            $cita->save(); // Guardamos en la base de datos
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cita confirmada correctamente.'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al confirmar la cita.'], 500);
+        }
     }
 
 }

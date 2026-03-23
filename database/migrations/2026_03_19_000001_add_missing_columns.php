@@ -34,16 +34,18 @@ return new class extends Migration {
                 });
             }
 
-            // Cambiar ENUMs usando sintaxis nativa de Laravel 12
-            Schema::table('notificaciones', function (Blueprint $table) {
-                $table->enum('tipo', [
-                    'recordatorio', 'confirmacion', 'cancelacion', 'push', 'reagenda'
-                ])->nullable()->change();
+            // Fix para Railway: Durante el proceso de "Build", Railway corre las migraciones
+            // usando un SQLite temporal. SQLite NO soporta modificar o alterar ENUMs.
+            // Por lo tanto, solo corremos la modificación si la base de datos de producción es MySQL.
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement("ALTER TABLE notificaciones MODIFY COLUMN tipo ENUM(
+                    'recordatorio','confirmacion','cancelacion','push','reagenda'
+                ) NULL");
 
-                $table->enum('estado', [
-                    'pendiente', 'enviado', 'leido', 'no_leida'
-                ])->nullable()->change();
-            });
+                DB::statement("ALTER TABLE notificaciones MODIFY COLUMN estado ENUM(
+                    'pendiente','enviado','leido','no_leida'
+                ) NULL");
+            }
         }
 
         // 3. CLINICAS: Dirección normalizada y GPS
@@ -59,7 +61,7 @@ return new class extends Migration {
                     $table->string('municipio', 100)->nullable();
                 }
                 if (!Schema::hasColumn('clinicas', 'pais')) {
-                    $table->string('pais', 50)->default('Mexico'); // Evitamos acento por si acaso
+                    $table->string('pais', 50)->default('Mexico');
                 }
                 if (!Schema::hasColumn('clinicas', 'latitud')) {
                     $table->decimal('latitud', 10, 8)->nullable();
@@ -85,13 +87,11 @@ return new class extends Migration {
         }
 
         if (Schema::hasTable('notificaciones')) {
-            // No revertimos timestamps para evitar pérdida de datos si ya se usaron
-            
-            // Revertir ENUMs
-            Schema::table('notificaciones', function (Blueprint $table) {
-                $table->enum('tipo', ['recordatorio', 'confirmacion', 'cancelacion', 'push'])->nullable()->change();
-                $table->enum('estado', ['pendiente', 'enviado', 'leido'])->nullable()->change();
-            });
+            // Revertir ENUMs solo en MySQL
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement("ALTER TABLE notificaciones MODIFY COLUMN tipo ENUM('recordatorio','confirmacion','cancelacion','push') NULL");
+                DB::statement("ALTER TABLE notificaciones MODIFY COLUMN estado ENUM('pendiente','enviado','leido') NULL");
+            }
         }
 
         if (Schema::hasTable('citas') && Schema::hasColumn('citas', 'notas')) {

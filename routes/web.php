@@ -78,8 +78,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Publicidad
     Route::resource('publicidad', App\Http\Controllers\PublicidadController::class)
-        ->only(['index', 'store', 'destroy'])
-        ->middleware('plan:premium');
+        ->only(['index', 'store', 'destroy']);
     // Configuración
     Route::get('/configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
     Route::post('/configuracion/clinica', [ConfiguracionController::class, 'updateClinica'])->name('configuracion.updateClinica');
