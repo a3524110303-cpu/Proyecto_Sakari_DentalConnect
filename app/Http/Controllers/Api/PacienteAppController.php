@@ -536,52 +536,88 @@ class PacienteAppController extends Controller
      * Recibe la solicitud de reagenda desde la app móvil.
      * Guarda una nota en la cita y crea una notificación para el doctor.
      */
-    public function solicitarReagenda(Request $request, $id)
+    public function reagendarCita(Request $request, $id)
     {
+        // 1. Validamos los datos de entrada
         $request->validate([
-            'fecha'  => 'required|date_format:Y-m-d',
-            'hora'   => 'required|date_format:H:i',
-            'motivo' => 'nullable|string|max:500',
+            'fecha'  => 'required|date',
+            'hora'   => 'required|string',
         ]);
 
+        // 2. Buscamos la cita usando 'id_cita'
         $cita = Cita::with(['doctor.usuario', 'paciente'])->where('id_cita', $id)->first();
 
         if (!$cita) {
             return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
         }
 
-        // Verificar que la cita pertenezca al paciente autenticado
-        $paciente = Paciente::where('id_usuario', Auth::id())->first();
-        if (!$paciente || $cita->id_paciente !== $paciente->id_paciente) {
-            return response()->json(['success' => false, 'message' => 'No tienes permiso para modificar esta cita.'], 403);
+        // 3. Bloqueo de seguridad: Validar si ya fue reagendada antes
+        if ($cita->ha_sido_reagendada) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Límite alcanzado. Solo puedes reagendar tu cita una vez.'
+            ], 400);
         }
 
-        // 1. Añadir nota de reagenda al historial de la cita
-        $notaReagenda = "⚠️ SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
-            . $request->fecha . " a las " . $request->hora
-            . ". Motivo: " . ($request->motivo ?? 'No especificado');
+        $fechaCitaOriginal = \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
+
+        // 4. ¡ACTUALIZAMOS LA FECHA REAL EN LA BASE DE DATOS!
+        $nuevaFechaHora = $request->fecha . ' ' . $request->hora . ':00';
+        $cita->fecha_hora_inicio = $nuevaFechaHora;
+        $cita->estado_cita = 'agendada'; // O el estado que prefieras manejar
+        $cita->ha_sido_reagendada = true; // Levantamos la bandera de bloqueo
+
+        // 5. Dejamos la nota en el historial por si el doctor la quiere ver
+        $notaReagenda = "⚠️ REAGENDADA POR PACIENTE: La cita original era el " . $fechaCitaOriginal . ".";
         $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
+        
+        // ¡GUARDAMOS LOS CAMBIOS!
         $cita->save();
 
-        // 2. Crear notificación para el doctor asignado
+        // 6. Mantenemos tu lógica de Notificar al Doctor
+        $paciente = Paciente::where('id_usuario', Auth::id())->first();
         $idUsuarioDoctor = optional($cita->doctor)->id_usuario;
+        
         if ($idUsuarioDoctor) {
-            $fechaCitaOriginal = Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
-            $nombrePaciente    = optional($paciente)->nombre . ' ' . optional($paciente)->apellido_paterno;
+            $nombrePaciente = optional($paciente)->nombre . ' ' . optional($paciente)->apellido_paterno;
 
             Notificacion::create([
                 'id_usuario' => $idUsuarioDoctor,
                 'tipo'       => 'reagenda',
-                'mensaje'    => "El paciente {$nombrePaciente} ha solicitado reagendar su cita del "
+                'mensaje'    => "El paciente {$nombrePaciente} ha reagendado su cita del "
                     . "{$fechaCitaOriginal} para el {$request->fecha} a las {$request->hora}.",
                 'estado'     => 'no_leida',
             ]);
         }
 
+        // 7. Le respondemos a Flutter que todo fue un éxito
         return response()->json([
             'success' => true,
-            'message' => 'Solicitud de reagenda enviada a la clínica con éxito.',
+            'message' => 'Cita reagendada correctamente a las ' . $request->hora,
         ], 200);
+    }
+    
+    public function confirmarCita($id)
+    {
+        try {
+            $cita = Cita::find($id);
+
+            if (!$cita) {
+                return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
+            }
+
+            // Cambiamos el estado a 'confirmada'
+            $cita->estado_cita = 'confirmada';
+            $cita->save(); // Guardamos en la base de datos
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cita confirmada correctamente.'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al confirmar la cita.'], 500);
+        }
     }
 
 }
