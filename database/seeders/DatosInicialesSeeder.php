@@ -56,6 +56,18 @@ class DatosInicialesSeeder extends Seeder
             'created_at' => now(),
         ]);
 
+        // 4.5 Crear Usuario Super Administrador (SaaS)
+        DB::table('usuarios_sistema')->insertOrIgnore([
+            'id_clinica' => $idClinica,
+            'nombre_completo' => 'Super Administrador SaaS',
+            'rol' => 'administrador',
+            'email' => 'superadmin@dentalconnect.com',
+            'password' => Hash::make('password123'),
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         // 5. Crear un Paciente de Prueba
         // Primero el usuario del paciente (para la App)
         $idUserPaciente = DB::table('usuarios_sistema')->insertGetId([
