@@ -556,8 +556,29 @@ class PacienteAppController extends Controller
             return response()->json(['success' => false, 'message' => 'No tienes permiso para modificar esta cita.'], 403);
         }
 
+        if (!in_array($cita->estado_cita, ['pendiente', 'confirmada'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo se puede solicitar reagenda para citas pendientes o confirmadas.'
+            ], 422);
+        }
+
+        $fechaHoraSolicitada = Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora);
+        if ($fechaHoraSolicitada->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No puedes solicitar reagenda en una fecha u hora que ya paso.'
+            ], 422);
+        }
+
+        $cita->reagenda_solicitada_at = now();
+        $cita->reagenda_fecha_solicitada = $request->fecha;
+        $cita->reagenda_hora_solicitada = $request->hora;
+        $cita->reagenda_motivo = $request->motivo;
+        $cita->reagenda_estatus = 'pendiente';
+
         // 1. Añadir nota de reagenda al historial de la cita
-        $notaReagenda = "⚠️ SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
+        $notaReagenda = "SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
             . $request->fecha . " a las " . $request->hora
             . ". Motivo: " . ($request->motivo ?? 'No especificado');
         $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
@@ -580,7 +601,7 @@ class PacienteAppController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Solicitud de reagenda enviada a la clínica con éxito.',
+            'message' => 'Solicitud de reagenda enviada. La clinica debe aplicarla el mismo dia de la solicitud.',
         ], 200);
     }
 

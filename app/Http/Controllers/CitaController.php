@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Archivo;
 use App\Models\Cita;
 use App\Models\Servicio;
 use Illuminate\Support\Facades\Auth;
@@ -39,6 +40,7 @@ class CitaController extends Controller
             'fecha' => 'required|date_format:Y-m-d',
             'hora' => 'required|date_format:H:i',
             'duracion_minutos' => 'nullable|integer|in:15,30',
+            'cuidados_postratamiento_pdf' => 'nullable|file|mimes:pdf|max:10240',
         ]);
 
         try {
@@ -61,7 +63,7 @@ class CitaController extends Controller
                     ->withInput();
             }
 
-            Cita::create([
+            $cita = Cita::create([
                 'id_clinica' => $idClinica,
                 'id_paciente' => $request->id_paciente,
                 'id_doctor' => $idDoctor,
@@ -72,6 +74,20 @@ class CitaController extends Controller
                 'motivo' => $servicio->nombre_servicio,
                 'costo_estimado' => $servicio->precio_base,
             ]);
+
+            if ($request->hasFile('cuidados_postratamiento_pdf')) {
+                $archivoPdf = $request->file('cuidados_postratamiento_pdf');
+                $nombreArchivo = 'cuidados_postratamiento_' . $cita->id_cita . '_' . time() . '.pdf';
+                $rutaArchivo = $archivoPdf->storeAs('cuidados_postratamiento', $nombreArchivo, 'public');
+
+                Archivo::create([
+                    'id_paciente' => $request->id_paciente,
+                    'id_cita' => $cita->id_cita,
+                    'url_archivo' => $rutaArchivo,
+                    'tipo' => 'pdf',
+                    'descripcion' => 'Cuidados postratamiento',
+                ]);
+            }
 
             return redirect()->route('pacientes.index')->with('success', '¡Cita agendada correctamente para el ' . $fechaHora->format('d/m/Y \a \l\a\s H:i') . '!');
 

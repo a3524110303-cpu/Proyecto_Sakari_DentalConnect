@@ -790,7 +790,7 @@
                 <i class="fa-solid fa-calendar-plus"></i> Agendar Nueva Cita
             </h3>
 
-            <form id="form-add-cita" action="{{ route('citas.store') }}" method="POST">
+            <form id="form-add-cita" action="{{ route('citas.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="id_paciente" id="form-cita-paciente-id">
 
@@ -891,6 +891,17 @@
                         {{-- Inputs ocultos compatibles con CitaController --}}
                         <input type="hidden" name="fecha" id="input-reserva-fecha" required>
                         <input type="hidden" name="hora" id="input-reserva-hora" required>
+
+                        <div style="margin-bottom: 15px; margin-top: 5px;">
+                            <label for="cuidados-postratamiento-pdf"
+                                style="display:block; margin-bottom:6px; font-weight:700; color:#444;">Subir cuidados
+                                postratamiento (PDF)</label>
+                            <input type="file" name="cuidados_postratamiento_pdf" id="cuidados-postratamiento-pdf"
+                                class="modern-input" accept="application/pdf">
+                            <small style="display:block; margin-top:6px; color:#888; font-weight:600;">
+                                Opcional. Solo se aceptan archivos PDF (máx. 10MB).
+                            </small>
+                        </div>
 
                         {{-- Contenedor de las píldoras --}}
                         <div id="reserva-contenedor-horarios"

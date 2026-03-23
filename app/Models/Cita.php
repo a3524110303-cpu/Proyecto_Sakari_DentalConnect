@@ -42,7 +42,12 @@ class Cita extends Model
         'estado_cita',
         'costo_estimado',
         'motivo',
-        'notas'
+        'notas',
+        'reagenda_solicitada_at',
+        'reagenda_fecha_solicitada',
+        'reagenda_hora_solicitada',
+        'reagenda_motivo',
+        'reagenda_estatus'
     ];
 
     // Relación: Paciente

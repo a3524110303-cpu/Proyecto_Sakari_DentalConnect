@@ -211,6 +211,10 @@ class DashboardController extends Controller
 
         $cita = Cita::findOrFail($idCita);
         $idClinica = Auth::user()->id_clinica;
+        $esReagendaMovilPendiente =
+            $cita->reagenda_estatus === 'pendiente'
+            && !empty($cita->reagenda_solicitada_at)
+            && !empty($cita->reagenda_fecha_solicitada);
 
         if($request->filled('estado_cita')){
             $cita->estado_cita=$request->estado_cita;
@@ -222,9 +226,44 @@ class DashboardController extends Controller
 
         if($request->filled('nueva_fecha')){
 
+            if ($esReagendaMovilPendiente) {
+                $fechaSolicitud = Carbon::parse($cita->reagenda_solicitada_at)->toDateString();
+                $hoy = now()->toDateString();
+
+                if ($fechaSolicitud !== $hoy) {
+                    $cita->reagenda_estatus = 'expirada';
+                    $cita->save();
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La solicitud de reagenda expiro. Solo se puede aplicar el mismo dia en que el paciente la envio.'
+                    ], 422);
+                }
+            }
+
             $hora=$request->filled('nueva_hora')
                 ? $request->nueva_hora
-                : Carbon::parse($cita->fecha_hora_inicio)->format('H:i');
+                : (
+                    $esReagendaMovilPendiente && !empty($cita->reagenda_hora_solicitada)
+                        ? Carbon::parse($cita->reagenda_hora_solicitada)->format('H:i')
+                        : Carbon::parse($cita->fecha_hora_inicio)->format('H:i')
+                );
+
+            if ($esReagendaMovilPendiente) {
+                $horaSolicitada = !empty($cita->reagenda_hora_solicitada)
+                    ? Carbon::parse($cita->reagenda_hora_solicitada)->format('H:i')
+                    : null;
+
+                if (
+                    $request->nueva_fecha !== $cita->reagenda_fecha_solicitada
+                    || ($horaSolicitada !== null && $hora !== $horaSolicitada)
+                ) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Para una reagenda solicitada desde la app, solo se puede aplicar la fecha y hora solicitadas por el paciente.'
+                    ], 422);
+                }
+            }
 
             $duracionMinutos = (int) $request->input('nueva_duracion_minutos', 30);
             if (!in_array($duracionMinutos, [15, 30], true)) {
@@ -246,6 +285,10 @@ class DashboardController extends Controller
             $cita->id_doctor = $idDoctorDisponible;
             $cita->fecha_hora_inicio=$nuevoInicio;
             $cita->fecha_hora_fin=$nuevoFin;
+
+            if ($esReagendaMovilPendiente) {
+                $cita->reagenda_estatus = 'aplicada';
+            }
 
         }
 
