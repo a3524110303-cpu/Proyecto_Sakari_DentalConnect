@@ -158,27 +158,29 @@ class PacienteAppController extends Controller
     /**
      * Retorna datos de la clínica
      */
-    public function clinicasYDoctores()
+    public function clinicasYDoctores() 
     {
         $idClinica = Auth::user()->id_clinica;
         $clinica   = Clinica::find($idClinica);
 
-        // Construir dirección legible para la app móvil
+        // Construir dirección legible
         $partesDireccion = array_filter([
-            $clinica->calle,
-            $clinica->ciudad,
-            $clinica->municipio,
-            $clinica->estado,
-            $clinica->codigo_postal,
+            $clinica->calle, $clinica->ciudad, $clinica->municipio, $clinica->estado, $clinica->codigo_postal,
         ]);
         $clinica->direccion_completa = implode(', ', $partesDireccion);
 
-        // URL de Google Maps: coordenadas exactas si las tiene, texto si no
+        // URL de Google Maps
         if (!empty($clinica->latitud) && !empty($clinica->longitud)) {
             $clinica->map_url = "https://www.google.com/maps/search/?api=1&query={$clinica->latitud},{$clinica->longitud}";
         } else {
             $clinica->map_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode($clinica->direccion_completa);
         }
+
+        // 🔥 NUEVO: Buscamos los 7 días en la base de datos y los metemos a la clínica 🔥
+        $clinica->horarios = \Illuminate\Support\Facades\DB::table('horarios_clinica')
+            ->where('id_clinica', $idClinica)
+            ->orderBy('dia_semana', 'asc')
+            ->get();
 
         $doctores = \App\Models\User::where('id_clinica', $idClinica)
             ->where('rol', 'doctor')
