@@ -538,19 +538,18 @@ class PacienteAppController extends Controller
      */
     public function reagendarCita(Request $request, $id)
     {
-        // 1. Validamos los datos de entrada
         $request->validate([
             'fecha'  => 'required|date',
             'hora'   => 'required|string',
         ]);
 
-        // 2. Buscamos la cita usando 'id_cita'
         $cita = Cita::with(['doctor.usuario', 'paciente'])->where('id_cita', $id)->first();
 
         if (!$cita) {
             return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
         }
-        // NUEVO CANDADO DE SEGURIDAD: No reagendar si ya está confirmada
+
+        // CANDADO 1: No reagendar si ya está confirmada
         if (strtolower($cita->estado_cita) === 'confirmada') {
             return response()->json([
                 'success' => false, 
@@ -558,8 +557,8 @@ class PacienteAppController extends Controller
             ], 400);
         }
 
-        // 3. Bloqueo de seguridad: Validar si ya fue reagendada antes
-        if ($cita->ha_sido_reagendada) {
+        // CANDADO 2 (EL TRUCO): Validar si ya fue reagendada leyendo el historial de notas
+        if ($cita->notas && strpos($cita->notas, '⚠️ REAGENDADA POR PACIENTE') !== false) {
             return response()->json([
                 'success' => false, 
                 'message' => 'Límite alcanzado. Solo puedes reagendar tu cita una vez.'
@@ -568,20 +567,19 @@ class PacienteAppController extends Controller
 
         $fechaCitaOriginal = \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
 
-        // 4. ¡ACTUALIZAMOS LA FECHA REAL EN LA BASE DE DATOS!
+        // ACTUALIZAMOS LOS DATOS SEGUROS
         $nuevaFechaHora = $request->fecha . ' ' . $request->hora . ':00';
         $cita->fecha_hora_inicio = $nuevaFechaHora;
-        $cita->estado_cita = 'agendada'; // O el estado que prefieras manejar
-        $cita->ha_sido_reagendada = true; // Levantamos la bandera de bloqueo
+        $cita->estado_cita = 'pendiente'; // Lo regresamos al estado por defecto para evitar errores de ENUM
 
-        // 5. Dejamos la nota en el historial por si el doctor la quiere ver
+        // Usamos la nota como nuestra "Bandera" eterna de que ya se reagendó
         $notaReagenda = "⚠️ REAGENDADA POR PACIENTE: La cita original era el " . $fechaCitaOriginal . ".";
         $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
         
-        // ¡GUARDAMOS LOS CAMBIOS!
+        // AHORA SÍ GUARDARÁ PERFECTAMENTE
         $cita->save();
 
-        // 6. Mantenemos tu lógica de Notificar al Doctor
+        // Notificar al Doctor
         $paciente = Paciente::where('id_usuario', Auth::id())->first();
         $idUsuarioDoctor = optional($cita->doctor)->id_usuario;
         
@@ -597,7 +595,6 @@ class PacienteAppController extends Controller
             ]);
         }
 
-        // 7. Le respondemos a Flutter que todo fue un éxito
         return response()->json([
             'success' => true,
             'message' => 'Cita reagendada correctamente a las ' . $request->hora,

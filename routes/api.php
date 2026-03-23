@@ -79,4 +79,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Añade esta línea debajo de tus otras rutas de citas:
     Route::post('/citas/{id}/confirmar', [App\Http\Controllers\Api\PacienteAppController::class, 'confirmarCita']);
     Route::post('/citas/{id}/reagendar', [App\Http\Controllers\Api\PacienteAppController::class, 'reagendarCita']);
+    // Buscamos si en la columna notas existe nuestro texto clave secreto
+      haSidoReagendada: json['notas'] != null && json['notas'].toString().contains('⚠️ REAGENDADA POR PACIENTE'),
 });
