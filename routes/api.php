@@ -78,4 +78,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/citas/{id}/reagendar', [PacienteAppController::class, 'reagendarCita']);
     // Añade esta línea debajo de tus otras rutas de citas:
     Route::post('/citas/{id}/confirmar', [App\Http\Controllers\Api\PacienteAppController::class, 'confirmarCita']);
+    Route::post('/citas/{id}/reagendar', [App\Http\Controllers\Api\PacienteAppController::class, 'reagendarCita']);
 });

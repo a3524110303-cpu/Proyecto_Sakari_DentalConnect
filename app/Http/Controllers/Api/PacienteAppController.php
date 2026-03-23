@@ -550,6 +550,13 @@ class PacienteAppController extends Controller
         if (!$cita) {
             return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
         }
+        // NUEVO CANDADO DE SEGURIDAD: No reagendar si ya está confirmada
+        if (strtolower($cita->estado_cita) === 'confirmada') {
+            return response()->json([
+                'success' => false, 
+                'message' => 'No es posible reagendar una cita que ya ha sido confirmada.'
+            ], 400);
+        }
 
         // 3. Bloqueo de seguridad: Validar si ya fue reagendada antes
         if ($cita->ha_sido_reagendada) {
@@ -596,7 +603,7 @@ class PacienteAppController extends Controller
             'message' => 'Cita reagendada correctamente a las ' . $request->hora,
         ], 200);
     }
-    
+
     public function confirmarCita($id)
     {
         try {
