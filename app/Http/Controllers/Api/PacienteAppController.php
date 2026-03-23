@@ -53,21 +53,25 @@ class PacienteAppController extends Controller
     /**
      * Retorna citas del paciente ordenadas a futuro.
      */
-    public function citasProximas(Request $request)
+    public function citasProximas()
     {
         $paciente = Paciente::where('id_usuario', Auth::id())->first();
 
-        if (!$paciente)
-            return response()->json(['success' => false, 'data' => []], 404);
+        if (!$paciente) {
+            return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
+        }
 
-        $citas = Cita::with(['servicio:id_servicio,nombre_servicio', 'doctor:id_doctor,id_usuario,cedula_profesional'])
+        // Usamos 'with' para traer los datos relacionales del doctor y el servicio real de la BD
+        $citas = Cita::with(['doctor.usuario', 'detalles.servicio'])
             ->where('id_paciente', $paciente->id_paciente)
-            ->where('fecha_hora_inicio', '>=', now())
-            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+            ->whereNotIn('estado_cita', ['cancelada', 'completada'])
             ->orderBy('fecha_hora_inicio', 'asc')
             ->get();
 
-        return response()->json(['success' => true, 'data' => $citas]);
+        return response()->json([
+            'success' => true,
+            'data' => $citas
+        ], 200);
     }
 
     /**
@@ -193,21 +197,14 @@ class PacienteAppController extends Controller
      */
     public function publicidad()
     {
-        $idClinica = Auth::user()->id_clinica ?? 1;
+        // Leemos TODAS las promociones reales que hayas guardado en tu base de datos
+        $promociones = \App\Models\Publicidad::all();
 
-        $promociones = Publicidad::whereHas('usuario', function ($q) use ($idClinica) {
-            $q->where('id_clinica', $idClinica);
-        })
-            ->where('activo', 1)
-            ->where(function ($q) {
-                $q->whereNull('fecha_inicio')->orWhere('fecha_inicio', '<=', now());
-            })
-            ->where(function ($q) {
-                $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now());
-            })
-            ->get();
-
-        return response()->json(['success' => true, 'publicidad' => $promociones]);
+        // Le enviamos la lista completa a la aplicación de Flutter
+        return response()->json([
+            'success' => true,
+            'data' => $promociones
+        ], 200);
     }
     /**
      * Retorna el catálogo de servicios/tratamientos de la clínica.
