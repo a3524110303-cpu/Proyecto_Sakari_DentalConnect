@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\TratamientoController;
@@ -29,8 +30,8 @@ use App\Http\Controllers\Api\PacienteHistorialController;
 // Rutas Públicas (Login/Registro)
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
-Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+Route::get('/register', [RegisterController::class, 'showRegister'])->name('register');
+Route::post('/register', [RegisterController::class, 'register'])->name('register.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Rutas de Recuperación de Contraseña
