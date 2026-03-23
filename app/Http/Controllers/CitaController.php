@@ -85,7 +85,7 @@ class CitaController extends Controller
                     'id_cita' => $cita->id_cita,
                     'url_archivo' => $rutaArchivo,
                     'tipo' => 'pdf',
-                    'descripcion' => 'Cuidados postratamiento',
+                    'descripcion' => 'Cuidados post tratamiento',
                 ]);
             }
 

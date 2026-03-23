@@ -895,7 +895,7 @@
                         <div style="margin-bottom: 15px; margin-top: 5px;">
                             <label for="cuidados-postratamiento-pdf"
                                 style="display:block; margin-bottom:6px; font-weight:700; color:#444;">Subir cuidados
-                                postratamiento (PDF)</label>
+                                post tratamiento (PDF)</label>
                             <input type="file" name="cuidados_postratamiento_pdf" id="cuidados-postratamiento-pdf"
                                 class="modern-input" accept="application/pdf">
                             <small style="display:block; margin-top:6px; color:#888; font-weight:600;">
