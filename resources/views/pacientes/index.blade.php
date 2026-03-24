@@ -891,9 +891,7 @@
                         <div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div>
                     </div>
 
-                    <div id="reserva-grid-dias">
-                        {{-- Los días se generarán aquí con JS usando las clases .dia-reserva y .dia-libre/pocos/lleno --}}
-                    </div>
+                    <div id="reserva-grid-dias"></div>
 
                     <div class="legend-container">
                         <span><span class="dot" style="background:#22c55e;"></span> Libre</span>
@@ -904,21 +902,16 @@
 
                 {{-- HORARIOS --}}
                 <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
-                    
                     <h4 style="font-weight: 800;">
                         <i class="fa-regular fa-clock"></i> 2. Elige la Hora
                     </h4>
-
                     <p id="lbl-fecha-seleccionada" style="color: #888; margin-top: 10px; margin-bottom: 15px;">
                         Selecciona un día en el calendario primero.
                     </p>
-
                     <input type="hidden" name="fecha" id="input-reserva-fecha" required>
                     <input type="hidden" name="hora" id="input-reserva-hora" required>
 
-                    <div id="reserva-contenedor-horarios"
-                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; min-height: 200px;">
-                        
+                    <div id="reserva-contenedor-horarios" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; min-height: 200px;">
                         <div style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px; color: #aaa;">
                             <p>Esperando selección de fecha...</p>
                         </div>
@@ -928,12 +921,12 @@
 
             {{-- 📄 CUIDADOS --}}
             <div style="margin-top: 25px;">
-                <label style="font-weight: 700;">📄 Subir cuidados post-tratamiento</label>
+                <label style="font-weight: 700;">📄 Subir cuidados post-tratamiento (Máx. 2MB)</label>
                 <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 18px; background: #f9fafb; text-align: center; margin-top: 8px; transition: 0.2s;"
                      onmouseover="this.style.borderColor='#06b6d4'; this.style.background='#ecfeff'"
                      onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
                     <input type="file" name="cuidados_pdf" accept="application/pdf" id="input-cuidados" style="display:none;"
-                           onchange="document.getElementById('nombre-cuidados').innerText = this.files[0]?.name || 'Ningún archivo seleccionado';">
+                           onchange="validarTamanoArchivo(this, 'nombre-cuidados')">
                     <label for="input-cuidados" style="cursor:pointer;">
                         <i class="fa-solid fa-file-pdf" style="font-size: 1.8rem; color:#ef4444;"></i>
                         <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
@@ -944,12 +937,12 @@
 
             {{-- 🪥 TIPS --}}
             <div style="margin-top: 20px;">
-                <label style="font-weight: 700;">🪥 Subir tips de higiene</label>
+                <label style="font-weight: 700;">🪥 Subir tips de higiene (Máx. 2MB)</label>
                 <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 18px; background: #f9fafb; text-align: center; margin-top: 8px; transition: 0.2s;"
                      onmouseover="this.style.borderColor='#22c55e'; this.style.background='#f0fdf4'"
                      onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
                     <input type="file" name="tips_pdf" accept="application/pdf" id="input-tips" style="display:none;"
-                           onchange="document.getElementById('nombre-tips').innerText = this.files[0]?.name || 'Ningún archivo seleccionado';">
+                           onchange="validarTamanoArchivo(this, 'nombre-tips')">
                     <label for="input-tips" style="cursor:pointer;">
                         <i class="fa-solid fa-tooth" style="font-size: 1.8rem; color:#22c55e;"></i>
                         <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
@@ -963,9 +956,30 @@
                 style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; margin-top: 25px; background: #06b6d4; color: white; border: none; cursor: pointer;">
                 <i class="fa-solid fa-floppy-disk"></i> Confirmar Cita
             </button>
-
         </form>
     </div>
+
+    <script>
+        function validarTamanoArchivo(input, spanId) {
+            const file = input.files[0];
+            const maxKiloBytes = 2048; // 2MB
+            const span = document.getElementById(spanId);
+
+            if (file) {
+                if (file.size > maxKiloBytes * 1024) {
+                    alert("El archivo '" + file.name + "' es demasiado grande. El límite es de 2048 KB (2MB).");
+                    input.value = ""; // Limpia el input
+                    span.innerText = "Ningún archivo seleccionado";
+                    span.style.color = "#ef4444";
+                } else {
+                    span.innerText = file.name;
+                    span.style.color = "#666";
+                }
+            } else {
+                span.innerText = "Ningún archivo seleccionado";
+            }
+        }
+    </script>
 </div>
     {{-- Modal de Edición (Readonly: Nombre, Apellidos, Fecha Nac, Tipo Sangre) --}}
     <div id="modal-edit-patient" class="modal-overlay">
