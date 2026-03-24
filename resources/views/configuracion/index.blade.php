@@ -119,7 +119,7 @@
                 <div style="text-align: center; margin-bottom: 20px;">
                     <div style="position: relative; display: inline-block;">
                         @if($doctorPerfil && $doctorPerfil->foto_perfil)
-                            <img src="{{ asset('storage/' . $doctorPerfil->foto_perfil) }}"
+                            <img src="{{ route('storage.file', ['path' => $doctorPerfil->foto_perfil]) }}"
                                  alt="Foto del Doctor"
                                  style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 15px rgba(0,119,182,0.25); cursor: pointer;"
                                  onclick="document.getElementById('input-foto-doctor').click()">

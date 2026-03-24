@@ -117,3 +117,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/panel', [AdminPanelController::class, 'index'])->name('admin.panel');
     });
 });
+
+// Ruta especial para servir archivos de almacenamiento y evitar el Error 403 de Railway (Nginx / Volumes)
+Route::get('/storage-file/{path}', function ($path) {
+    // Prevenir el directory traversal bloqueando ".." en la ruta
+    if (strpos($path, '..') !== false) {
+        abort(403);
+    }
+    
+    $fullPath = storage_path('app/public/' . $path);
+    
+    if (!file_exists($fullPath)) {
+        abort(404);
+    }
+
+    return response()->file($fullPath);
+})->where('path', '.*')->name('storage.file');
