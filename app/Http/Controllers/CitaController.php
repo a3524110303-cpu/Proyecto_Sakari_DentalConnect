@@ -38,6 +38,7 @@ class CitaController extends Controller
             'id_servicio' => 'required|exists:catalogo_servicios,id_servicio',
             'fecha' => 'required|date_format:Y-m-d',
             'hora' => 'required|date_format:H:i',
+            'duracion_minutos' => 'nullable|integer|in:15,30',
         ]);
 
         try {
@@ -46,28 +47,17 @@ class CitaController extends Controller
 
             // Combinar fecha + hora en un solo datetime
             $fechaHora = Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora);
+            $duracionMinutos = (int) ($request->input('duracion_minutos', 30));
+            $finHora = $fechaHora->copy()->addMinutes($duracionMinutos);
 
             // Buscar el servicio para obtener el precio y nombre
             $servicio = Servicio::findOrFail($request->id_servicio);
 
-            // Buscar el primer doctor activo de la clínica via join con usuarios_sistema
-            $idDoctor = DB::table('doctores')
-                ->join('usuarios_sistema', 'doctores.id_usuario', '=', 'usuarios_sistema.id_usuario')
-                ->where('usuarios_sistema.id_clinica', $idClinica)
-                ->value('doctores.id_doctor') ?? 1;
+            $idDoctor = $this->buscarDoctorDisponible($idClinica, $fechaHora, $finHora);
 
-            // ── Verificar duplicado exacto ────────────────────────────────
-            // Si ya existe una cita pendiente para este paciente en la misma fecha y hora (mismo minuto),
-            // rechazar la solicitud para evitar duplicados por clicks múltiples.
-            $duplicado = Cita::where('id_paciente', $request->id_paciente)
-                ->where('id_clinica', $idClinica)
-                ->where('estado_cita', 'pendiente')
-                ->where('fecha_hora_inicio', $fechaHora)
-                ->exists();
-
-            if ($duplicado) {
+            if (!$idDoctor) {
                 return redirect()->route('pacientes.index')
-                    ->with('error', 'Ya existe una cita pendiente para este paciente en la misma fecha y hora.')
+                    ->with('error', 'El horario seleccionado ya no está disponible para la duración elegida.')
                     ->withInput();
             }
 
@@ -77,7 +67,7 @@ class CitaController extends Controller
                 'id_doctor' => $idDoctor,
                 'id_servicio' => $request->id_servicio,
                 'fecha_hora_inicio' => $fechaHora,
-                'fecha_hora_fin' => $fechaHora->copy()->addHour(),
+                'fecha_hora_fin' => $finHora,
                 'estado_cita' => 'pendiente',
                 'motivo' => $servicio->nombre_servicio,
                 'costo_estimado' => $servicio->precio_base,
@@ -88,5 +78,39 @@ class CitaController extends Controller
         } catch (\Exception $e) {
             return redirect()->route('pacientes.index')->with('error', 'Error al agendar: ' . $e->getMessage())->withInput();
         }
+    }
+
+    private function buscarDoctorDisponible(int $idClinica, Carbon $inicio, Carbon $fin): ?int
+    {
+        $doctores = DB::table('doctores')
+            ->join('usuarios_sistema', 'doctores.id_usuario', '=', 'usuarios_sistema.id_usuario')
+            ->where('usuarios_sistema.id_clinica', $idClinica)
+            ->pluck('doctores.id_doctor');
+
+        foreach ($doctores as $idDoctor) {
+            $tieneBloqueo = DB::table('horarios_bloqueados')
+                ->where('id_doctor', $idDoctor)
+                ->where('estatus_horario', 'activo')
+                ->where('fecha_inicio', '<', $fin)
+                ->where('fecha_fin', '>', $inicio)
+                ->exists();
+
+            if ($tieneBloqueo) {
+                continue;
+            }
+
+            $empalme = Cita::where('id_clinica', $idClinica)
+                ->where('id_doctor', $idDoctor)
+                ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+                ->where('fecha_hora_inicio', '<', $fin)
+                ->where('fecha_hora_fin', '>', $inicio)
+                ->exists();
+
+            if (!$empalme) {
+                return (int) $idDoctor;
+            }
+        }
+
+        return null;
     }
 }

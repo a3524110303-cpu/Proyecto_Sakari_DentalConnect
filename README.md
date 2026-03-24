@@ -57,3 +57,33 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## DentalConnect SaaS (Landing + Suscripciones + Admin)
+
+Se agrego una capa SaaS con:
+
+- Landing publica en `/` con planes Basico, Premium y Ultra.
+- Checkout de suscripciones con Stripe.
+- Webhook Stripe para sincronizar estado de suscripcion.
+- Panel administrativo global en `/admin/panel` (rol `administrador`).
+- Proteccion por nivel de plan para modulos premium (ejemplo: Publicidad).
+
+### Variables de entorno requeridas
+
+Configura en `.env`:
+
+- `STRIPE_KEY=` Clave publicable de Stripe.
+- `STRIPE_SECRET=` Clave secreta de Stripe.
+- `STRIPE_WEBHOOK_SECRET=` Secreto del endpoint webhook de Stripe.
+
+### Configurar Price IDs por plan
+
+En la tabla `saas_planes` debes guardar los Price IDs de Stripe en `stripe_price_id` para cada plan (`basic`, `premium`, `ultra`).
+
+### Endpoint de webhook
+
+Ruta configurada:
+
+- `POST /stripe/webhook`
+
+El webhook valida firma con `STRIPE_WEBHOOK_SECRET`.

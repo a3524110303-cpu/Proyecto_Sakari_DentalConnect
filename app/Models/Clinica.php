@@ -35,4 +35,38 @@ class Clinica extends Model
         'codigo_postal',
         'config_anticipo_pct'
     ];
+
+    public function usuarios()
+    {
+        return $this->hasMany(User::class, 'id_clinica', 'id_clinica');
+    }
+
+    public function citas()
+    {
+        return $this->hasMany(Cita::class, 'id_clinica', 'id_clinica');
+    }
+
+    public function suscripciones()
+    {
+        return $this->hasMany(SuscripcionClinica::class, 'id_clinica', 'id_clinica');
+    }
+
+    public function suscripcionActiva()
+    {
+        return $this->hasOne(SuscripcionClinica::class, 'id_clinica', 'id_clinica')
+            ->whereIn('estado', ['active', 'trialing'])
+            ->latest('periodo_fin');
+    }
+
+    public function hasPlanAtLeast(string $requiredSlug): bool
+    {
+        $requiredPlan = PlanSaas::where('slug', $requiredSlug)->first();
+        $currentSubscription = $this->suscripcionActiva()->with('plan')->first();
+
+        if (!$requiredPlan || !$currentSubscription || !$currentSubscription->plan) {
+            return false;
+        }
+
+        return (int) $currentSubscription->plan->nivel >= (int) $requiredPlan->nivel;
+    }
 }

@@ -5,12 +5,19 @@
 @section('contenido')
     <div class="header-section" style="margin-bottom: 30px;">
         <h2 class="page-title">Configuración de la Clínica {{ $clinica->nombre_comercial }}</h2>
-        <p style="color: #666;">Gestiona la información de tu consultorio y de tu equipo/p>
+        <p style="color: #666;">Gestiona la información de tu consultorio y de tu equipo</p>
     </div>
 
     @if(session('success'))
         <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
             <i class="fa-solid fa-check-circle"></i> {{ session('success') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div style="background: #f8d7da; color: #842029; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            {{ $errors->first() }}
         </div>
     @endif
 
@@ -99,9 +106,15 @@
                         </div>
                         <div>
                             <label>Cambiar Contraseña</label>
-                            <input type="password" name="password" class="modern-input" placeholder="Opcional">
+                            <input type="password" name="password" class="modern-input" placeholder="Opcional" autocomplete="new-password">
                         </div>
                     </div>
+
+                    <div style="margin-top: 15px;">
+                        <label>Confirmar Nueva Contraseña</label>
+                        <input type="password" name="password_confirmation" class="modern-input"
+                            placeholder="Solo si cambias contraseña" autocomplete="new-password">
+                        </div>
 
                     <button type="submit" class="ghost-btn"
                         style="margin-top: 20px; background: #0077b6; color: white; width: 100%;">
@@ -257,7 +270,11 @@
 
                 <label style="display:block; margin-bottom:5px;">Contraseña</label>
                 <input type="password" name="password" class="modern-input" required
-                    style="width:100%; margin-bottom:20px;">
+                    style="width:100%; margin-bottom:10px;" autocomplete="new-password">
+
+                <label style="display:block; margin-bottom:5px;">Confirmar Contraseña</label>
+                <input type="password" name="password_confirmation" class="modern-input" required
+                    style="width:100%; margin-bottom:20px;" autocomplete="new-password">
 
                 <div style="text-align: right;">
                     <button type="button" onclick="document.getElementById('modal-recep').style.display='none'"
@@ -288,8 +305,12 @@
                     style="width:100%; margin-bottom:10px;">
 
                 <label style="display:block; margin-bottom:5px;">Nueva Contraseña (Opcional)</label>
-                <input type="password" name="password" class="modern-input" style="width:100%; margin-bottom:20px;"
+                <input type="password" name="password" class="modern-input" style="width:100%; margin-bottom:10px;"
                     placeholder="Dejar vacío para no cambiar">
+
+                <label style="display:block; margin-bottom:5px;">Confirmar Nueva Contraseña</label>
+                <input type="password" name="password_confirmation" class="modern-input"
+                    style="width:100%; margin-bottom:20px;" placeholder="Solo si cambias contraseña">
 
                 <div style="text-align: right;">
                     <button type="button" onclick="document.getElementById('modal-edit-recep').style.display='none'"

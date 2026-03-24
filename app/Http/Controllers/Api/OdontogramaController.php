@@ -31,8 +31,12 @@ class OdontogramaController extends Controller
     /**
      * Guarda un nuevo registro cuando el doctor marca un diente.
      */
-    public function store(Request $request)
+    public function store(Request $request, $id_paciente = null)
     {
+        if (!is_null($id_paciente)) {
+            $request->merge(['id_paciente' => $id_paciente]);
+        }
+
         $validated = $request->validate([
             'id_paciente' => 'required|integer|exists:pacientes,id_paciente',
             'id_cita' => 'nullable|integer|exists:citas,id_cita',

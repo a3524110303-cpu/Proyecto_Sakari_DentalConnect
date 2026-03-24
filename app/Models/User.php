@@ -54,4 +54,9 @@ class User extends Authenticatable
     {
         return $this->password;
     }
+
+    public function clinica()
+    {
+        return $this->belongsTo(Clinica::class, 'id_clinica', 'id_clinica');
+    }
 }

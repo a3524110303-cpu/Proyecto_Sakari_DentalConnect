@@ -17,20 +17,29 @@ class RoleMiddleware
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         if (!Auth::check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthenticated.'
-            ], 401);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+
+            return redirect()->route('login');
         }
 
         $user = Auth::user();
 
         // Validamos contra los roles permitidos en la ruta
         if (!in_array($user->rol, $roles)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Acceso denegado: No tienes los permisos de ' . implode(' o ', $roles) . ' necesarios para esta acción.'
-            ], 403);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Acceso denegado: No tienes los permisos de ' . implode(' o ', $roles) . ' necesarios para esta acción.'
+                ], 403);
+            }
+
+            return redirect()->route('dashboard')
+                ->with('error', 'No tienes permisos para acceder a esta seccion.');
         }
 
         return $next($request);

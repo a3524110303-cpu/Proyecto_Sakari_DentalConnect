@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use App\Helpers\StringHelper;
 
 
@@ -32,10 +33,17 @@ class UpdateUsuarioRequest extends FormRequest
 
     public function rules(): array
     {
+        $idUsuario = (int) $this->input('id_usuario');
+
         return [
             'id_usuario' => 'required|exists:usuarios_sistema,id_usuario',
             'nombre_completo' => ['required', 'string', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/u'],
-            'email' => 'required|email|max:150',
+            'email' => [
+                'required',
+                'email',
+                'max:150',
+                Rule::unique('usuarios_sistema', 'email')->ignore($idUsuario, 'id_usuario'),
+            ],
             'password' => 'nullable|string|min:8|confirmed',
             // Datos del doctor (opcionales, se ignoran para recepcionistas)
             'cedula_profesional' => 'nullable|string|max:20',

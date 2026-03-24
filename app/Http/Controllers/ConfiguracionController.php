@@ -71,16 +71,17 @@ class ConfiguracionController extends Controller
      */
     public function updateUsuario(UpdateUsuarioRequest $request)
     {
-        $usuario = User::findOrFail($request->id_usuario);
+        $validated = $request->validated();
+        $usuario = User::findOrFail($validated['id_usuario']);
 
         $data = [
-            'nombre_completo' => $request->nombre_completo,
-            'email' => $request->email,
+            'nombre_completo' => $validated['nombre_completo'],
+            'email' => $validated['email'],
         ];
 
         // Actualizar contraseña solo si se proporcionó una nueva
-        if ($request->filled('password')) {
-            $data['password'] = $request->password;  // El cast 'hashed' del modelo User lo hashea automáticamente
+        if (!empty($validated['password'])) {
+            $data['password'] = $validated['password'];  // El cast 'hashed' del modelo User lo hashea automáticamente
         }
 
         $usuario->update($data);
@@ -90,8 +91,8 @@ class ConfiguracionController extends Controller
             Doctor::updateOrCreate(
                 ['id_usuario' => $usuario->id_usuario],
                 [
-                    'cedula_profesional' => $request->cedula_profesional,
-                    'horario_default' => $request->horario_default,
+                    'cedula_profesional' => $validated['cedula_profesional'] ?? null,
+                    'horario_default' => $validated['horario_default'] ?? null,
                 ]
             );
         }

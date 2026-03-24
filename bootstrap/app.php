@@ -14,8 +14,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
 
+        $middleware->validateCsrfTokens(except: [
+            'stripe/webhook',
+        ]);
+
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'plan' => \App\Http\Middleware\EnsurePlanLevel::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
