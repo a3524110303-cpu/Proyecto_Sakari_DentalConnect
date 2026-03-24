@@ -792,14 +792,12 @@
             {{-- 🔹 Paciente + Servicio + Duración --}}
             <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
 
-                {{-- Paciente --}}
                 <div style="flex: 1; min-width: 200px;">
                     <label style="font-weight: 700;">Paciente:</label>
                     <input type="text" id="form-cita-paciente-nombre" class="modern-input" readonly
                         style="background: #f8f9fa;">
                 </div>
 
-                {{-- Servicio --}}
                 <div style="flex: 1; min-width: 200px;">
                     <label style="font-weight: 700;">Servicio:</label>
                     <select name="id_servicio" class="modern-input" required>
@@ -811,7 +809,6 @@
                     </select>
                 </div>
 
-                {{-- Duración --}}
                 <div style="flex: 1; min-width: 150px;">
                     <label style="font-weight: 700;">Duración:</label>
                     <select name="duracion_minutos" class="modern-input">
@@ -832,6 +829,18 @@
                         <i class="fa-regular fa-calendar-days"></i> 1. Elige el Día
                     </h4>
 
+                    {{-- 🔥 NAV MES (ESTO FALTABA) --}}
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <button type="button" onclick="cambiarMesReserva(-1)">⬅</button>
+
+                        <span id="reserva-mes-anio" style="font-weight:800;">
+                            Cargando...
+                        </span>
+
+                        <button type="button" onclick="cambiarMesReserva(1)">➡</button>
+                    </div>
+
+                    {{-- GRID --}}
                     <div id="reserva-grid-dias"></div>
                 </div>
 
@@ -861,32 +870,18 @@
 
             {{-- 📄 CUIDADOS --}}
             <div style="margin-top: 25px;">
-                <label style="font-weight: 700;">
-                    📄 Subir cuidados post-tratamiento
-                </label>
-
-                <input 
-                    type="file" 
-                    name="cuidados_pdf"
-                    accept="application/pdf"
+                <label style="font-weight: 700;">📄 Subir cuidados post-tratamiento</label>
+                <input type="file" name="cuidados_pdf" accept="application/pdf"
                     class="modern-input"
-                    style="margin-top: 8px; padding: 10px; background: #f8f9fa;"
-                >
+                    style="margin-top: 8px; padding: 10px; background: #f8f9fa;">
             </div>
 
-            {{-- 🪥 TIPS DE HIGIENE --}}
+            {{-- 🪥 TIPS --}}
             <div style="margin-top: 20px;">
-                <label style="font-weight: 700;">
-                    🪥 Subir tips de higiene
-                </label>
-
-                <input 
-                    type="file" 
-                    name="tips_pdf"
-                    accept="application/pdf"
+                <label style="font-weight: 700;">🪥 Subir tips de higiene</label>
+                <input type="file" name="tips_pdf" accept="application/pdf"
                     class="modern-input"
-                    style="margin-top: 8px; padding: 10px; background: #f8f9fa;"
-                >
+                    style="margin-top: 8px; padding: 10px; background: #f8f9fa;">
             </div>
 
             {{-- BOTÓN --}}
