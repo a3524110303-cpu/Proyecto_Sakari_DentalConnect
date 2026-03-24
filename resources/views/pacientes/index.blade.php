@@ -1652,96 +1652,101 @@
             generarHorasReserva(fechaString, horaInicio, horaFin);
         }
 
-        function generarHorasReserva(fecha, horaInicioStr, horaFinStr) {
-            const contenedor = document.getElementById('reserva-contenedor-horarios');
-            contenedor.innerHTML = '';
+        async function generarHorasReserva(fecha, horaInicioStr, horaFinStr) {
+    const contenedor = document.getElementById('reserva-contenedor-horarios');
+    contenedor.innerHTML = '<p style="text-align:center;">Cargando horarios...</p>';
 
-            let horariosClinica = [];
+    let horariosClinica = [];
 
-            // Generar slots de 30 min desde horaInicioStr hasta horaFinStr
-            if (horaInicioStr && horaFinStr) {
-                let [hInicio, mInicio] = horaInicioStr.split(':').map(Number);
-                let [hFin, mFin] = horaFinStr.split(':').map(Number);
+    // 🔹 Generar horarios base
+    if (horaInicioStr && horaFinStr) {
+        let [hInicio, mInicio] = horaInicioStr.split(':').map(Number);
+        let [hFin, mFin] = horaFinStr.split(':').map(Number);
 
-                let currentDate = new Date();
-                currentDate.setHours(hInicio, mInicio, 0, 0);
+        let currentDate = new Date();
+        currentDate.setHours(hInicio, mInicio, 0, 0);
 
-                let endDate = new Date();
-                endDate.setHours(hFin, mFin, 0, 0);
+        let endDate = new Date();
+        endDate.setHours(hFin, mFin, 0, 0);
 
-                // Prevenir loop infinito si la configuración es rara
-                while (currentDate < endDate && horariosClinica.length < 48) {
-                    let h = String(currentDate.getHours()).padStart(2, '0');
-                    let m = String(currentDate.getMinutes()).padStart(2, '0');
-                    horariosClinica.push(`${h}:${m}`);
-
-                    // Añadir 30 mins
-                    currentDate.setMinutes(currentDate.getMinutes() + 30);
-                }
-            }
-
-            if (horariosClinica.length === 0) {
-                contenedor.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #888; font-style: italic;">No hay horarios configurados para este día.</p>';
-                return;
-            }
-
-            horariosClinica.forEach(hora => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'reserva-hora-btn';
-
-                // Formato 12 hrs
-                const [h, m] = hora.split(':');
-                const ampm = h >= 12 ? 'PM' : 'AM';
-                const hora12 = (h % 12 || 12) + ':' + m + ' ' + ampm;
-                btn.innerText = hora12;
-
-                // Estilo de las píldoras
-                btn.style.padding = '12px 0';
-                btn.style.background = '#fff';
-                btn.style.border = '1px solid #ccc';
-                btn.style.borderRadius = '10px';
-                btn.style.color = '#333';
-                btn.style.fontWeight = '700';
-                btn.style.cursor = 'pointer';
-                btn.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
-
-                btn.onmouseover = () => {
-                    if (document.getElementById('input-reserva-hora').value !== hora) {
-                        btn.style.borderColor = 'var(--primary-color)';
-                        btn.style.color = 'var(--primary-color)';
-                    }
-                };
-                btn.onmouseout = () => {
-                    if (document.getElementById('input-reserva-hora').value !== hora) {
-                        btn.style.borderColor = '#ccc';
-                        btn.style.color = '#333';
-                    }
-                };
-
-                btn.onclick = () => {
-                    // Reiniciar todos al estilo original
-                    document.querySelectorAll('.reserva-hora-btn').forEach(b => {
-                        b.style.background = '#fff';
-                        b.style.color = '#333';
-                        b.style.borderColor = '#ccc';
-                        b.style.boxShadow = 'none';
-                        b.style.transform = 'scale(1)';
-                    });
-
-                    // Estilo ACTIVO
-                    btn.style.background = 'var(--primary-color)';
-                    btn.style.color = 'white';
-                    btn.style.borderColor = 'var(--primary-color)';
-                    btn.style.boxShadow = '0 6px 15px rgba(0, 209, 255, 0.3)';
-                    btn.style.transform = 'scale(1.05)';
-
-                    // Asignar valor para el backend
-                    document.getElementById('input-reserva-hora').value = hora;
-                };
-
-                contenedor.appendChild(btn);
-            });
+        while (currentDate < endDate && horariosClinica.length < 48) {
+            let h = String(currentDate.getHours()).padStart(2, '0');
+            let m = String(currentDate.getMinutes()).padStart(2, '0');
+            horariosClinica.push(`${h}:${m}`);
+            currentDate.setMinutes(currentDate.getMinutes() + 30);
         }
+    }
+
+    // 🔹 Obtener horas ocupadas del backend
+    let horasOcupadas = [];
+    try {
+        const res = await fetch(`/api/citas/ocupadas?fecha=${fecha}`);
+        const data = await res.json();
+        horasOcupadas = data.ocupadas || [];
+    } catch (error) {
+        console.error("Error cargando horas ocupadas", error);
+    }
+
+    contenedor.innerHTML = '';
+
+    const ahora = new Date();
+
+    horariosClinica.forEach(hora => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'reserva-hora-btn';
+
+        const [h, m] = hora.split(':');
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const hora12 = (h % 12 || 12) + ':' + m + ' ' + ampm;
+        btn.innerText = hora12;
+
+        // 🔥 FECHA COMPLETA DEL SLOT
+        const fechaHoraSlot = new Date(`${fecha}T${hora}:00`);
+
+        const esPasado = fechaHoraSlot < ahora;
+        const estaOcupada = horasOcupadas.includes(hora);
+
+        // 🎯 CASO 1: HORA PASADA
+        if (esPasado) {
+            btn.style.background = '#f3f4f6';
+            btn.style.color = '#9ca3af';
+            btn.style.cursor = 'not-allowed';
+            btn.disabled = true;
+        }
+
+        // 🎯 CASO 2: OCUPADA
+        else if (estaOcupada) {
+            btn.style.background = '#fee2e2';
+            btn.style.color = '#ef4444';
+            btn.style.cursor = 'not-allowed';
+            btn.innerText += ' (Ocupado)';
+            btn.disabled = true;
+        }
+
+        // 🎯 DISPONIBLE
+        else {
+            btn.style.background = '#fff';
+            btn.style.border = '1px solid #ccc';
+            btn.style.borderRadius = '10px';
+            btn.style.fontWeight = '700';
+            btn.style.cursor = 'pointer';
+
+            btn.onclick = () => {
+                document.querySelectorAll('.reserva-hora-btn').forEach(b => {
+                    b.style.background = '#fff';
+                    b.style.color = '#333';
+                });
+
+                btn.style.background = 'var(--primary-color)';
+                btn.style.color = 'white';
+
+                document.getElementById('input-reserva-hora').value = hora;
+            };
+        }
+
+        contenedor.appendChild(btn);
+    });
+}
     </script>
 @endsection

@@ -33,11 +33,7 @@ class CitaController extends Controller
             'id_servicio' => 'required|exists:catalogo_servicios,id_servicio',
             'fecha' => 'required|date_format:Y-m-d',
             'hora' => 'required|date_format:H:i',
-
-            // duración opcional
             'duracion_minutos' => 'nullable|integer|in:15,30',
-
-            // PDFs opcionales
             'cuidados_pdf' => 'nullable|file|mimes:pdf|max:2048',
             'tips_pdf' => 'nullable|file|mimes:pdf|max:2048',
         ]);
@@ -55,8 +51,28 @@ class CitaController extends Controller
             $duracionMinutos = (int) $request->input('duracion_minutos', 30);
             $finHora = $fechaHora->copy()->addMinutes($duracionMinutos);
 
+            // 🚫 VALIDACIÓN 1: no permitir horas pasadas
+            if ($fechaHora < Carbon::now()) {
+                return back()
+                    ->with('error', 'No puedes agendar en una hora pasada.')
+                    ->withInput();
+            }
+
             // 📦 Servicio
             $servicio = Servicio::findOrFail($request->id_servicio);
+
+            // 🚫 VALIDACIÓN 2: evitar empalmes en TODA la clínica
+            $yaOcupada = Cita::where('id_clinica', $idClinica)
+                ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+                ->where('fecha_hora_inicio', '<', $finHora)
+                ->where('fecha_hora_fin', '>', $fechaHora)
+                ->exists();
+
+            if ($yaOcupada) {
+                return back()
+                    ->with('error', 'Ese horario ya está ocupado.')
+                    ->withInput();
+            }
 
             // 👨‍⚕️ Buscar doctor disponible
             $idDoctor = $this->buscarDoctorDisponible($idClinica, $fechaHora, $finHora);
@@ -67,7 +83,7 @@ class CitaController extends Controller
                     ->withInput();
             }
 
-            // 🚫 Evitar duplicado exacto
+            // 🚫 VALIDACIÓN 3: duplicado exacto del paciente
             $duplicado = Cita::where('id_paciente', $request->id_paciente)
                 ->where('id_clinica', $idClinica)
                 ->where('estado_cita', 'pendiente')
@@ -76,7 +92,7 @@ class CitaController extends Controller
 
             if ($duplicado) {
                 return back()
-                    ->with('error', 'Ya existe una cita en ese horario.')
+                    ->with('error', 'El paciente ya tiene una cita en ese horario.')
                     ->withInput();
             }
 
@@ -85,13 +101,11 @@ class CitaController extends Controller
             $rutaTips = null;
 
             if ($request->hasFile('cuidados_pdf')) {
-                $rutaCuidados = $request->file('cuidados_pdf')
-                    ->store('cuidados', 'public');
+                $rutaCuidados = $request->file('cuidados_pdf')->store('cuidados', 'public');
             }
 
             if ($request->hasFile('tips_pdf')) {
-                $rutaTips = $request->file('tips_pdf')
-                    ->store('tips', 'public');
+                $rutaTips = $request->file('tips_pdf')->store('tips', 'public');
             }
 
             // ✅ Crear cita
@@ -119,7 +133,7 @@ class CitaController extends Controller
         }
     }
 
-    // 👨‍⚕️ Doctor disponible
+    // 👨‍⚕️ Buscar doctor disponible
     public function buscarDoctorDisponible(int $idClinica, Carbon $inicio, Carbon $fin): ?int
     {
         $doctores = DB::table('doctores')
@@ -129,7 +143,7 @@ class CitaController extends Controller
 
         foreach ($doctores as $idDoctor) {
 
-            // 🚫 Bloqueos
+            // 🚫 Bloqueos manuales
             $tieneBloqueo = DB::table('horarios_bloqueados')
                 ->where('id_doctor', $idDoctor)
                 ->where('estatus_horario', 'activo')
@@ -139,7 +153,7 @@ class CitaController extends Controller
 
             if ($tieneBloqueo) continue;
 
-            // 🚫 Empalmes
+            // 🚫 Empalmes con citas
             $empalme = Cita::where('id_clinica', $idClinica)
                 ->where('id_doctor', $idDoctor)
                 ->whereIn('estado_cita', ['pendiente', 'confirmada'])
@@ -153,5 +167,28 @@ class CitaController extends Controller
         }
 
         return null;
+    }
+
+    // 🔥 ENDPOINT PARA FRONTEND (horas ocupadas)
+    public function horasOcupadas(Request $request)
+    {
+        $request->validate([
+            'fecha' => 'required|date_format:Y-m-d'
+        ]);
+
+        $idClinica = Auth::user()->id_clinica;
+        $fecha = $request->fecha;
+
+        $horas = Cita::where('id_clinica', $idClinica)
+            ->whereDate('fecha_hora_inicio', $fecha)
+            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+            ->pluck('fecha_hora_inicio')
+            ->map(function ($hora) {
+                return Carbon::parse($hora)->format('H:i');
+            });
+
+        return response()->json([
+            'ocupadas' => $horas
+        ]);
     }
 }
