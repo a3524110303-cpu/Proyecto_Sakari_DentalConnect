@@ -37,8 +37,9 @@ class CitaController extends Controller
             // ✅ Duración
             'duracion_minutos' => 'nullable|integer|in:15,30',
 
-            // ✅ PDF
-            'cuidados_pdf' => 'nullable|mimes:pdf|max:2048'
+            // ✅ PDFs
+            'cuidados_pdf' => 'nullable|mimes:pdf|max:2048',
+            'tips_pdf' => 'nullable|mimes:pdf|max:2048',
         ]);
 
         try {
@@ -53,7 +54,7 @@ class CitaController extends Controller
             // 📦 Servicio
             $servicio = Servicio::findOrFail($request->id_servicio);
 
-            // 👨‍⚕️ Buscar doctor disponible
+            // 👨‍⚕️ Doctor disponible
             $idDoctor = $this->buscarDoctorDisponible($idClinica, $fechaHora, $finHora);
 
             if (!$idDoctor) {
@@ -62,7 +63,7 @@ class CitaController extends Controller
                     ->withInput();
             }
 
-            // 🚫 Evitar duplicado del paciente
+            // 🚫 Evitar duplicado
             $duplicado = Cita::where('id_paciente', $request->id_paciente)
                 ->where('id_clinica', $idClinica)
                 ->where('estado_cita', 'pendiente')
@@ -75,11 +76,16 @@ class CitaController extends Controller
                     ->withInput();
             }
 
-            // 📄 Guardar PDF
-            $rutaPdf = null;
+            // 📄 Guardar PDFs
+            $rutaCuidados = null;
+            $rutaTips = null;
 
             if ($request->hasFile('cuidados_pdf')) {
-                $rutaPdf = $request->file('cuidados_pdf')->store('cuidados', 'public');
+                $rutaCuidados = $request->file('cuidados_pdf')->store('cuidados', 'public');
+            }
+
+            if ($request->hasFile('tips_pdf')) {
+                $rutaTips = $request->file('tips_pdf')->store('tips', 'public');
             }
 
             // ✅ Crear cita
@@ -93,7 +99,8 @@ class CitaController extends Controller
                 'estado_cita' => 'pendiente',
                 'motivo' => $servicio->nombre_servicio,
                 'costo_estimado' => $servicio->precio_base,
-                'cuidados_pdf' => $rutaPdf,
+                'cuidados_pdf' => $rutaCuidados,
+                'tips_pdf' => $rutaTips,
             ]);
 
             return redirect()->route('pacientes.index')
@@ -106,7 +113,7 @@ class CitaController extends Controller
         }
     }
 
-    // 👨‍⚕️ FUNCIÓN PARA DOCTOR DISPONIBLE
+    // 👨‍⚕️ DOCTOR DISPONIBLE
     public function buscarDoctorDisponible(int $idClinica, Carbon $inicio, Carbon $fin): ?int
     {
         $doctores = DB::table('doctores')
@@ -116,7 +123,7 @@ class CitaController extends Controller
 
         foreach ($doctores as $idDoctor) {
 
-            // 🚫 Horarios bloqueados
+            // 🚫 Bloqueos
             $tieneBloqueo = DB::table('horarios_bloqueados')
                 ->where('id_doctor', $idDoctor)
                 ->where('estatus_horario', 'activo')
@@ -124,11 +131,9 @@ class CitaController extends Controller
                 ->where('fecha_fin', '>', $inicio)
                 ->exists();
 
-            if ($tieneBloqueo) {
-                continue;
-            }
+            if ($tieneBloqueo) continue;
 
-            // 🚫 Citas empalmadas
+            // 🚫 Empalmes
             $empalme = Cita::where('id_clinica', $idClinica)
                 ->where('id_doctor', $idDoctor)
                 ->whereIn('estado_cita', ['pendiente', 'confirmada'])

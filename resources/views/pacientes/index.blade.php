@@ -774,10 +774,10 @@
             </div>
         </div>
     </div>
-
-    {{-- MODAL: AGENDAR CITA (LOCAL) --}}
+{{-- MODAL: AGENDAR CITA (LOCAL) --}}
 <div id="modal-add-cita" class="modal-overlay">
     <div class="modal-glass modal-xl" style="max-width: 1050px; width: 95vw; max-height: 95vh; overflow-y: auto;">
+        
         <button class="close-modal" onclick="closeModal('modal-add-cita')">&times;</button>
 
         <h3 style="color: var(--secondary-color); margin-bottom: 20px; font-weight: 800; font-size: 1.6rem;">
@@ -811,7 +811,7 @@
                     </select>
                 </div>
 
-                {{-- 🔥 NUEVO: Duración --}}
+                {{-- Duración --}}
                 <div style="flex: 1; min-width: 150px;">
                     <label style="font-weight: 700;">Duración:</label>
                     <select name="duracion_minutos" class="modern-input">
@@ -849,11 +849,17 @@
                     <input type="hidden" name="fecha" id="input-reserva-fecha" required>
                     <input type="hidden" name="hora" id="input-reserva-hora" required>
 
-                    <div id="reserva-contenedor-horarios"></div>
+                    <div id="reserva-contenedor-horarios"
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;">
+                        
+                        <div style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px; color: #aaa;">
+                            <p>Esperando selección de fecha...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {{-- 🔥 PDF (MEJOR UBICADO) --}}
+            {{-- 📄 CUIDADOS --}}
             <div style="margin-top: 25px;">
                 <label style="font-weight: 700;">
                     📄 Subir cuidados post-tratamiento
@@ -862,6 +868,21 @@
                 <input 
                     type="file" 
                     name="cuidados_pdf"
+                    accept="application/pdf"
+                    class="modern-input"
+                    style="margin-top: 8px; padding: 10px; background: #f8f9fa;"
+                >
+            </div>
+
+            {{-- 🪥 TIPS DE HIGIENE --}}
+            <div style="margin-top: 20px;">
+                <label style="font-weight: 700;">
+                    🪥 Subir tips de higiene
+                </label>
+
+                <input 
+                    type="file" 
+                    name="tips_pdf"
                     accept="application/pdf"
                     class="modern-input"
                     style="margin-top: 8px; padding: 10px; background: #f8f9fa;"

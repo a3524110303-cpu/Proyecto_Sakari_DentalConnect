@@ -633,47 +633,49 @@ Incluye:
 
     <nav class="dashboard-sidebar">
         <ul class="navbar">
-            <li class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                <a href="{{ route('dashboard') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-house"></i></span>
-                    <span class="text">Inicio</span>
-                </a>
-            </li>
+            @if(auth()->check() && auth()->user()->rol !== 'administrador')
+                <li class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                    <a href="{{ route('dashboard') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-house"></i></span>
+                        <span class="text">Inicio</span>
+                    </a>
+                </li>
 
-            <li class="nav-item {{ request()->routeIs('pacientes.index') ? 'active' : '' }}">
-                <a href="{{ route('pacientes.index') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-users"></i></span>
-                    <span class="text">Pacientes</span>
-                </a>
-            </li>
+                <li class="nav-item {{ request()->routeIs('pacientes.index') ? 'active' : '' }}">
+                    <a href="{{ route('pacientes.index') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-users"></i></span>
+                        <span class="text">Pacientes</span>
+                    </a>
+                </li>
 
-            <li class="nav-item {{ request()->routeIs('tratamientos.index') ? 'active' : '' }}">
-                <a href="{{ route('tratamientos.index') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-notes-medical"></i></span>
-                    <span class="text">Tratamientos</span>
-                </a>
-            </li>
+                <li class="nav-item {{ request()->routeIs('tratamientos.index') ? 'active' : '' }}">
+                    <a href="{{ route('tratamientos.index') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-notes-medical"></i></span>
+                        <span class="text">Tratamientos</span>
+                    </a>
+                </li>
 
-            <li class="nav-item {{ request()->routeIs('publicidad.index') ? 'active' : '' }}">
-                <a href="{{ route('publicidad.index') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-bullhorn"></i></span>
-                    <span class="text">Publicidad</span>
-                </a>
-            </li>
+                <li class="nav-item {{ request()->routeIs('publicidad.index') ? 'active' : '' }}">
+                    <a href="{{ route('publicidad.index') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-bullhorn"></i></span>
+                        <span class="text">Publicidad</span>
+                    </a>
+                </li>
 
-            <li class="nav-item {{ request()->routeIs('configuracion.index') ? 'active' : '' }}">
-                <a href="{{ route('configuracion.index') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-gear"></i></span>
-                    <span class="text">Configuración</span>
-                </a>
-            </li>
+                <li class="nav-item {{ request()->routeIs('configuracion.index') ? 'active' : '' }}">
+                    <a href="{{ route('configuracion.index') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-gear"></i></span>
+                        <span class="text">Configuración</span>
+                    </a>
+                </li>
 
-            <li class="nav-item {{ request()->routeIs('suscripciones.show') ? 'active' : '' }}">
-                <a href="{{ route('suscripciones.show') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-crown"></i></span>
-                    <span class="text">Suscripción</span>
-                </a>
-            </li>
+                <li class="nav-item {{ request()->routeIs('suscripciones.show') ? 'active' : '' }}">
+                    <a href="{{ route('suscripciones.show') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-crown"></i></span>
+                        <span class="text">Suscripción</span>
+                    </a>
+                </li>
+            @endif
 
             @if(auth()->check() && auth()->user()->rol === 'administrador')
                 <li class="nav-item {{ request()->routeIs('admin.panel') ? 'active' : '' }}">
