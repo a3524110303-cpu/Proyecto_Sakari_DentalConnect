@@ -776,6 +776,57 @@
     </div>
 {{-- MODAL: AGENDAR CITA (LOCAL) --}}
 <div id="modal-add-cita" class="modal-overlay">
+    <style>
+        /* Estilos específicos para restaurar la cuadrícula del calendario */
+        #reserva-grid-dias {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .dia-reserva {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            border: none;
+            font-size: 0.9rem;
+        }
+
+        /* Clases de disponibilidad según la imagen */
+        .dia-libre { background-color: #e8f9ee; color: #22c55e; }
+        .dia-pocos { background-color: #fef3c7; color: #f59e0b; }
+        .dia-lleno { background-color: #fee2e2; color: #ef4444; }
+        
+        .dia-reserva:hover { transform: scale(1.05); filter: brightness(0.95); }
+        .dia-selected { outline: 2px solid #06b6d4; box-shadow: 0 0 10px rgba(6,182,212,0.3); }
+
+        .calendar-labels {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: 700;
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .legend-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    </style>
+
     <div class="modal-glass modal-xl" style="max-width: 1050px; width: 95vw; max-height: 95vh; overflow-y: auto;">
         
         <button class="close-modal" onclick="closeModal('modal-add-cita')">&times;</button>
@@ -791,11 +842,9 @@
 
             {{-- 🔹 Paciente + Servicio + Duración --}}
             <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
-
                 <div style="flex: 1; min-width: 200px;">
                     <label style="font-weight: 700;">Paciente:</label>
-                    <input type="text" id="form-cita-paciente-nombre" class="modern-input" readonly
-                        style="background: #f8f9fa;">
+                    <input type="text" id="form-cita-paciente-nombre" class="modern-input" readonly style="background: #f8f9fa;">
                 </div>
 
                 <div style="flex: 1; min-width: 200px;">
@@ -816,30 +865,41 @@
                         <option value="30" selected>30 min</option>
                     </select>
                 </div>
-
             </div>
 
             {{-- CONTENEDOR PRINCIPAL --}}
             <div style="display: flex; flex-wrap: wrap; gap: 30px; background: #ffffff; border-radius: 20px;">
 
                 {{-- CALENDARIO --}}
-                <div style="flex: 1; min-width: 300px; background: #F8FDFF; padding: 25px; border-radius: 16px; border: 1px solid #dceeef;">
+                <div style="flex: 1; min-width: 320px; background: #F8FDFF; padding: 25px; border-radius: 16px; border: 1px solid #dceeef;">
                     
                     <h4 style="font-weight: 800;">
                         <i class="fa-regular fa-calendar-days"></i> 1. Elige el Día
                     </h4>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <button type="button" onclick="cambiarMesReserva(-1)">⬅</button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; margin-top: 15px;">
+                        <button type="button" onclick="cambiarMesReserva(-1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">❮</button>
 
-                        <span id="reserva-mes-anio" style="font-weight:800;">
+                        <span id="reserva-mes-anio" style="font-weight:800; color: #06b6d4; text-transform: capitalize; font-size: 1.1rem;">
                             Cargando...
                         </span>
 
-                        <button type="button" onclick="cambiarMesReserva(1)">➡</button>
+                        <button type="button" onclick="cambiarMesReserva(1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">❯</button>
                     </div>
 
-                    <div id="reserva-grid-dias"></div>
+                    <div class="calendar-labels">
+                        <div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div>
+                    </div>
+
+                    <div id="reserva-grid-dias">
+                        {{-- Los días se generarán aquí con JS usando las clases .dia-reserva y .dia-libre/pocos/lleno --}}
+                    </div>
+
+                    <div class="legend-container">
+                        <span><span class="dot" style="background:#22c55e;"></span> Libre</span>
+                        <span><span class="dot" style="background:#f59e0b;"></span> Pocos</span>
+                        <span><span class="dot" style="background:#ef4444;"></span> Lleno</span>
+                    </div>
                 </div>
 
                 {{-- HORARIOS --}}
@@ -849,15 +909,15 @@
                         <i class="fa-regular fa-clock"></i> 2. Elige la Hora
                     </h4>
 
-                    <p id="lbl-fecha-seleccionada" style="color: #888;">
-                        Selecciona un día primero.
+                    <p id="lbl-fecha-seleccionada" style="color: #888; margin-top: 10px; margin-bottom: 15px;">
+                        Selecciona un día en el calendario primero.
                     </p>
 
                     <input type="hidden" name="fecha" id="input-reserva-fecha" required>
                     <input type="hidden" name="hora" id="input-reserva-hora" required>
 
                     <div id="reserva-contenedor-horarios"
-                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;">
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; min-height: 200px;">
                         
                         <div style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px; color: #aaa;">
                             <p>Esperando selección de fecha...</p>
@@ -866,79 +926,41 @@
                 </div>
             </div>
 
-            {{-- 📄 CUIDADOS (DISEÑO NUEVO) --}}
+            {{-- 📄 CUIDADOS --}}
             <div style="margin-top: 25px;">
                 <label style="font-weight: 700;">📄 Subir cuidados post-tratamiento</label>
-
-                <div style="
-                    border: 2px dashed #d1d5db;
-                    border-radius: 12px;
-                    padding: 18px;
-                    background: #f9fafb;
-                    text-align: center;
-                    margin-top: 8px;
-                    transition: 0.2s;
-                "
-                onmouseover="this.style.borderColor='#06b6d4'; this.style.background='#ecfeff'"
-                onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
-
-                    <input 
-                        type="file" 
-                        name="cuidados_pdf"
-                        accept="application/pdf"
-                        id="input-cuidados"
-                        style="display:none;"
-                        onchange="document.getElementById('nombre-cuidados').innerText = this.files[0]?.name || 'Ningún archivo seleccionado';"
-                    >
-
+                <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 18px; background: #f9fafb; text-align: center; margin-top: 8px; transition: 0.2s;"
+                     onmouseover="this.style.borderColor='#06b6d4'; this.style.background='#ecfeff'"
+                     onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
+                    <input type="file" name="cuidados_pdf" accept="application/pdf" id="input-cuidados" style="display:none;"
+                           onchange="document.getElementById('nombre-cuidados').innerText = this.files[0]?.name || 'Ningún archivo seleccionado';">
                     <label for="input-cuidados" style="cursor:pointer;">
                         <i class="fa-solid fa-file-pdf" style="font-size: 1.8rem; color:#ef4444;"></i>
                         <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
-                        <span id="nombre-cuidados" style="font-size: 0.85rem; color:#666;">
-                            Ningún archivo seleccionado
-                        </span>
+                        <span id="nombre-cuidados" style="font-size: 0.85rem; color:#666;">Ningún archivo seleccionado</span>
                     </label>
                 </div>
             </div>
 
-            {{-- 🪥 TIPS (DISEÑO NUEVO) --}}
+            {{-- 🪥 TIPS --}}
             <div style="margin-top: 20px;">
                 <label style="font-weight: 700;">🪥 Subir tips de higiene</label>
-
-                <div style="
-                    border: 2px dashed #d1d5db;
-                    border-radius: 12px;
-                    padding: 18px;
-                    background: #f9fafb;
-                    text-align: center;
-                    margin-top: 8px;
-                    transition: 0.2s;
-                "
-                onmouseover="this.style.borderColor='#22c55e'; this.style.background='#f0fdf4'"
-                onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
-
-                    <input 
-                        type="file" 
-                        name="tips_pdf"
-                        accept="application/pdf"
-                        id="input-tips"
-                        style="display:none;"
-                        onchange="document.getElementById('nombre-tips').innerText = this.files[0]?.name || 'Ningún archivo seleccionado';"
-                    >
-
+                <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 18px; background: #f9fafb; text-align: center; margin-top: 8px; transition: 0.2s;"
+                     onmouseover="this.style.borderColor='#22c55e'; this.style.background='#f0fdf4'"
+                     onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
+                    <input type="file" name="tips_pdf" accept="application/pdf" id="input-tips" style="display:none;"
+                           onchange="document.getElementById('nombre-tips').innerText = this.files[0]?.name || 'Ningún archivo seleccionado';">
                     <label for="input-tips" style="cursor:pointer;">
                         <i class="fa-solid fa-tooth" style="font-size: 1.8rem; color:#22c55e;"></i>
                         <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
-                        <span id="nombre-tips" style="font-size: 0.85rem; color:#666;">
-                            Ningún archivo seleccionado
-                        </span>
+                        <span id="nombre-tips" style="font-size: 0.85rem; color:#666;">Ningún archivo seleccionado</span>
                     </label>
                 </div>
             </div>
 
-            {{-- BOTÓN --}}
+            {{-- BOTÓN FINAL --}}
             <button type="submit" class="ghost-btn"
-                style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; margin-top: 25px;">
+                style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; margin-top: 25px; background: #06b6d4; color: white; border: none; cursor: pointer;">
                 <i class="fa-solid fa-floppy-disk"></i> Confirmar Cita
             </button>
 
