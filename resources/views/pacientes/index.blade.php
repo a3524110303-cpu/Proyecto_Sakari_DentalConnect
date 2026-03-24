@@ -829,7 +829,6 @@
                         <i class="fa-regular fa-calendar-days"></i> 1. Elige el Día
                     </h4>
 
-                    {{-- 🔥 NAV MES (ESTO FALTABA) --}}
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                         <button type="button" onclick="cambiarMesReserva(-1)">⬅</button>
 
@@ -840,7 +839,6 @@
                         <button type="button" onclick="cambiarMesReserva(1)">➡</button>
                     </div>
 
-                    {{-- GRID --}}
                     <div id="reserva-grid-dias"></div>
                 </div>
 
@@ -868,20 +866,74 @@
                 </div>
             </div>
 
-            {{-- 📄 CUIDADOS --}}
+            {{-- 📄 CUIDADOS (DISEÑO NUEVO) --}}
             <div style="margin-top: 25px;">
                 <label style="font-weight: 700;">📄 Subir cuidados post-tratamiento</label>
-                <input type="file" name="cuidados_pdf" accept="application/pdf"
-                    class="modern-input"
-                    style="margin-top: 8px; padding: 10px; background: #f8f9fa;">
+
+                <div style="
+                    border: 2px dashed #d1d5db;
+                    border-radius: 12px;
+                    padding: 18px;
+                    background: #f9fafb;
+                    text-align: center;
+                    margin-top: 8px;
+                    transition: 0.2s;
+                "
+                onmouseover="this.style.borderColor='#06b6d4'; this.style.background='#ecfeff'"
+                onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
+
+                    <input 
+                        type="file" 
+                        name="cuidados_pdf"
+                        accept="application/pdf"
+                        id="input-cuidados"
+                        style="display:none;"
+                        onchange="document.getElementById('nombre-cuidados').innerText = this.files[0]?.name || 'Ningún archivo seleccionado';"
+                    >
+
+                    <label for="input-cuidados" style="cursor:pointer;">
+                        <i class="fa-solid fa-file-pdf" style="font-size: 1.8rem; color:#ef4444;"></i>
+                        <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
+                        <span id="nombre-cuidados" style="font-size: 0.85rem; color:#666;">
+                            Ningún archivo seleccionado
+                        </span>
+                    </label>
+                </div>
             </div>
 
-            {{-- 🪥 TIPS --}}
+            {{-- 🪥 TIPS (DISEÑO NUEVO) --}}
             <div style="margin-top: 20px;">
                 <label style="font-weight: 700;">🪥 Subir tips de higiene</label>
-                <input type="file" name="tips_pdf" accept="application/pdf"
-                    class="modern-input"
-                    style="margin-top: 8px; padding: 10px; background: #f8f9fa;">
+
+                <div style="
+                    border: 2px dashed #d1d5db;
+                    border-radius: 12px;
+                    padding: 18px;
+                    background: #f9fafb;
+                    text-align: center;
+                    margin-top: 8px;
+                    transition: 0.2s;
+                "
+                onmouseover="this.style.borderColor='#22c55e'; this.style.background='#f0fdf4'"
+                onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
+
+                    <input 
+                        type="file" 
+                        name="tips_pdf"
+                        accept="application/pdf"
+                        id="input-tips"
+                        style="display:none;"
+                        onchange="document.getElementById('nombre-tips').innerText = this.files[0]?.name || 'Ningún archivo seleccionado';"
+                    >
+
+                    <label for="input-tips" style="cursor:pointer;">
+                        <i class="fa-solid fa-tooth" style="font-size: 1.8rem; color:#22c55e;"></i>
+                        <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
+                        <span id="nombre-tips" style="font-size: 0.85rem; color:#666;">
+                            Ningún archivo seleccionado
+                        </span>
+                    </label>
+                </div>
             </div>
 
             {{-- BOTÓN --}}
