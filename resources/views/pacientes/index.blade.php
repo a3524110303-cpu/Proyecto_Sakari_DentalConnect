@@ -777,7 +777,7 @@
 {{-- MODAL: AGENDAR CITA (LOCAL) --}}
 <div id="modal-add-cita" class="modal-overlay">
     <style>
-        /* Estilos de cuadrícula del calendario */
+        /* Estilos específicos para restaurar la cuadrícula del calendario */
         #reserva-grid-dias {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -798,6 +798,7 @@
             font-size: 0.9rem;
         }
 
+        /* Clases de disponibilidad según la imagen */
         .dia-libre { background-color: #e8f9ee; color: #22c55e; }
         .dia-pocos { background-color: #fef3c7; color: #f59e0b; }
         .dia-lleno { background-color: #fee2e2; color: #ef4444; }
@@ -815,48 +816,6 @@
             margin-bottom: 5px;
         }
 
-        /* --- ESTILOS PARA HORARIOS (BLOQUEO) --- */
-        .hora-item {
-            padding: 12px;
-            border-radius: 10px;
-            text-align: center;
-            font-weight: 700;
-            cursor: pointer;
-            transition: 0.2s;
-            border: 1px solid #dceeef;
-            background: white;
-            color: #333;
-        }
-
-        .hora-item:hover:not(.hora-bloqueada) {
-            background: #06b6d4;
-            color: white;
-        }
-
-        .hora-bloqueada {
-            background-color: #f3f4f6 !important; /* Gris */
-            color: #9ca3af !important;           /* Texto tenue */
-            border: 1px solid #e5e7eb !important;
-            cursor: not-allowed !important;      /* Icono prohibido */
-            pointer-events: none;                /* Bloquea el clic totalmente */
-            position: relative;
-            opacity: 0.7;
-        }
-
-        .hora-bloqueada::after {
-            content: '✖';
-            font-size: 0.6rem;
-            position: absolute;
-            top: 2px;
-            right: 4px;
-        }
-
-        .hora-selected {
-            background: #06b6d4 !important;
-            color: white !important;
-            border-color: #06b6d4 !important;
-        }
-
         .legend-container {
             display: flex;
             justify-content: center;
@@ -869,14 +828,16 @@
     </style>
 
     <div class="modal-glass modal-xl" style="max-width: 1050px; width: 95vw; max-height: 95vh; overflow-y: auto;">
+        
         <button class="close-modal" onclick="closeModal('modal-add-cita')">&times;</button>
 
-        <h3 style="color: var(--secondary-color); text-align: center; margin-bottom: 20px; font-weight: 800; font-size: 1.6rem;">
+        <h3 style="color: var(--secondary-color); margin-bottom: 20px; font-weight: 800; font-size: 1.6rem;">
             <i class="fa-solid fa-calendar-plus"></i> Agendar Nueva Cita
         </h3>
 
         <form id="form-add-cita" action="{{ route('citas.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
+
             <input type="hidden" name="id_paciente" id="form-cita-paciente-id">
 
             {{-- 🔹 Paciente + Servicio + Duración --}}
@@ -890,31 +851,48 @@
                     <label style="font-weight: 700;">Servicio:</label>
                     <select name="id_servicio" class="modern-input" required>
                         @foreach($servicios as $srv)
-                            <option value="{{ $srv->id_servicio }}">{{ $srv->nombre_servicio }} (${{ number_format($srv->precio_base, 2) }})</option>
+                            <option value="{{ $srv->id_servicio }}">
+                                {{ $srv->nombre_servicio }} (${{ number_format($srv->precio_base, 2) }})
+                            </option>
                         @endforeach
                     </select>
                 </div>
 
                 <div style="flex: 1; min-width: 150px;">
                     <label style="font-weight: 700;">Duración:</label>
-                    <select name="duracion_minutos" id="form-cita-duracion" class="modern-input">
+                    <select name="duracion_minutos" class="modern-input">
                         <option value="15">15 min</option>
                         <option value="30" selected>30 min</option>
                     </select>
                 </div>
             </div>
 
+            {{-- CONTENEDOR PRINCIPAL --}}
             <div style="display: flex; flex-wrap: wrap; gap: 30px; background: #ffffff; border-radius: 20px;">
-                {{-- 1. CALENDARIO --}}
+
+                {{-- CALENDARIO --}}
                 <div style="flex: 1; min-width: 320px; background: #F8FDFF; padding: 25px; border-radius: 16px; border: 1px solid #dceeef;">
-                    <h4 style="font-weight: 800;"><i class="fa-regular fa-calendar-days"></i> 1. Elige el Día</h4>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin:15px 0;">
-                        <button type="button" onclick="cambiarMesReserva(-1)" style="border:none; background:none; cursor:pointer;">❮</button>
-                        <span id="reserva-mes-anio" style="font-weight:800; color: #06b6d4; text-transform: capitalize;">Cargando...</span>
-                        <button type="button" onclick="cambiarMesReserva(1)" style="border:none; background:none; cursor:pointer;">❯</button>
+                    
+                    <h4 style="font-weight: 800;">
+                        <i class="fa-regular fa-calendar-days"></i> 1. Elige el Día
+                    </h4>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; margin-top: 15px;">
+                        <button type="button" onclick="cambiarMesReserva(-1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">❮</button>
+
+                        <span id="reserva-mes-anio" style="font-weight:800; color: #06b6d4; text-transform: capitalize; font-size: 1.1rem;">
+                            Cargando...
+                        </span>
+
+                        <button type="button" onclick="cambiarMesReserva(1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">❯</button>
                     </div>
-                    <div class="calendar-labels"><div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div></div>
+
+                    <div class="calendar-labels">
+                        <div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div>
+                    </div>
+
                     <div id="reserva-grid-dias"></div>
+
                     <div class="legend-container">
                         <span><span class="dot" style="background:#22c55e;"></span> Libre</span>
                         <span><span class="dot" style="background:#f59e0b;"></span> Pocos</span>
@@ -922,79 +900,84 @@
                     </div>
                 </div>
 
-                {{-- 2. HORARIOS --}}
-                <div style="flex: 1; min-width: 300px;">
-                    <h4 style="font-weight: 800;"><i class="fa-regular fa-clock"></i> 2. Elige la Hora</h4>
-                    <p id="lbl-fecha-seleccionada" style="color: #888; margin: 10px 0;">Selecciona un día en el calendario primero.</p>
+                {{-- HORARIOS --}}
+                <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
+                    <h4 style="font-weight: 800;">
+                        <i class="fa-regular fa-clock"></i> 2. Elige la Hora
+                    </h4>
+                    <p id="lbl-fecha-seleccionada" style="color: #888; margin-top: 10px; margin-bottom: 15px;">
+                        Selecciona un día en el calendario primero.
+                    </p>
                     <input type="hidden" name="fecha" id="input-reserva-fecha" required>
                     <input type="hidden" name="hora" id="input-reserva-hora" required>
 
-                    <div id="reserva-contenedor-horarios" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-                        <div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: #aaa; border: 2px dashed #ddd; border-radius: 12px;">
-                            Esperando selección de fecha...
+                    <div id="reserva-contenedor-horarios" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; min-height: 200px;">
+                        <div style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px; color: #aaa;">
+                            <p>Esperando selección de fecha...</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- DOCUMENTOS --}}
+            {{-- 📄 CUIDADOS --}}
             <div style="margin-top: 25px;">
                 <label style="font-weight: 700;">📄 Subir cuidados post-tratamiento (Máx. 2MB)</label>
-                <input type="file" name="cuidados_pdf" accept="application/pdf" id="input-cuidados" style="display:none;" onchange="validarTamanoArchivo(this, 'nombre-cuidados')">
-                <div onclick="document.getElementById('input-cuidados').click()" style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; background: #f9fafb;">
-                    <i class="fa-solid fa-file-pdf" style="color:#ef4444;"></i> <span id="nombre-cuidados">Seleccionar PDF</span>
+                <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 18px; background: #f9fafb; text-align: center; margin-top: 8px; transition: 0.2s;"
+                     onmouseover="this.style.borderColor='#06b6d4'; this.style.background='#ecfeff'"
+                     onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
+                    <input type="file" name="cuidados_pdf" accept="application/pdf" id="input-cuidados" style="display:none;"
+                           onchange="validarTamanoArchivo(this, 'nombre-cuidados')">
+                    <label for="input-cuidados" style="cursor:pointer;">
+                        <i class="fa-solid fa-file-pdf" style="font-size: 1.8rem; color:#ef4444;"></i>
+                        <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
+                        <span id="nombre-cuidados" style="font-size: 0.85rem; color:#666;">Ningún archivo seleccionado</span>
+                    </label>
                 </div>
             </div>
 
-            <button type="submit" class="ghost-btn" style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; margin-top: 25px; background: #06b6d4; color: white; border: none; cursor: pointer;">
+            {{-- 🪥 TIPS --}}
+            <div style="margin-top: 20px;">
+                <label style="font-weight: 700;">🪥 Subir tips de higiene (Máx. 2MB)</label>
+                <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 18px; background: #f9fafb; text-align: center; margin-top: 8px; transition: 0.2s;"
+                     onmouseover="this.style.borderColor='#22c55e'; this.style.background='#f0fdf4'"
+                     onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
+                    <input type="file" name="tips_pdf" accept="application/pdf" id="input-tips" style="display:none;"
+                           onchange="validarTamanoArchivo(this, 'nombre-tips')">
+                    <label for="input-tips" style="cursor:pointer;">
+                        <i class="fa-solid fa-tooth" style="font-size: 1.8rem; color:#22c55e;"></i>
+                        <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
+                        <span id="nombre-tips" style="font-size: 0.85rem; color:#666;">Ningún archivo seleccionado</span>
+                    </label>
+                </div>
+            </div>
+
+            {{-- BOTÓN FINAL --}}
+            <button type="submit" class="ghost-btn"
+                style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; margin-top: 25px; background: #06b6d4; color: white; border: none; cursor: pointer;">
                 <i class="fa-solid fa-floppy-disk"></i> Confirmar Cita
             </button>
         </form>
     </div>
 
     <script>
-        // --- INICIALIZACIÓN: MES DE ABRIL ---
-        let hoy = new Date();
-        // Si estamos en marzo, sumamos 1 para que inicie en abril
-        let mesActual = hoy.getMonth() === 2 ? 3 : hoy.getMonth(); 
-        let anioActual = hoy.getFullYear();
-
-        // --- FUNCIÓN PARA VALIDAR PDF ---
         function validarTamanoArchivo(input, spanId) {
             const file = input.files[0];
-            const maxKB = 2048;
+            const maxKiloBytes = 2048; // 2MB
             const span = document.getElementById(spanId);
-            if (file && file.size > maxKB * 1024) {
-                alert("Archivo demasiado grande. Máximo 2048 KB.");
-                input.value = "";
-                span.innerText = "Seleccionar PDF";
-            } else {
-                span.innerText = file ? file.name : "Seleccionar PDF";
-            }
-        }
 
-        // --- FUNCIÓN PARA PINTAR HORARIOS CON BLOQUEO ---
-        // Ejemplo de uso: pintarHorarios(['09:00 AM', '10:00 AM'], ['09:00 AM'])
-        function pintarHorarios(disponibles, ocupados) {
-            const contenedor = document.getElementById('reserva-contenedor-horarios');
-            contenedor.innerHTML = '';
-
-            disponibles.forEach(hora => {
-                const btn = document.createElement('div');
-                btn.innerText = hora;
-                
-                if (ocupados.includes(hora)) {
-                    btn.className = 'hora-item hora-bloqueada';
+            if (file) {
+                if (file.size > maxKiloBytes * 1024) {
+                    alert("El archivo '" + file.name + "' es demasiado grande. El límite es de 2048 KB (2MB).");
+                    input.value = ""; // Limpia el input
+                    span.innerText = "Ningún archivo seleccionado";
+                    span.style.color = "#ef4444";
                 } else {
-                    btn.className = 'hora-item';
-                    btn.onclick = function() {
-                        document.querySelectorAll('.hora-item').forEach(el => el.classList.remove('hora-selected'));
-                        btn.classList.add('hora-selected');
-                        document.getElementById('input-reserva-hora').value = hora;
-                    };
+                    span.innerText = file.name;
+                    span.style.color = "#666";
                 }
-                contenedor.appendChild(btn);
-            });
+            } else {
+                span.innerText = "Ningún archivo seleccionado";
+            }
         }
     </script>
 </div>
