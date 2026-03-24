@@ -816,6 +816,49 @@
             margin-bottom: 5px;
         }
 
+        /* --- NUEVOS ESTILOS PARA HORARIOS --- */
+        .hora-item {
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid #dceeef;
+            background: white;
+            color: #333;
+        }
+
+        .hora-item:hover:not(.hora-bloqueada) {
+            background: #06b6d4;
+            color: white;
+        }
+
+        .hora-bloqueada {
+            background-color: #f3f4f6 !important;
+            color: #9ca3af !important;
+            border: 1px solid #e5e7eb !important;
+            cursor: not-allowed !important;
+            pointer-events: none; /* Bloquea el click */
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .hora-bloqueada::after {
+            content: '✖';
+            font-size: 0.6rem;
+            position: absolute;
+            top: 2px;
+            right: 4px;
+        }
+
+        .hora-selected {
+            background: #06b6d4 !important;
+            color: white !important;
+            border-color: #06b6d4 !important;
+        }
+        /* ------------------------------------ */
+
         .legend-container {
             display: flex;
             justify-content: center;
@@ -872,18 +915,13 @@
 
                 {{-- CALENDARIO --}}
                 <div style="flex: 1; min-width: 320px; background: #F8FDFF; padding: 25px; border-radius: 16px; border: 1px solid #dceeef;">
-                    
                     <h4 style="font-weight: 800;">
                         <i class="fa-regular fa-calendar-days"></i> 1. Elige el Día
                     </h4>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; margin-top: 15px;">
                         <button type="button" onclick="cambiarMesReserva(-1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">❮</button>
-
-                        <span id="reserva-mes-anio" style="font-weight:800; color: #06b6d4; text-transform: capitalize; font-size: 1.1rem;">
-                            Cargando...
-                        </span>
-
+                        <span id="reserva-mes-anio" style="font-weight:800; color: #06b6d4; text-transform: capitalize; font-size: 1.1rem;">Cargando...</span>
                         <button type="button" onclick="cambiarMesReserva(1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">❯</button>
                     </div>
 
@@ -908,9 +946,11 @@
                     <p id="lbl-fecha-seleccionada" style="color: #888; margin-top: 10px; margin-bottom: 15px;">
                         Selecciona un día en el calendario primero.
                     </p>
+                    
                     <input type="hidden" name="fecha" id="input-reserva-fecha" required>
                     <input type="hidden" name="hora" id="input-reserva-hora" required>
 
+                    {{-- Este contenedor ahora recibirá divs con clase .hora-item y opcionalmente .hora-bloqueada --}}
                     <div id="reserva-contenedor-horarios" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; min-height: 200px;">
                         <div style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px; color: #aaa;">
                             <p>Esperando selección de fecha...</p>
@@ -951,7 +991,6 @@
                 </div>
             </div>
 
-            {{-- BOTÓN FINAL --}}
             <button type="submit" class="ghost-btn"
                 style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; margin-top: 25px; background: #06b6d4; color: white; border: none; cursor: pointer;">
                 <i class="fa-solid fa-floppy-disk"></i> Confirmar Cita
@@ -968,7 +1007,7 @@
             if (file) {
                 if (file.size > maxKiloBytes * 1024) {
                     alert("El archivo '" + file.name + "' es demasiado grande. El límite es de 2048 KB (2MB).");
-                    input.value = ""; // Limpia el input
+                    input.value = ""; 
                     span.innerText = "Ningún archivo seleccionado";
                     span.style.color = "#ef4444";
                 } else {
