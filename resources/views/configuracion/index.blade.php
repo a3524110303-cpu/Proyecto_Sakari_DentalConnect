@@ -14,6 +14,12 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div style="background: #f8d7da; color: #842029; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <i class="fa-solid fa-circle-xmark"></i> {{ session('error') }}
+        </div>
+    @endif
+
     @if($errors->any())
         <div style="background: #f8d7da; color: #842029; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
             <i class="fa-solid fa-triangle-exclamation"></i>

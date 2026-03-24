@@ -215,14 +215,16 @@ class ConfiguracionController extends Controller
     public function subirFotoDoctor(Request $request)
     {
         $request->validate([
-            'foto_perfil' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'foto_perfil' => 'required|image|mimes:jpeg,png,jpg,webp|max:10240', // 10MB máximo
         ]);
 
         $user = Auth::user();
-        $doctor = Doctor::where('id_usuario', $user->id_usuario)->first();
+        // Buscar al doctor dueño de la clínica, sin importar si soy admin o recepcionista
+        $doctorUser = User::where('id_clinica', $user->id_clinica)->where('rol', 'doctor')->first();
+        $doctor = $doctorUser ? Doctor::where('id_usuario', $doctorUser->id_usuario)->first() : null;
 
         if (!$doctor) {
-            return back()->with('error', 'No se encontró el perfil del doctor.');
+            return back()->with('error', 'No se encontró el perfil del doctor para esta clínica.');
         }
 
         // Eliminar foto anterior si existe
