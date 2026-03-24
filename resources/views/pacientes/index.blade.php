@@ -783,8 +783,8 @@
                 <i class="fa-solid fa-calendar-plus"></i> Agendar Nueva Cita
             </h3>
 
-            <form id="form-add-cita" action="{{ route('citas.store') }}" method="POST">
-                @csrf
+           <form id="form-add-cita" action="{{ route('citas.store') }}" method="POST" enctype="multipart/form-data">
+             @csrf
                 <input type="hidden" name="id_paciente" id="form-cita-paciente-id">
 
                 {{-- Fila superior: Paciente + Servicio --}}
@@ -886,6 +886,20 @@
                         </div>
                     </div>
                 </div>
+                 {{-- 🔥 NUEVO CAMPO PDF --}}
+            <div style="margin-top: 20px;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 700;">
+                    📄 Subir cuidados post-tratamiento
+                </label>
+
+                <input 
+                    type="file" 
+                    name="cuidados_pdf"
+                    accept="application/pdf"
+                    class="modern-input"
+                    style="padding: 10px; background: #f8f9fa; cursor: pointer;"
+                >
+            </div>
 
                 {{-- Botón confirmar --}}
                 <button type="submit" id="btn-confirmar-cita" class="ghost-btn"
