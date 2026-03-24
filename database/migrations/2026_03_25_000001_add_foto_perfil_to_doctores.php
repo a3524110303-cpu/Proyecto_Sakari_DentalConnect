@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('doctores', function (Blueprint $table) {
-            $table->string('foto_perfil', 255)->nullable()->after('horario_default');
+            $table->string('foto_perfil', 255)->nullable();
         });
     }
 
