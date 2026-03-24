@@ -550,14 +550,13 @@
         </div>
     </div>
 
-    {{-- Perfil del Paciente (Sección de detalle) --}}
     <div id="modal-patient-profile" class="modal-overlay">
-        <div class="modal-glass modal-xl" style="max-width: 1000px; padding: 0; overflow: hidden; border-radius: 20px;">
+        <div class="modal-glass modal-xl" style="max-width: 1000px; padding: 0; overflow: hidden; border-radius: 20px; display: flex; flex-direction: column; max-height: 92vh;">
             <button class="close-modal" onclick="closeModal('modal-patient-profile')"
                 style="position: absolute; top: 15px; right: 20px; z-index: 10;">&times;</button>
 
-            <div class="profile-header-container"
-                style="background: linear-gradient(135deg, #e0fbfc 0%, #caf0f8 100%); padding: 35px 45px; border-bottom: 1px solid #b0e0f5; display: flex; align-items: center; gap: 25px;">
+            <div class="profile-header-container" style="flex-shrink: 0;
+                background: linear-gradient(135deg, #e0fbfc 0%, #caf0f8 100%); padding: 35px 45px; border-bottom: 1px solid #b0e0f5; display: flex; align-items: center; gap: 25px;">
                 <div style="position: relative; width: 85px; height: 85px;"
                     title="Clic para subir/cambiar foto de progreso">
                     <img id="p-foto" src="" alt="Foto Paciente"
@@ -582,8 +581,8 @@
                 </div>
             </div>
 
-            <div class="profile-tabs-container"
-                style="display: flex; border-bottom: 2px solid #eee; padding: 0 30px; background: white;">
+            <div class="profile-tabs-container" style="flex-shrink: 0;
+                display: flex; border-bottom: 2px solid #eee; padding: 0 30px; background: white;">
                 <button onclick="showTab('tab-general')" id="btn-tab-general" class="tab-btn tab-active">
                     <i class="fa-solid fa-user"></i> Resumen General
                 </button>
@@ -650,7 +649,7 @@
                 }
             </style>
 
-            <div class="profile-content-container" style="padding: 35px 45px; overflow-y: auto; max-height: 65vh;">
+            <div class="profile-content-container" style="flex: 1; min-height: 0; overflow-y: auto; padding: 35px 45px;">
                 <div id="tab-general">
                     <div class="general-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
                         <div>

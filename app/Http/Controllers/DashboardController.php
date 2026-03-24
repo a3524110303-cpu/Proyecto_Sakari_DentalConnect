@@ -273,7 +273,7 @@ class DashboardController extends Controller
                 'id_cita'=>$cita->id_cita,
                 'monto'=>$request->monto_abono,
                 'fecha_ingreso'=>now(),
-                'metodo_pago'=>'efectivo',
+                'metodo'=>'efectivo',
                 'descripcion'=>'Abono en cita: '.$cita->motivo
 
             ]);
@@ -565,6 +565,40 @@ class DashboardController extends Controller
             'horas_ocupadas' => array_values(array_unique($horasOcupadas)),
             'total_slots' => $totalSlots,
         ];
+    }
+    /**
+     * Retorna notificaciones de reagenda no leídas del usuario autenticado.
+     */
+    public function notificacionesReagenda()
+    {
+        $user = Auth::user();
+
+        $notificaciones = Notificacion::where('id_usuario', $user->id_usuario)
+            ->where('tipo', 'reagenda')
+            ->where('estado', 'no_leida')
+            ->orderBy('created_at', 'desc')
+            ->take(20)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $notificaciones,
+        ]);
+    }
+
+    /**
+     * Marca una notificación como leída.
+     */
+    public function marcarNotificacionLeida($id)
+    {
+        $notificacion = Notificacion::where('id_notificacion', $id)
+            ->where('id_usuario', Auth::id())
+            ->firstOrFail();
+
+        $notificacion->estado = 'leida';
+        $notificacion->save();
+
+        return response()->json(['success' => true, 'message' => 'Notificación marcada como leída.']);
     }
 
 }

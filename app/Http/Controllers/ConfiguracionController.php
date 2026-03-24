@@ -209,4 +209,30 @@ class ConfiguracionController extends Controller
             ->orderByRaw('FIELD(dia_semana, 1, 2, 3, 4, 5, 6, 0)')
             ->get();
     }
+    /**
+     * Sube o actualiza la foto de perfil del doctor.
+     */
+    public function subirFotoDoctor(Request $request)
+    {
+        $request->validate([
+            'foto_perfil' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        $user = Auth::user();
+        $doctor = Doctor::where('id_usuario', $user->id_usuario)->first();
+
+        if (!$doctor) {
+            return back()->with('error', 'No se encontró el perfil del doctor.');
+        }
+
+        // Eliminar foto anterior si existe
+        if ($doctor->foto_perfil && \Storage::disk('public')->exists($doctor->foto_perfil)) {
+            \Storage::disk('public')->delete($doctor->foto_perfil);
+        }
+
+        $ruta = $request->file('foto_perfil')->store('fotos_doctores', 'public');
+        $doctor->update(['foto_perfil' => $ruta]);
+
+        return back()->with('success', 'Foto de perfil actualizada correctamente.');
+    }
 }

@@ -346,7 +346,7 @@ class PacienteAppController extends Controller
 
         // 4. Buscar en la Base de Datos a qué hora abren y cierran ESE DÍA ESPECÍFICO
         try {
-            $horariosClinica = \Illuminate\Support\Facades\DB::table('horario_clinicas')
+            $horariosClinica = \Illuminate\Support\Facades\DB::table('horarios_clinica')
                 ->where('id_clinica', $idClinica)
                 ->get();
 
@@ -478,7 +478,7 @@ class PacienteAppController extends Controller
 
         // 2. BUSCAR DÍAS DE LA SEMANA
         try {
-            $horarios = \Illuminate\Support\Facades\DB::table('horario_clinicas')
+            $horarios = \Illuminate\Support\Facades\DB::table('horarios_clinica')
                 ->where('id_clinica', $idClinica)
                 ->get();
 

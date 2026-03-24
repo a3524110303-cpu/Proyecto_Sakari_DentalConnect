@@ -104,7 +104,7 @@ class PacienteController extends Controller
             DB::commit();
 
             return redirect()->back()
-                ->with('success', "Paciente registrado correctamente. TOKEN: {$tokenStr}");
+                ->with('success', 'Paciente registrado correctamente. Se ha generado su acceso a la aplicación móvil.');
 
         } catch (\Exception $e) {
             DB::rollBack();
