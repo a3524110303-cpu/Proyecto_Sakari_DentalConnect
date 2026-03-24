@@ -56,7 +56,7 @@ Route::post('/stripe/webhook', [SuscripcionController::class, 'webhook'])->name(
  * Incluyen el dashboard, gestión de pacientes, tratamientos, configuración y APIs internas.
  */
 // Rutas Privadas (Requieren Login)
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Suscripciones SaaS
