@@ -1250,9 +1250,13 @@
             document.getElementById('view-enfermedades').innerText = paciente.enfermedades_cronicas || 'Ninguna registrada';
 
             // Foto
-            const fotoUrl = paciente.archivos ? paciente.archivos.find(a => a.tipo === 'imagen') : null;
+            const fotoUrl = paciente.archivos
+                ? (paciente.archivos.find(a => a.tipo === 'imagen' && a.descripcion === 'Foto de perfil/progreso del paciente')
+                    || paciente.archivos.find(a => a.tipo === 'imagen'))
+                : null;
             if (fotoUrl) {
-                document.getElementById('p-foto').src = '/storage/' + fotoUrl.url_archivo.replace('public/', '');
+                const ruta = (fotoUrl.url_archivo || '').replace('public/', '').replace(/^\/+/, '');
+                document.getElementById('p-foto').src = '/storage-file/' + ruta;
                 document.getElementById('p-foto').style.display = 'block';
                 document.getElementById('p-foto-placeholder').style.display = 'none';
             } else {

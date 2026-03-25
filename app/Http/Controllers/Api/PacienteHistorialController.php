@@ -132,6 +132,7 @@ class PacienteHistorialController extends Controller
             // Buscar si ya tiene una foto, si sí, actualizar, si no, crear.
             $archivo = Archivo::where('id_paciente', $idPaciente)
                 ->where('tipo', 'imagen')
+                ->where('descripcion', 'Foto de perfil/progreso del paciente')
                 ->first();
 
             if ($archivo) {

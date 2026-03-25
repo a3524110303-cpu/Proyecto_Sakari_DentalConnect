@@ -73,6 +73,23 @@ class PacienteAppController extends Controller
             ->orderBy('fecha_hora_inicio', 'asc')
             ->get();
 
+        $citas->transform(function ($cita) {
+            $cuidados = $cita->archivos
+                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'cuidados_pdf');
+            $tips = $cita->archivos
+                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'tips_pdf');
+
+            $cita->cuidados_pdf_url = $cuidados
+                ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cuidados->url_archivo), '/')])
+                : ($cita->cuidados_pdf_url ?? null);
+
+            $cita->tips_pdf_url = $tips
+                ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $tips->url_archivo), '/')])
+                : ($cita->tips_pdf_url ?? null);
+
+            return $cita;
+        });
+
         return response()->json([
             'success' => true,
             'data' => $citas
@@ -100,6 +117,23 @@ class PacienteAppController extends Controller
             ->orderBy('fecha_hora_inicio', 'desc')
             ->take(15) // Limitado por desempeño
             ->get();
+
+        $citas->transform(function ($cita) {
+            $cuidados = $cita->archivos
+                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'cuidados_pdf');
+            $tips = $cita->archivos
+                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'tips_pdf');
+
+            $cita->cuidados_pdf_url = $cuidados
+                ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cuidados->url_archivo), '/')])
+                : ($cita->cuidados_pdf_url ?? null);
+
+            $cita->tips_pdf_url = $tips
+                ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $tips->url_archivo), '/')])
+                : ($cita->tips_pdf_url ?? null);
+
+            return $cita;
+        });
 
         return response()->json(['success' => true, 'data' => $citas]);
     }
