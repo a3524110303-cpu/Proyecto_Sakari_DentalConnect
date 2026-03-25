@@ -128,16 +128,37 @@ Route::get('/storage-file/{path}', function ($path) {
         abort(403);
     }
 
-    $disk = Storage::disk('public');
-    $root = config('filesystems.disks.public.root');
-    $relativePath = ltrim($path, '/');
-    $fullPath = rtrim((string) $root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $relativePath;
+    $rawPath = ltrim((string) $path, '/');
+    $decodedPath = ltrim(rawurldecode($rawPath), '/');
 
-    if (!$disk->exists($relativePath)) {
-        abort(404);
+    $candidatos = array_values(array_unique([
+        $decodedPath,
+        preg_replace('#^public/#', '', $decodedPath),
+    ]));
+
+    $disk = Storage::disk('public');
+    $root = rtrim((string) config('filesystems.disks.public.root'), DIRECTORY_SEPARATOR);
+    $fallbackRoot = rtrim(storage_path('app/public'), DIRECTORY_SEPARATOR);
+
+    $fullPath = null;
+    foreach ($candidatos as $rel) {
+        if ($rel === null || $rel === '') {
+            continue;
+        }
+
+        if ($disk->exists($rel)) {
+            $fullPath = $root . DIRECTORY_SEPARATOR . $rel;
+            break;
+        }
+
+        $fallbackPath = $fallbackRoot . DIRECTORY_SEPARATOR . $rel;
+        if (file_exists($fallbackPath)) {
+            $fullPath = $fallbackPath;
+            break;
+        }
     }
 
-    if (!file_exists($fullPath)) {
+    if (!$fullPath || !file_exists($fullPath)) {
         abort(404);
     }
 
