@@ -476,6 +476,7 @@
                    value="{{ old('fecha_nacimiento') }}" 
                    max="{{ date('Y-m-d', strtotime('-2 years')) }}"
                    title="El paciente debe tener al menos 2 años de edad">
+                   
                     <select name="sexo" class="modern-input" required>
                         <option value="" disabled selected>Sexo*</option>
                         <option value="M" {{ old('sexo') == 'M' ? 'selected' : '' }}>Masculino</option>
