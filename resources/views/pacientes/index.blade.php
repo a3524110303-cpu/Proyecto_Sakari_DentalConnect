@@ -1388,7 +1388,7 @@
 
                     let imageHtml = '';
                     if (ev.imagenes && ev.imagenes.length > 0) {
-                        const imgUrl = '/storage/' + ev.imagenes[0].ruta_imagen;
+                        const imgUrl = ev.imagenes[0].url_imagen || ('/storage/' + ev.imagenes[0].ruta_imagen);
                         imageHtml = `<div style="margin-top: 15px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; display: inline-block;">
                                                                                                                 <a href="${imgUrl}" target="_blank" title="Ver imagen completa">
                                                                                                                     <img src="${imgUrl}" alt="Evidencia" style="max-width: 200px; max-height: 150px; display: block; object-fit: cover;">
