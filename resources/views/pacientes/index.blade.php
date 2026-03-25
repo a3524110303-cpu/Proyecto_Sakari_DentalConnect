@@ -470,13 +470,14 @@
                         maxlength="15" value="{{ old('telefono') }}" oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
 
                    <input type="date" 
-                   name="fecha_nacimiento"
-                   class="modern-input" 
-                   required
-                   value="{{ old('fecha_nacimiento') }}" 
-                   max="{{ date('Y-m-d', strtotime('-2 years')) }}"
-                   title="El paciente debe tener al menos 2 años de edad">
-                   
+       name="fecha_nacimiento" 
+       class="modern-input" 
+       required
+       value="{{ old('fecha_nacimiento') }}" 
+       max="{{ date('Y-m-d', strtotime('-2 years')) }}"
+       oninvalid="this.setCustomValidity('La fecha de nacimiento no es válida')"
+       oninput="this.setCustomValidity('')">
+
                     <select name="sexo" class="modern-input" required>
                         <option value="" disabled selected>Sexo*</option>
                         <option value="M" {{ old('sexo') == 'M' ? 'selected' : '' }}>Masculino</option>
