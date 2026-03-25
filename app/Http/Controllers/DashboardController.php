@@ -747,7 +747,14 @@ class DashboardController extends Controller
 
         $notificacion = Notificacion::where('id_notificacion', $id)
             ->where('id_usuario', Auth::user()->id_usuario)
-            ->firstOrFail();
+            ->first();
+
+        if (!$notificacion) {
+            return response()->json([
+                'success' => true,
+                'message' => 'La notificacion ya fue procesada o no existe.',
+            ]);
+        }
 
         if ($request->accion === 'aceptar') {
             $cita = Cita::find($notificacion->id_cita);
@@ -810,7 +817,7 @@ class DashboardController extends Controller
             $cita->save();
         }
 
-        $notificacion->estado = 'leida';
+        $notificacion->estado = 'leido';
         $notificacion->save();
 
         return response()->json([
@@ -827,10 +834,17 @@ class DashboardController extends Controller
     public function marcarNotificacionLeida($id)
     {
         $notificacion = Notificacion::where('id_notificacion', $id)
-            ->where('id_usuario', Auth::id())
-            ->firstOrFail();
+            ->where('id_usuario', Auth::user()->id_usuario)
+            ->first();
 
-        $notificacion->estado = 'leida';
+        if (!$notificacion) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Notificacion ya marcada o no encontrada.',
+            ]);
+        }
+
+        $notificacion->estado = 'leido';
         $notificacion->save();
 
         return response()->json(['success' => true, 'message' => 'Notificación marcada como leída.']);
