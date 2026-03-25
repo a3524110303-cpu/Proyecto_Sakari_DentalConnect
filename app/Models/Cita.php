@@ -44,16 +44,13 @@ class Cita extends Model
         'costo_estimado',
         'motivo',
         'notas',
-<<<<<<< HEAD
         'reagenda_solicitada_at',
         'reagenda_fecha_solicitada',
         'reagenda_hora_solicitada',
         'reagenda_motivo',
-        'reagenda_estatus'
-=======
+        'reagenda_estatus',
         'cuidados_pdf',
         'tips_pdf',
->>>>>>> 66451db0d14e939f31dd568f91653af885088535
     ];
 
     protected $appends = [

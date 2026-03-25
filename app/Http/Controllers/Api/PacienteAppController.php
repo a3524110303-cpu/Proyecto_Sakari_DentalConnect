@@ -598,8 +598,6 @@ class PacienteAppController extends Controller
             ], 400);
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
         if (!in_array($cita->estado_cita, ['pendiente', 'confirmada'], true)) {
             return response()->json([
                 'success' => false,
@@ -615,43 +613,6 @@ class PacienteAppController extends Controller
             ], 422);
         }
 
-        $cita->reagenda_solicitada_at = now();
-        $cita->reagenda_fecha_solicitada = $request->fecha;
-        $cita->reagenda_hora_solicitada = $request->hora;
-        $cita->reagenda_motivo = $request->motivo;
-        $cita->reagenda_estatus = 'pendiente';
-
-        // 1. Añadir nota de reagenda al historial de la cita
-        $notaReagenda = "SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
-            . $request->fecha . " a las " . $request->hora
-            . ". Motivo: " . ($request->motivo ?? 'No especificado');
-=======
-        // CANDADO 2 (EL TRUCO): Validar si ya fue reagendada leyendo el historial de notas
-        if ($cita->notas && strpos($cita->notas, '⚠️ REAGENDADA POR PACIENTE') !== false) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Límite alcanzado. Solo puedes reagendar tu cita una vez.'
-            ], 400);
-        }
-
-        $fechaCitaOriginal = \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
-
-        // ACTUALIZAMOS LOS DATOS SEGUROS
-        $nuevaFechaHora = $request->fecha . ' ' . $request->hora . ':00';
-        $cita->fecha_hora_inicio = $nuevaFechaHora;
-        $cita->estado_cita = 'pendiente'; // Lo regresamos al estado por defecto para evitar errores de ENUM
-
-        // Usamos la nota como nuestra "Bandera" eterna de que ya se reagendó
-        $notaReagenda = "⚠️ REAGENDADA POR PACIENTE: La cita original era el " . $fechaCitaOriginal . ".";
->>>>>>> 4f77b79af23ec045e416aed9ee7b8676b23505a5
-        $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
-        
-        // AHORA SÍ GUARDARÁ PERFECTAMENTE
-        $cita->save();
-
-        // Notificar al Doctor
-        $paciente = Paciente::where('id_usuario', Auth::id())->first();
-=======
         // Revisar si ya tiene una petición pendiente para evitar spam.
         $peticionPrevia = Notificacion::where('id_cita', $cita->id_cita)
             ->where('estado', 'no_leida')
@@ -661,8 +622,19 @@ class PacienteAppController extends Controller
             return response()->json(['success' => false, 'message' => 'Ya tienes una solicitud de reagenda en proceso.'], 400);
         }
 
-        $fechaCitaOriginal = \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
->>>>>>> 66451db0d14e939f31dd568f91653af885088535
+        $fechaCitaOriginal = Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
+
+        $cita->reagenda_solicitada_at = now();
+        $cita->reagenda_fecha_solicitada = $request->fecha;
+        $cita->reagenda_hora_solicitada = $request->hora;
+        $cita->reagenda_motivo = $request->motivo;
+        $cita->reagenda_estatus = 'pendiente';
+        $notaReagenda = "SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
+            . $request->fecha . " a las " . $request->hora
+            . ". Motivo: " . ($request->motivo ?? 'No especificado');
+        $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
+        $cita->save();
+
         $idUsuarioDoctor = optional($cita->doctor)->id_usuario;
 
         if ($idUsuarioDoctor) {
@@ -692,15 +664,7 @@ class PacienteAppController extends Controller
 
         return response()->json([
             'success' => true,
-<<<<<<< HEAD
-<<<<<<< HEAD
             'message' => 'Solicitud de reagenda enviada. La clinica debe aplicarla el mismo dia de la solicitud.',
-=======
-            'message' => 'Cita reagendada correctamente a las ' . $request->hora,
->>>>>>> 4f77b79af23ec045e416aed9ee7b8676b23505a5
-=======
-            'message' => 'Tu solicitud de reagenda fue enviada a la clínica. Te confirmaremos pronto.',
->>>>>>> 66451db0d14e939f31dd568f91653af885088535
         ], 200);
     }
 
