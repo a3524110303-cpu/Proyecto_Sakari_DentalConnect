@@ -877,8 +877,18 @@ Incluye:
                     }
                 }
                 const paciente = datosObj.paciente ? datosObj.paciente : 'Paciente';
-                const nuevaFecha = datosObj.nueva_fecha ? datosObj.nueva_fecha : '-';
-                const nuevaHora = datosObj.nueva_hora ? datosObj.nueva_hora : '-';
+
+                let nuevaFecha = datosObj.nueva_fecha || datosObj.fecha || '-';
+                let nuevaHora = datosObj.nueva_hora || datosObj.hora || '-';
+
+                if ((nuevaFecha === '-' || nuevaHora === '-') && (datosObj.nueva_fecha_hora || datosObj.fecha_hora || datosObj.fecha_sugerida)) {
+                    const fechaHoraRaw = datosObj.nueva_fecha_hora || datosObj.fecha_hora || datosObj.fecha_sugerida;
+                    const dt = new Date(fechaHoraRaw);
+                    if (!isNaN(dt.getTime())) {
+                        if (nuevaFecha === '-') nuevaFecha = dt.toISOString().slice(0, 10);
+                        if (nuevaHora === '-') nuevaHora = dt.toTimeString().slice(0, 5);
+                    }
+                }
 
                 return '<div class="notif-item">'
                     + '<p class="notif-item-title">' + paciente + '</p>'

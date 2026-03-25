@@ -620,13 +620,31 @@ class DashboardController extends Controller
             }
 
             if (empty($datos['nueva_fecha']) || empty($datos['nueva_hora'])) {
-                if (!empty($datos['nueva_fecha_hora'])) {
+                // Compatibilidad con payloads antiguos o claves alternativas.
+                $fechaHoraRaw = $datos['nueva_fecha_hora']
+                    ?? $datos['fecha_hora']
+                    ?? $datos['fecha_sugerida']
+                    ?? null;
+
+                if (!empty($fechaHoraRaw)) {
                     try {
-                        $fecha = Carbon::parse($datos['nueva_fecha_hora']);
+                        $fecha = Carbon::parse($fechaHoraRaw);
                         $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? $fecha->format('Y-m-d');
                         $datos['nueva_hora'] = $datos['nueva_hora'] ?? $fecha->format('H:i');
                     } catch (\Throwable $e) {
+                        // Intento manual para formato dd/mm/YYYY HH:mm(:ss)
+                        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2})(?::\d{2})?$/', (string) $fechaHoraRaw, $m)) {
+                            $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? ($m[3] . '-' . $m[2] . '-' . $m[1]);
+                            $datos['nueva_hora'] = $datos['nueva_hora'] ?? $m[4];
+                        }
                     }
+                }
+
+                if (empty($datos['nueva_fecha']) && !empty($datos['fecha'])) {
+                    $datos['nueva_fecha'] = $datos['fecha'];
+                }
+                if (empty($datos['nueva_hora']) && !empty($datos['hora'])) {
+                    $datos['nueva_hora'] = $datos['hora'];
                 }
 
                 if (($cita && $cita->fecha_hora_inicio) && (empty($datos['nueva_fecha']) || empty($datos['nueva_hora']))) {
