@@ -803,11 +803,6 @@
             font-size: 0.9rem;
         }
 
-<<<<<<< HEAD
-            <form id="form-add-cita" action="{{ route('citas.store') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <input type="hidden" name="id_paciente" id="form-cita-paciente-id">
-=======
         /* Clases de disponibilidad según la imagen */
         .dia-libre { background-color: #e8f9ee; color: #22c55e; }
         .dia-pocos { background-color: #fef3c7; color: #f59e0b; }
@@ -815,7 +810,6 @@
         
         .dia-reserva:hover { transform: scale(1.05); filter: brightness(0.95); }
         .dia-selected { outline: 2px solid #06b6d4; box-shadow: 0 0 10px rgba(6,182,212,0.3); }
->>>>>>> 66451db0d14e939f31dd568f91653af885088535
 
         .calendar-labels {
             display: grid;
@@ -922,106 +916,10 @@
                     <input type="hidden" name="fecha" id="input-reserva-fecha" required>
                     <input type="hidden" name="hora" id="input-reserva-hora" required>
 
-<<<<<<< HEAD
-                    {{-- COLUMNA IZQUIERDA: CALENDARIO --}}
-                    <div
-                        style="flex: 1; min-width: 300px; background: #F8FDFF; padding: 25px; border-radius: 16px; border: 1px solid #dceeef;">
-                        <h4 style="color: #000; font-weight: 800; margin-top: 0; margin-bottom: 20px; font-size: 1.2rem;">
-                            <i class="fa-regular fa-calendar-days" style="color: var(--primary-color);"></i> 1. Elige el Día
-                        </h4>
 
-                        {{-- Navegación del mes --}}
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 10px 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
-                            <button type="button" onclick="cambiarMesReserva(-1)"
-                                style="border: none; background: transparent; cursor: pointer; color: #666; font-size: 1.1rem; padding: 5px 10px; border-radius: 8px;"
-                                onmouseover="this.style.background='#f0f0f0'"
-                                onmouseout="this.style.background='transparent'">
-                                <i class="fa-solid fa-chevron-left"></i>
-                            </button>
-                            <span id="reserva-mes-anio"
-                                style="font-weight: 800; color: var(--primary-color); font-size: 1.1rem; text-transform: capitalize;">Cargando...</span>
-                            <button type="button" onclick="cambiarMesReserva(1)"
-                                style="border: none; background: transparent; cursor: pointer; color: #666; font-size: 1.1rem; padding: 5px 10px; border-radius: 8px;"
-                                onmouseover="this.style.background='#f0f0f0'"
-                                onmouseout="this.style.background='transparent'">
-                                <i class="fa-solid fa-chevron-right"></i>
-                            </button>
-                        </div>
-
-                        {{-- Días de la semana --}}
-                        <div
-                            style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; font-size: 0.85em; font-weight: 700; color: #aaa; margin-bottom: 10px;">
-                            <span>D</span><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span>
-                        </div>
-
-                        {{-- Grid dinámica del calendario --}}
-                        <div id="reserva-grid-dias"
-                            style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; font-size: 0.95em;">
-                            {{-- Se llena con JS --}}
-                        </div>
-
-                        {{-- Leyenda --}}
-                        <div
-                            style="margin-top: 25px; display: flex; gap: 15px; justify-content: center; font-size: 0.75em; color: #666; font-weight: 600;">
-                            <div style="display:flex; align-items:center;"><span
-                                    style="width:10px;height:10px;background:#32D74B;border-radius:50%;margin-right:6px; box-shadow: 0 2px 4px rgba(50,215,75,0.3);"></span>Libre
-                            </div>
-                            <div style="display:flex; align-items:center;"><span
-                                    style="width:10px;height:10px;background:#FFC107;border-radius:50%;margin-right:6px; box-shadow: 0 2px 4px rgba(255,193,7,0.3);"></span>Pocos
-                            </div>
-                            <div style="display:flex; align-items:center;"><span
-                                    style="width:10px;height:10px;background:#EF4444;border-radius:50%;margin-right:6px; box-shadow: 0 2px 4px rgba(239,68,68,0.3);"></span>Lleno
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- COLUMNA DERECHA: HORARIOS --}}
-                    <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
-                        <h4 style="color: #000; font-weight: 800; margin-top: 0; margin-bottom: 5px; font-size: 1.2rem;">
-                            <i class="fa-regular fa-clock" style="color: var(--primary-color);"></i> 2. Elige la Hora
-                        </h4>
-                        <p id="lbl-fecha-seleccionada"
-                            style="color: #888; font-weight: 600; font-size: 0.9rem; margin-bottom: 20px;">
-                            Selecciona un día en el calendario primero.
-                        </p>
-
-                        <div style="margin-bottom: 15px;">
-                            <label style="display:block; margin-bottom:6px; font-weight:700; color:#444;">Duración</label>
-                            <select name="duracion_minutos" id="input-reserva-duracion" class="modern-input"
-                                style="max-width: 220px;" onchange="recalcularHorasReserva()">
-                                <option value="15">15 minutos</option>
-                                <option value="30" selected>30 minutos</option>
-                            </select>
-                        </div>
-
-                        {{-- Inputs ocultos compatibles con CitaController --}}
-                        <input type="hidden" name="fecha" id="input-reserva-fecha" required>
-                        <input type="hidden" name="hora" id="input-reserva-hora" required>
-
-                        <div style="margin-bottom: 15px; margin-top: 5px;">
-                            <label for="cuidados-postratamiento-pdf"
-                                style="display:block; margin-bottom:6px; font-weight:700; color:#444;">Subir cuidados
-                                post tratamiento (PDF)</label>
-                            <input type="file" name="cuidados_postratamiento_pdf" id="cuidados-postratamiento-pdf"
-                                class="modern-input" accept="application/pdf">
-                            <small style="display:block; margin-top:6px; color:#888; font-weight:600;">
-                                Opcional. Solo se aceptan archivos PDF (máx. 10MB).
-                            </small>
-                        </div>
-
-                        {{-- Contenedor de las píldoras --}}
-                        <div id="reserva-contenedor-horarios"
-                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; align-content: flex-start; flex-grow: 1;">
-                            <div
-                                style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px 20px; color: #aaa; font-weight: 600; text-align: center; height: 100%;">
-                                <p>Esperando selección de fecha...</p>
-                            </div>
-=======
                     <div id="reserva-contenedor-horarios" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; min-height: 200px;">
                         <div style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px; color: #aaa;">
                             <p>Esperando selección de fecha...</p>
->>>>>>> 66451db0d14e939f31dd568f91653af885088535
                         </div>
                     </div>
                 </div>

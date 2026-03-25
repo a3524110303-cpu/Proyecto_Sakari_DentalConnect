@@ -179,7 +179,14 @@ class PacienteAppController extends Controller
     {
         $fecha = Carbon::parse($request->input('fecha', now()));
 
-        $idClinica = Auth::user()->id_clinica ?? 1;
+        $idClinica = $this->resolveClinicaId(Auth::user());
+        if (!$idClinica) {
+            return response()->json([
+                'success' => true,
+                'fecha_solicitada' => $fecha->format('Y-m'),
+                'disponibilidad_mes' => [],
+            ]);
+        }
 
         $citasDiasMes = Cita::where('id_clinica', $idClinica)
             ->whereMonth('fecha_hora_inicio', $fecha->month)
@@ -202,7 +209,13 @@ class PacienteAppController extends Controller
      */
     public function clinicasYDoctores() 
     {
-        $idClinica = Auth::user()->id_clinica;
+        $idClinica = $this->resolveClinicaId(Auth::user());
+        if (!$idClinica) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo determinar la clinica del paciente autenticado.',
+            ], 404);
+        }
         $clinica   = Clinica::find($idClinica);
 
         // Construir dirección legible
@@ -256,7 +269,10 @@ class PacienteAppController extends Controller
      */
     public function tratamientos(Request $request)
     {
-        $idClinica = Auth::user()->id_clinica ?? 1;
+        $idClinica = $this->resolveClinicaId(Auth::user());
+        if (!$idClinica) {
+            return response()->json([]);
+        }
 
         // Buscamos los servicios de la clínica del paciente
         $servicios = \App\Models\Servicio::where('id_clinica', $idClinica)
@@ -364,8 +380,10 @@ class PacienteAppController extends Controller
     public function horasDisponiblesDia(Request $request)
     {
         $fecha = $request->query('fecha');
-        $user = Auth::user();
-        $idClinica = $user ? $user->id_clinica : 1;
+        $idClinica = $this->resolveClinicaId(Auth::user());
+        if (!$idClinica) {
+            return response()->json(['success' => true, 'data' => []]);
+        }
 
         // 1. Averiguar qué día de la semana es la fecha que nos piden (1 = Lunes, 7 = Domingo)
         $fechaCarbon = \Carbon\Carbon::parse($fecha);
@@ -480,7 +498,16 @@ class PacienteAppController extends Controller
     public function diasBloqueados(Request $request)
     {
         $user = Auth::user();
-        $idClinica = $user ? $user->id_clinica : 1;
+        $idClinica = $this->resolveClinicaId($user);
+        if (!$idClinica) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'fechas_bloqueadas' => [],
+                    'dias_semana_cerrados' => [6, 7],
+                ]
+            ]);
+        }
 
         $fechasBloqueadas = [];
         $diasSemanaCerrados = [];
@@ -572,6 +599,29 @@ class PacienteAppController extends Controller
                 'dias_semana_cerrados' => array_values($diasSemanaCerrados)
             ]
         ]);
+    }
+
+    private function resolveClinicaId($user): ?int
+    {
+        if (!$user) {
+            return null;
+        }
+
+        if (!empty($user->id_clinica)) {
+            return (int) $user->id_clinica;
+        }
+
+        $idUsuario = $user->id_usuario ?? $user->id ?? null;
+        if (!$idUsuario) {
+            return null;
+        }
+
+        $paciente = Paciente::where('id_usuario', $idUsuario)->first();
+        if ($paciente && !empty($paciente->id_clinica)) {
+            return (int) $paciente->id_clinica;
+        }
+
+        return null;
     }
 
     /**
