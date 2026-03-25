@@ -31,19 +31,28 @@ Resumen de secciones:
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Si existe el panel global del layout, evitamos duplicar UX de notificaciones.
+            if (document.getElementById('notif-bell')) {
+                return;
+            }
+
             fetch('/api/notificaciones/reagenda')
                 .then(r => r.json())
                 .then(data => {
-                    if (!data.success || !data.data || data.data.length === 0) return;
+                    const payload = Array.isArray(data)
+                        ? { success: true, data }
+                        : data;
+
+                    if (!payload.success || !Array.isArray(payload.data) || payload.data.length === 0) return;
 
                     const panel = document.getElementById('panel-notificaciones-reagenda');
                     const lista = document.getElementById('lista-notificaciones-reagenda');
                     const badge = document.getElementById('badge-reagenda-count');
 
                     panel.style.display = 'block';
-                    badge.textContent = data.data.length;
+                    badge.textContent = payload.data.length;
 
-                    data.data.forEach(n => {
+                    payload.data.forEach(n => {
                         const div = document.createElement('div');
                         div.id = 'notif-' + n.id_notificacion;
                         div.style.cssText = 'background: white; border: 1px solid #FDE68A; border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px;';

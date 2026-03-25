@@ -663,7 +663,18 @@ class PacienteAppController extends Controller
             'hora'   => 'required|string',
         ]);
 
-        $cita = Cita::with(['doctor.usuario', 'paciente'])->where('id_cita', $id)->first();
+        $user = Auth::user();
+        $idUsuario = $user->id_usuario ?? $user->id ?? Auth::id();
+        $pacienteAuth = Paciente::where('id_usuario', $idUsuario)->first();
+
+        if (!$pacienteAuth) {
+            return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
+        }
+
+        $cita = Cita::with(['doctor.usuario', 'paciente'])
+            ->where('id_cita', $id)
+            ->where('id_paciente', $pacienteAuth->id_paciente)
+            ->first();
 
         if (!$cita) {
             return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
@@ -742,10 +753,34 @@ class PacienteAppController extends Controller
     public function confirmarCita($id)
     {
         try {
-            $cita = Cita::find($id);
+            $user = Auth::user();
+            $idUsuario = $user->id_usuario ?? $user->id ?? Auth::id();
+            $pacienteAuth = Paciente::where('id_usuario', $idUsuario)->first();
+
+            if (!$pacienteAuth) {
+                return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
+            }
+
+            $cita = Cita::where('id_cita', $id)
+                ->where('id_paciente', $pacienteAuth->id_paciente)
+                ->first();
 
             if (!$cita) {
                 return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
+            }
+
+            if ($cita->estado_cita === 'confirmada') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'La cita ya estaba confirmada.'
+                ], 200);
+            }
+
+            if (!in_array($cita->estado_cita, ['pendiente', 'confirmada'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se pueden confirmar citas pendientes.'
+                ], 422);
             }
 
             // Cambiamos el estado a 'confirmada'
