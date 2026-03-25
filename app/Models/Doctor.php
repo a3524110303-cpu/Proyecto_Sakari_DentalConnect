@@ -27,7 +27,8 @@ class Doctor extends Model
     protected $fillable = [
         'id_usuario',
         'cedula_profesional',
-        'horario_default'
+        'horario_default',
+        'foto_perfil',
     ];
 
     public function usuario()

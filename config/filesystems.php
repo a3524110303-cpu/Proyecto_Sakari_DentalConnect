@@ -2,6 +2,8 @@
 
 return [
 
+    'railway_volume_root' => env('RAILWAY_VOLUME_MOUNT_PATH'),
+
     /*
     |--------------------------------------------------------------------------
     | Default Filesystem Disk
@@ -32,7 +34,12 @@ return [
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app/private'),
+            'root' => env(
+                'LOCAL_DISK_ROOT',
+                env('RAILWAY_VOLUME_MOUNT_PATH')
+                    ? rtrim(env('RAILWAY_VOLUME_MOUNT_PATH'), '/\\') . '/private'
+                    : storage_path('app/private')
+            ),
             'serve' => true,
             'throw' => false,
             'report' => false,
@@ -40,7 +47,12 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            'root' => env(
+                'PUBLIC_DISK_ROOT',
+                env('RAILWAY_VOLUME_MOUNT_PATH')
+                    ? rtrim(env('RAILWAY_VOLUME_MOUNT_PATH'), '/\\') . '/public'
+                    : storage_path('app/public')
+            ),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,

@@ -14,6 +14,7 @@ use App\Models\Doctor;
 use App\Models\Notificacion;
 use App\Models\Publicidad;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 class PacienteAppController extends Controller
 {
@@ -62,12 +63,32 @@ class PacienteAppController extends Controller
         }
 
         // Solo pedimos el doctor, para evitar errores de relaciones complejas
-        $citas = Cita::with(['doctor.usuario'])
+        $citas = Cita::with([
+            'doctor.usuario',
+            'archivos:id_archivo,id_cita,url_archivo,tipo,descripcion',
+        ])
             ->where('id_paciente', $paciente->id_paciente)
             // Filtramos las que ya pasaron
             ->whereNotIn('estado_cita', ['cancelada', 'completada'])
             ->orderBy('fecha_hora_inicio', 'asc')
             ->get();
+
+        $citas->transform(function ($cita) {
+            $cuidados = $cita->archivos
+                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'cuidados_pdf');
+            $tips = $cita->archivos
+                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'tips_pdf');
+
+            $cita->cuidados_pdf_url = $cuidados
+                ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cuidados->url_archivo), '/')])
+                : ($cita->cuidados_pdf_url ?? null);
+
+            $cita->tips_pdf_url = $tips
+                ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $tips->url_archivo), '/')])
+                : ($cita->tips_pdf_url ?? null);
+
+            return $cita;
+        });
 
         return response()->json([
             'success' => true,
@@ -85,13 +106,34 @@ class PacienteAppController extends Controller
         if (!$paciente)
             return response()->json(['success' => false, 'data' => []], 404);
 
-        $citas = Cita::with(['servicio:id_servicio,nombre_servicio', 'doctor:id_doctor,id_usuario,cedula_profesional'])
+        $citas = Cita::with([
+            'servicio:id_servicio,nombre_servicio',
+            'doctor:id_doctor,id_usuario,cedula_profesional',
+            'archivos:id_archivo,id_cita,url_archivo,tipo,descripcion',
+        ])
             ->where('id_paciente', $paciente->id_paciente)
             ->where('fecha_hora_inicio', '<', now())
             ->whereIn('estado_cita', ['completada', 'cancelada'])
             ->orderBy('fecha_hora_inicio', 'desc')
             ->take(15) // Limitado por desempeño
             ->get();
+
+        $citas->transform(function ($cita) {
+            $cuidados = $cita->archivos
+                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'cuidados_pdf');
+            $tips = $cita->archivos
+                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'tips_pdf');
+
+            $cita->cuidados_pdf_url = $cuidados
+                ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cuidados->url_archivo), '/')])
+                : ($cita->cuidados_pdf_url ?? null);
+
+            $cita->tips_pdf_url = $tips
+                ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $tips->url_archivo), '/')])
+                : ($cita->tips_pdf_url ?? null);
+
+            return $cita;
+        });
 
         return response()->json(['success' => true, 'data' => $citas]);
     }
@@ -158,27 +200,29 @@ class PacienteAppController extends Controller
     /**
      * Retorna datos de la clínica
      */
-    public function clinicasYDoctores()
+    public function clinicasYDoctores() 
     {
         $idClinica = Auth::user()->id_clinica;
         $clinica   = Clinica::find($idClinica);
 
-        // Construir dirección legible para la app móvil
+        // Construir dirección legible
         $partesDireccion = array_filter([
-            $clinica->calle,
-            $clinica->ciudad,
-            $clinica->municipio,
-            $clinica->estado,
-            $clinica->codigo_postal,
+            $clinica->calle, $clinica->ciudad, $clinica->municipio, $clinica->estado, $clinica->codigo_postal,
         ]);
         $clinica->direccion_completa = implode(', ', $partesDireccion);
 
-        // URL de Google Maps: coordenadas exactas si las tiene, texto si no
+        // URL de Google Maps
         if (!empty($clinica->latitud) && !empty($clinica->longitud)) {
             $clinica->map_url = "https://www.google.com/maps/search/?api=1&query={$clinica->latitud},{$clinica->longitud}";
         } else {
             $clinica->map_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode($clinica->direccion_completa);
         }
+
+        // 🔥 NUEVO: Buscamos los 7 días en la base de datos y los metemos a la clínica 🔥
+        $clinica->horarios = \Illuminate\Support\Facades\DB::table('horarios_clinica')
+            ->where('id_clinica', $idClinica)
+            ->orderBy('dia_semana', 'asc')
+            ->get();
 
         $doctores = \App\Models\User::where('id_clinica', $idClinica)
             ->where('rol', 'doctor')
@@ -344,7 +388,7 @@ class PacienteAppController extends Controller
 
         // 4. Buscar en la Base de Datos a qué hora abren y cierran ESE DÍA ESPECÍFICO
         try {
-            $horariosClinica = \Illuminate\Support\Facades\DB::table('horario_clinicas')
+            $horariosClinica = \Illuminate\Support\Facades\DB::table('horarios_clinica')
                 ->where('id_clinica', $idClinica)
                 ->get();
 
@@ -476,7 +520,7 @@ class PacienteAppController extends Controller
 
         // 2. BUSCAR DÍAS DE LA SEMANA
         try {
-            $horarios = \Illuminate\Support\Facades\DB::table('horario_clinicas')
+            $horarios = \Illuminate\Support\Facades\DB::table('horarios_clinica')
                 ->where('id_clinica', $idClinica)
                 ->get();
 
@@ -547,7 +591,6 @@ class PacienteAppController extends Controller
             return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
         }
 
-        // CANDADO 1: No reagendar si ya está confirmada
         if (strtolower($cita->estado_cita) === 'confirmada') {
             return response()->json([
                 'success' => false, 
@@ -555,6 +598,7 @@ class PacienteAppController extends Controller
             ], 400);
         }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
         if (!in_array($cita->estado_cita, ['pendiente', 'confirmada'], true)) {
             return response()->json([
@@ -607,16 +651,41 @@ class PacienteAppController extends Controller
 
         // Notificar al Doctor
         $paciente = Paciente::where('id_usuario', Auth::id())->first();
+=======
+        // Revisar si ya tiene una petición pendiente para evitar spam.
+        $peticionPrevia = Notificacion::where('id_cita', $cita->id_cita)
+            ->where('estado', 'no_leida')
+            ->where('tipo', 'reagenda')
+            ->exists();
+        if ($peticionPrevia) {
+            return response()->json(['success' => false, 'message' => 'Ya tienes una solicitud de reagenda en proceso.'], 400);
+        }
+
+        $fechaCitaOriginal = \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
+>>>>>>> 66451db0d14e939f31dd568f91653af885088535
         $idUsuarioDoctor = optional($cita->doctor)->id_usuario;
-        
+
         if ($idUsuarioDoctor) {
-            $nombrePaciente = optional($paciente)->nombre . ' ' . optional($paciente)->apellido_paterno;
+            $paciente = $cita->paciente;
+            $nombrePaciente = $paciente
+                ? trim(($paciente->nombre ?? '') . ' ' . ($paciente->apellido_paterno ?? ''))
+                : 'Paciente';
+            if ($nombrePaciente === '') {
+                $nombrePaciente = 'Paciente';
+            }
 
             Notificacion::create([
                 'id_usuario' => $idUsuarioDoctor,
+                'id_cita'    => $cita->id_cita,
                 'tipo'       => 'reagenda',
-                'mensaje'    => "El paciente {$nombrePaciente} ha reagendado su cita del "
-                    . "{$fechaCitaOriginal} para el {$request->fecha} a las {$request->hora}.",
+                'mensaje'    => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$request->fecha} a las {$request->hora}.",
+                'datos'      => [
+                    'paciente'         => $nombrePaciente,
+                    'fecha_original'   => $fechaCitaOriginal,
+                    'nueva_fecha'      => $request->fecha,
+                    'nueva_hora'       => $request->hora,
+                    'nueva_fecha_hora' => $request->fecha . ' ' . $request->hora . ':00',
+                ],
                 'estado'     => 'no_leida',
             ]);
         }
@@ -624,10 +693,14 @@ class PacienteAppController extends Controller
         return response()->json([
             'success' => true,
 <<<<<<< HEAD
+<<<<<<< HEAD
             'message' => 'Solicitud de reagenda enviada. La clinica debe aplicarla el mismo dia de la solicitud.',
 =======
             'message' => 'Cita reagendada correctamente a las ' . $request->hora,
 >>>>>>> 4f77b79af23ec045e416aed9ee7b8676b23505a5
+=======
+            'message' => 'Tu solicitud de reagenda fue enviada a la clínica. Te confirmaremos pronto.',
+>>>>>>> 66451db0d14e939f31dd568f91653af885088535
         ], 200);
     }
 
@@ -652,6 +725,72 @@ class PacienteAppController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error al confirmar la cita.'], 500);
         }
+    }
+
+    // --- FUNCIÓN 1: ACTUALIZAR DATOS BÁSICOS ---
+    public function updateProfile(Request $request)
+    {
+        $user = auth()->user();
+        
+        // Buscar al paciente relacionado a este usuario
+        $paciente = Paciente::withoutGlobalScopes()
+            ->where('id_usuario', $user->id_usuario)
+            ->first();
+
+        if (!$paciente) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Paciente no encontrado.'
+            ], 404);
+        }
+
+        // Validar qué datos se pueden actualizar (Añade los que consideres necesarios)
+        $request->validate([
+            'telefono' => 'nullable|string|max:20',
+            'calle' => 'nullable|string|max:100',
+            'numero_exterior' => 'nullable|string|max:20',
+            'colonia' => 'nullable|string|max:100',
+            'ciudad' => 'nullable|string|max:100',
+        ]);
+
+        // Actualizamos los datos
+        $paciente->update($request->only([
+            'telefono', 'calle', 'numero_exterior', 'colonia', 'ciudad'
+        ]));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Perfil actualizado correctamente.',
+            'paciente' => $paciente
+        ], 200);
+    }
+
+    // --- FUNCIÓN 2: ACTUALIZAR CONTRASEÑA ---
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:6',
+        ]);
+
+        $user = auth()->user();
+
+        // Verificar que la contraseña actual ingresada coincida con la de la BD
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'La contraseña actual es incorrecta.'
+            ], 400);
+        }
+
+        // Guardar la nueva contraseña
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Tu contraseña se ha actualizado con éxito.'
+        ], 200);
     }
 
 }

@@ -7,6 +7,8 @@ use App\Http\Requests\UpdateUsuarioRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use App\Models\Clinica;
 use App\Models\User;
 use App\Models\Doctor;
@@ -53,7 +55,6 @@ class ConfiguracionController extends Controller
 
     /**
      * Actualiza la información de la clínica.
-     * Usa UpdateClinicaRequest para todas las validaciones.
      */
     public function updateClinica(UpdateClinicaRequest $request)
     {
@@ -67,41 +68,46 @@ class ConfiguracionController extends Controller
 
     /**
      * Actualiza la información de un usuario (doctor o recepcionista).
-     * La autorización de tenant está garantizada por UpdateUsuarioRequest::authorize().
      */
     public function updateUsuario(UpdateUsuarioRequest $request)
     {
         $validated = $request->validated();
-        $usuario = User::findOrFail($validated['id_usuario']);
+        
+        // Buscamos al usuario asegurando que pertenezca a la clínica del autenticado
+        $usuario = User::where('id_clinica', Auth::user()->id_clinica)
+                       ->findOrFail($validated['id_usuario']);
 
         $data = [
             'nombre_completo' => $validated['nombre_completo'],
-            'email' => $validated['email'],
+            'email'           => $validated['email'],
+            'sobre_mi'        => $validated['sobre_mi'] ?? null, // <-- AQUÍ SE GUARDA TU TEXTO
         ];
 
         // Actualizar contraseña solo si se proporcionó una nueva
         if (!empty($validated['password'])) {
-            $data['password'] = $validated['password'];  // El cast 'hashed' del modelo User lo hashea automáticamente
+            $data['password'] = $validated['password']; 
         }
 
-        $usuario->update($data);
+        // Usamos una transacción para asegurar que si falla la parte del Doctor, no se rompa el User
+        DB::transaction(function () use ($usuario, $data, $validated) {
+            $usuario->update($data);
 
-        // Si es doctor, actualizar datos profesionales
-        if ($usuario->rol === 'doctor') {
-            Doctor::updateOrCreate(
-                ['id_usuario' => $usuario->id_usuario],
-                [
-                    'cedula_profesional' => $validated['cedula_profesional'] ?? null,
-                    'horario_default' => $validated['horario_default'] ?? null,
-                ]
-            );
-        }
+            if ($usuario->rol === 'doctor') {
+                Doctor::updateOrCreate(
+                    ['id_usuario' => $usuario->id_usuario],
+                    [
+                        'cedula_profesional' => $validated['cedula_profesional'] ?? null,
+                        'horario_default'    => $validated['horario_default'] ?? null,
+                    ]
+                );
+            }
+        });
 
         return back()->with('success', 'Perfil de usuario actualizado correctamente.');
     }
 
     /**
-     * Crea una nueva cuenta de recepcionista para la clínica del usuario autenticado.
+     * Crea una nueva cuenta de recepcionista.
      */
     public function storeRecepcionista(Request $request)
     {
@@ -115,8 +121,9 @@ class ConfiguracionController extends Controller
             'id_clinica' => Auth::user()->id_clinica,
             'nombre_completo' => $request->nombre_completo,
             'email' => $request->email,
-            'password' => $request->password,  // El cast 'hashed' del modelo User lo hashea automáticamente
+            'password' => $request->password,
             'rol' => 'recepcionista',
+            'is_active' => true,
         ]);
 
         return back()->with('success', 'Recepcionista agregada correctamente.');
@@ -133,13 +140,11 @@ class ConfiguracionController extends Controller
 
         $dias = $request->input('dias', []);
 
-        // Orden esperado: 1=Lunes … 6=Sábado, 0=Domingo
         foreach ([1, 2, 3, 4, 5, 6, 0] as $dia) {
             $activo = isset($dias[$dia]['activo']) ? 1 : 0;
             $horaInicio = $dias[$dia]['hora_inicio'] ?? null;
             $horaFin = $dias[$dia]['hora_fin'] ?? null;
 
-            // Si está inactivo, limpiar horas
             if (!$activo) {
                 $horaInicio = null;
                 $horaFin = null;
@@ -178,8 +183,7 @@ class ConfiguracionController extends Controller
     }
 
     /**
-     * Obtiene los 7 registros de horario de una clínica, creándolos con valores
-     * por defecto si no existen (Lun-Vie 09:00-18:00, Sáb-Dom cerrados).
+     * Obtiene o crea horarios por defecto.
      */
     private function obtenerOCrearHorarios(int $idClinica): \Illuminate\Database\Eloquent\Collection
     {
@@ -187,13 +191,13 @@ class ConfiguracionController extends Controller
 
         if ($existentes < 7) {
             $defaults = [
-                1 => ['activo' => true, 'hora_inicio' => '09:00', 'hora_fin' => '18:00'], // Lunes
-                2 => ['activo' => true, 'hora_inicio' => '09:00', 'hora_fin' => '18:00'], // Martes
-                3 => ['activo' => true, 'hora_inicio' => '09:00', 'hora_fin' => '18:00'], // Miércoles
-                4 => ['activo' => true, 'hora_inicio' => '09:00', 'hora_fin' => '18:00'], // Jueves
-                5 => ['activo' => true, 'hora_inicio' => '09:00', 'hora_fin' => '18:00'], // Viernes
-                6 => ['activo' => false, 'hora_inicio' => null, 'hora_fin' => null],     // Sábado
-                0 => ['activo' => false, 'hora_inicio' => null, 'hora_fin' => null],     // Domingo
+                1 => ['activo' => true, 'hora_inicio' => '09:00', 'hora_fin' => '18:00'],
+                2 => ['activo' => true, 'hora_inicio' => '09:00', 'hora_fin' => '18:00'],
+                3 => ['activo' => true, 'hora_inicio' => '09:00', 'hora_fin' => '18:00'],
+                4 => ['activo' => true, 'hora_inicio' => '09:00', 'hora_fin' => '18:00'],
+                5 => ['activo' => true, 'hora_inicio' => '09:00', 'hora_fin' => '18:00'],
+                6 => ['activo' => false, 'hora_inicio' => null, 'hora_fin' => null],
+                0 => ['activo' => false, 'hora_inicio' => null, 'hora_fin' => null],
             ];
 
             foreach ($defaults as $dia => $vals) {
@@ -204,9 +208,35 @@ class ConfiguracionController extends Controller
             }
         }
 
-        // Retornar ordenados: Lun(1)…Sáb(6), Dom(0)
         return HorarioClinica::where('id_clinica', $idClinica)
             ->orderByRaw('FIELD(dia_semana, 1, 2, 3, 4, 5, 6, 0)')
             ->get();
+    }
+
+    /**
+     * Sube o actualiza la foto de perfil del doctor.
+     */
+    public function subirFotoDoctor(Request $request)
+    {
+        $request->validate([
+            'foto_perfil' => 'required|image|mimes:jpeg,png,jpg,webp|max:10240',
+        ]);
+
+        $user = Auth::user();
+        $doctorUser = User::where('id_clinica', $user->id_clinica)->where('rol', 'doctor')->first();
+        $doctor = $doctorUser ? Doctor::where('id_usuario', $doctorUser->id_usuario)->first() : null;
+
+        if (!$doctor) {
+            return back()->with('error', 'No se encontró el perfil del doctor.');
+        }
+
+        if ($doctor->foto_perfil && Storage::disk('public')->exists($doctor->foto_perfil)) {
+            Storage::disk('public')->delete($doctor->foto_perfil);
+        }
+
+        $ruta = $request->file('foto_perfil')->store('fotos_doctores', 'public');
+        $doctor->update(['foto_perfil' => $ruta]);
+
+        return back()->with('success', 'Foto de perfil actualizada correctamente.');
     }
 }

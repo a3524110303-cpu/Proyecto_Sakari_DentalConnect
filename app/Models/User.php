@@ -20,6 +20,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $password
  * @property string $rol
  * @property bool $is_active
+ * @property string|null $sobre_mi
  * @property \Illuminate\Support\Carbon|null $email_verified_at
  * @property string|null $remember_token
  * @property \Illuminate\Support\Carbon|null $created_at
@@ -38,6 +39,8 @@ class User extends Authenticatable
         'email',
         'password',
         'rol',
+        'is_active', // Agregado para permitir desactivar usuarios
+        'sobre_mi',  // <--- ESTA ES LA LÍNEA QUE SOLUCIONA TU PROBLEMA
     ];
 
     protected $hidden = [
@@ -47,7 +50,8 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed'
+        'password' => 'hashed',
+        'is_active' => 'boolean', // Agregado para manejarlo como booleano
     ];
 
     public function getAuthPassword()

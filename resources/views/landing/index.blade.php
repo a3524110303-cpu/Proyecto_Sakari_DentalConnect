@@ -363,7 +363,7 @@
                 @forelse($publicidad as $ad)
                     <article class="ad-card">
                         @if($ad->imagen_path)
-                            <img class="ad-cover" src="{{ asset('storage/' . $ad->imagen_path) }}" alt="{{ $ad->titulo }}">
+                            <img class="ad-cover" src="{{ route('storage.file', ['path' => $ad->imagen_path]) }}" alt="{{ $ad->titulo }}">
                         @else
                             <div class="ad-cover" style="display:grid;place-items:center;color:#64748b;">
                                 <i class="fa-regular fa-image" style="font-size:2rem;"></i>

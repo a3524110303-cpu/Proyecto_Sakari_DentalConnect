@@ -17,6 +17,78 @@ Resumen de secciones:
     {{-- IDX-01 | Encabezado y métricas rápidas --}}
     <h2 class="page-title">Panel Principal</h2>
 
+    {{-- Panel de Notificaciones de Reagendado --}}
+    <div id="panel-notificaciones-reagenda" style="display: none; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 12px; padding: 18px 22px; margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; color: #9A3412; font-weight: 800; font-size: 1rem;">
+                <i class="fa-solid fa-bell" style="margin-right: 6px;"></i>
+                Solicitudes de Reagendado
+                <span id="badge-reagenda-count" style="background: #EA580C; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; margin-left: 6px;">0</span>
+            </h4>
+        </div>
+        <div id="lista-notificaciones-reagenda" style="display: flex; flex-direction: column; gap: 10px;"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/notificaciones/reagenda')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success || !data.data || data.data.length === 0) return;
+
+                    const panel = document.getElementById('panel-notificaciones-reagenda');
+                    const lista = document.getElementById('lista-notificaciones-reagenda');
+                    const badge = document.getElementById('badge-reagenda-count');
+
+                    panel.style.display = 'block';
+                    badge.textContent = data.data.length;
+
+                    data.data.forEach(n => {
+                        const div = document.createElement('div');
+                        div.id = 'notif-' + n.id_notificacion;
+                        div.style.cssText = 'background: white; border: 1px solid #FDE68A; border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px;';
+                        div.innerHTML = `
+                            <div style="flex: 1;">
+                                <p style="margin: 0; color: #78350F; font-size: 0.9rem; line-height: 1.4;">${n.mensaje}</p>
+                                <small style="color: #A3A3A3; font-size: 0.75rem;">${new Date(n.created_at).toLocaleString('es-MX')}</small>
+                            </div>
+                            <button onclick="marcarLeida(${n.id_notificacion})"
+                                style="background: #16A34A; color: white; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 700; cursor: pointer; font-size: 0.8rem; white-space: nowrap;">
+                                <i class="fa-solid fa-check"></i> Leída
+                            </button>
+                        `;
+                        lista.appendChild(div);
+                    });
+                })
+                .catch(() => {});
+        });
+
+        function marcarLeida(id) {
+            fetch('/api/notificaciones/' + id + '/leer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const el = document.getElementById('notif-' + id);
+                    if (el) el.remove();
+
+                    const badge = document.getElementById('badge-reagenda-count');
+                    const count = parseInt(badge.textContent) - 1;
+                    badge.textContent = count;
+
+                    if (count <= 0) {
+                        document.getElementById('panel-notificaciones-reagenda').style.display = 'none';
+                    }
+                }
+            });
+        }
+    </script>
+
     {{-- =====================================================================
     SECCIÓN DE MÉTRICAS RÁPIDAS
     ====================================================================== --}}

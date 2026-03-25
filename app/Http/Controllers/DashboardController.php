@@ -316,7 +316,7 @@ class DashboardController extends Controller
                 'id_cita'=>$cita->id_cita,
                 'monto'=>$request->monto_abono,
                 'fecha_ingreso'=>now(),
-                'metodo_pago'=>'efectivo',
+                'metodo'=>'efectivo',
                 'descripcion'=>'Abono en cita: '.$cita->motivo
 
             ]);
@@ -608,6 +608,176 @@ class DashboardController extends Controller
             'horas_ocupadas' => array_values(array_unique($horasOcupadas)),
             'total_slots' => $totalSlots,
         ];
+    }
+    /**
+     * Retorna notificaciones de reagenda no leídas del usuario autenticado.
+     */
+    public function notificacionesReagenda()
+    {
+        $user = Auth::user();
+
+        $notificaciones = Notificacion::where('id_usuario', $user->id_usuario)
+            ->where('tipo', 'reagenda')
+            ->where('estado', 'no_leida')
+            ->orderBy('created_at', 'desc')
+            ->take(20)
+            ->get();
+
+        $idsCita = $notificaciones
+            ->pluck('id_cita')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $citasById = Cita::with('paciente')
+            ->whereIn('id_cita', $idsCita)
+            ->get()
+            ->keyBy('id_cita');
+
+        $notificaciones->transform(function ($notif) use ($citasById) {
+            $datos = $notif->datos;
+            if (is_string($datos)) {
+                $decoded = json_decode($datos, true);
+                $datos = is_array($decoded) ? $decoded : [];
+            }
+            if (!is_array($datos)) {
+                $datos = [];
+            }
+
+            $cita = $notif->id_cita ? ($citasById[$notif->id_cita] ?? null) : null;
+
+            if (empty($datos['paciente'])) {
+                if ($cita && $cita->paciente) {
+                    $datos['paciente'] = trim(
+                        ($cita->paciente->nombre ?? '') . ' ' .
+                        ($cita->paciente->apellido_paterno ?? '') . ' ' .
+                        ($cita->paciente->apellido_materno ?? '')
+                    );
+                }
+
+                if (empty($datos['paciente']) && !empty($notif->mensaje)) {
+                    if (preg_match('/paciente\s+(.+?)\s+(solicita|ha)\s+/iu', $notif->mensaje, $m)) {
+                        $datos['paciente'] = trim($m[1]);
+                    }
+                }
+            }
+
+            if (empty($datos['nueva_fecha']) || empty($datos['nueva_hora'])) {
+                // Compatibilidad con payloads antiguos o claves alternativas.
+                $fechaHoraRaw = $datos['nueva_fecha_hora']
+                    ?? $datos['fecha_hora']
+                    ?? $datos['fecha_sugerida']
+                    ?? null;
+
+                if (!empty($fechaHoraRaw)) {
+                    try {
+                        $fecha = Carbon::parse($fechaHoraRaw);
+                        $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? $fecha->format('Y-m-d');
+                        $datos['nueva_hora'] = $datos['nueva_hora'] ?? $fecha->format('H:i');
+                    } catch (\Throwable $e) {
+                        // Intento manual para formato dd/mm/YYYY HH:mm(:ss)
+                        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2})(?::\d{2})?$/', (string) $fechaHoraRaw, $m)) {
+                            $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? ($m[3] . '-' . $m[2] . '-' . $m[1]);
+                            $datos['nueva_hora'] = $datos['nueva_hora'] ?? $m[4];
+                        }
+                    }
+                }
+
+                if (empty($datos['nueva_fecha']) && !empty($datos['fecha'])) {
+                    $datos['nueva_fecha'] = $datos['fecha'];
+                }
+                if (empty($datos['nueva_hora']) && !empty($datos['hora'])) {
+                    $datos['nueva_hora'] = $datos['hora'];
+                }
+                if (empty($datos['nueva_fecha']) && !empty($datos['fecha_nueva'])) {
+                    $datos['nueva_fecha'] = $datos['fecha_nueva'];
+                }
+                if (empty($datos['nueva_hora']) && !empty($datos['hora_nueva'])) {
+                    $datos['nueva_hora'] = $datos['hora_nueva'];
+                }
+
+                // Fallback legacy: intentar extraer fecha/hora desde el mensaje.
+                if ((!empty($notif->mensaje)) && (empty($datos['nueva_fecha']) || empty($datos['nueva_hora']))) {
+                    $mensaje = (string) $notif->mensaje;
+
+                    // Ejemplo: "... para el 2026-03-25 a las 14:30"
+                    if (preg_match('/para\s+el\s+(\d{4}-\d{2}-\d{2})\s+a\s+las\s+(\d{1,2}:\d{2})/iu', $mensaje, $m)) {
+                        $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? $m[1];
+                        $datos['nueva_hora'] = $datos['nueva_hora'] ?? $m[2];
+                    }
+
+                    // Ejemplo: "... para el 25/03/2026 a las 14:30"
+                    if (empty($datos['nueva_fecha']) || empty($datos['nueva_hora'])) {
+                        if (preg_match('/para\s+el\s+(\d{2})\/(\d{2})\/(\d{4})\s+a\s+las\s+(\d{1,2}:\d{2})/iu', $mensaje, $m)) {
+                            $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? ($m[3] . '-' . $m[2] . '-' . $m[1]);
+                            $datos['nueva_hora'] = $datos['nueva_hora'] ?? $m[4];
+                        }
+                    }
+                }
+
+                if (($cita && $cita->fecha_hora_inicio) && (empty($datos['nueva_fecha']) || empty($datos['nueva_hora']))) {
+                    try {
+                        $inicio = Carbon::parse($cita->fecha_hora_inicio);
+                        $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? $inicio->format('Y-m-d');
+                        $datos['nueva_hora'] = $datos['nueva_hora'] ?? $inicio->format('H:i');
+                    } catch (\Throwable $e) {
+                    }
+                }
+            }
+
+            $datos['paciente'] = trim($datos['paciente'] ?? '') ?: 'Paciente';
+            $datos['nueva_fecha'] = trim((string) ($datos['nueva_fecha'] ?? '')) ?: '-';
+            $datos['nueva_hora'] = trim((string) ($datos['nueva_hora'] ?? '')) ?: '-';
+
+            $notif->datos = $datos;
+            return $notif;
+        });
+
+        return response()->json($notificaciones);
+    }
+
+    /**
+     * Procesa una solicitud de reagenda (aceptar/rechazar) desde el dashboard.
+     */
+    public function procesarReagenda(Request $request, $id)
+    {
+        $notificacion = Notificacion::where('id_notificacion', $id)
+            ->where('id_usuario', Auth::user()->id_usuario)
+            ->firstOrFail();
+
+        if ($request->accion === 'aceptar') {
+            $cita = Cita::find($notificacion->id_cita);
+            if ($cita && $notificacion->datos) {
+                $datos = $notificacion->datos;
+                $nuevaFecha = \Carbon\Carbon::parse($datos['nueva_fecha_hora']);
+
+                $cita->fecha_hora_inicio = $nuevaFecha;
+                $cita->fecha_hora_fin = $nuevaFecha->copy()->addMinutes(30);
+                $cita->estado_cita = 'pendiente';
+                $cita->notas = "⚠️ REAGENDADA POR PACIENTE.\n" . ($cita->notas ?? '');
+                $cita->save();
+            }
+        }
+
+        $notificacion->estado = 'leida';
+        $notificacion->save();
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Marca una notificación como leída.
+     */
+    public function marcarNotificacionLeida($id)
+    {
+        $notificacion = Notificacion::where('id_notificacion', $id)
+            ->where('id_usuario', Auth::id())
+            ->firstOrFail();
+
+        $notificacion->estado = 'leida';
+        $notificacion->save();
+
+        return response()->json(['success' => true, 'message' => 'Notificación marcada como leída.']);
     }
 
 }

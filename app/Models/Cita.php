@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Modelo que representa una cita médica en el sistema.
@@ -43,12 +44,60 @@ class Cita extends Model
         'costo_estimado',
         'motivo',
         'notas',
+<<<<<<< HEAD
         'reagenda_solicitada_at',
         'reagenda_fecha_solicitada',
         'reagenda_hora_solicitada',
         'reagenda_motivo',
         'reagenda_estatus'
+=======
+        'cuidados_pdf',
+        'tips_pdf',
+>>>>>>> 66451db0d14e939f31dd568f91653af885088535
     ];
+
+    protected $appends = [
+        'cuidados_pdf_url',
+        'tips_pdf_url',
+    ];
+
+    public function getCuidadosPdfUrlAttribute(): ?string
+    {
+        $ruta = $this->cuidados_pdf;
+
+        if (!$ruta) {
+            $archivo = $this->relationLoaded('archivos')
+                ? $this->archivos->firstWhere('descripcion', 'cuidados_pdf')
+                : $this->archivos()->where('tipo', 'pdf')->where('descripcion', 'cuidados_pdf')->first();
+
+            $ruta = $archivo->url_archivo ?? null;
+        }
+
+        if (!$ruta) {
+            return null;
+        }
+
+        return Storage::disk(env('CITAS_FILESYSTEM_DISK', 'public'))->url($ruta);
+    }
+
+    public function getTipsPdfUrlAttribute(): ?string
+    {
+        $ruta = $this->tips_pdf;
+
+        if (!$ruta) {
+            $archivo = $this->relationLoaded('archivos')
+                ? $this->archivos->firstWhere('descripcion', 'tips_pdf')
+                : $this->archivos()->where('tipo', 'pdf')->where('descripcion', 'tips_pdf')->first();
+
+            $ruta = $archivo->url_archivo ?? null;
+        }
+
+        if (!$ruta) {
+            return null;
+        }
+
+        return Storage::disk(env('CITAS_FILESYSTEM_DISK', 'public'))->url($ruta);
+    }
 
     // Relación: Paciente
     public function paciente()
@@ -73,6 +122,11 @@ class Cita extends Model
     public function detalles()
     {
         return $this->hasMany(CitaDetalle::class, 'id_cita');
+    }
+
+    public function archivos()
+    {
+        return $this->hasMany(Archivo::class, 'id_cita', 'id_cita');
     }
 
     // Relación: Pagos/Abonos

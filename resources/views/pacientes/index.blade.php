@@ -372,13 +372,6 @@
         </div>
     @endif
 
-    @if($errors->any())
-        <div
-            style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; color: #991b1b; font-weight: 600; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);">
-            <i class="fa-solid fa-triangle-exclamation"></i> {{ $errors->first() }}
-        </div>
-    @endif
-
     <div class="header-tools">
         <div class="search-pill-container">
             <input type="text" id="patient-search" class="search-pill"
@@ -476,8 +469,14 @@
                     <input type="text" name="telefono" class="modern-input" placeholder="Teléfono Celular*" required
                         maxlength="15" value="{{ old('telefono') }}" oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
 
-                    <input type="date" name="fecha_nacimiento" class="modern-input" required
-                        value="{{ old('fecha_nacimiento') }}" title="Fecha de Nacimiento">
+                   <input type="date" 
+       name="fecha_nacimiento" 
+       class="modern-input" 
+       required
+       value="{{ old('fecha_nacimiento') }}" 
+       max="{{ date('Y-m-d', strtotime('-2 years')) }}"
+       oninvalid="this.setCustomValidity('La fecha de nacimiento no es válida')"
+       oninput="this.setCustomValidity('')">
 
                     <select name="sexo" class="modern-input" required>
                         <option value="" disabled selected>Sexo*</option>
@@ -550,14 +549,13 @@
         </div>
     </div>
 
-    {{-- Perfil del Paciente (Sección de detalle) --}}
     <div id="modal-patient-profile" class="modal-overlay">
-        <div class="modal-glass modal-xl" style="max-width: 1000px; padding: 0; overflow: hidden; border-radius: 20px;">
+        <div class="modal-glass modal-xl" style="max-width: 1000px; padding: 0; overflow: hidden; border-radius: 20px; display: flex; flex-direction: column; max-height: 92vh;">
             <button class="close-modal" onclick="closeModal('modal-patient-profile')"
                 style="position: absolute; top: 15px; right: 20px; z-index: 10;">&times;</button>
 
-            <div class="profile-header-container"
-                style="background: linear-gradient(135deg, #e0fbfc 0%, #caf0f8 100%); padding: 35px 45px; border-bottom: 1px solid #b0e0f5; display: flex; align-items: center; gap: 25px;">
+            <div class="profile-header-container" style="flex-shrink: 0;
+                background: linear-gradient(135deg, #e0fbfc 0%, #caf0f8 100%); padding: 35px 45px; border-bottom: 1px solid #b0e0f5; display: flex; align-items: center; gap: 25px;">
                 <div style="position: relative; width: 85px; height: 85px;"
                     title="Clic para subir/cambiar foto de progreso">
                     <img id="p-foto" src="" alt="Foto Paciente"
@@ -582,8 +580,8 @@
                 </div>
             </div>
 
-            <div class="profile-tabs-container"
-                style="display: flex; border-bottom: 2px solid #eee; padding: 0 30px; background: white;">
+            <div class="profile-tabs-container" style="flex-shrink: 0;
+                display: flex; border-bottom: 2px solid #eee; padding: 0 30px; background: white;">
                 <button onclick="showTab('tab-general')" id="btn-tab-general" class="tab-btn tab-active">
                     <i class="fa-solid fa-user"></i> Resumen General
                 </button>
@@ -650,7 +648,7 @@
                 }
             </style>
 
-            <div class="profile-content-container" style="padding: 35px 45px; overflow-y: auto; max-height: 65vh;">
+            <div class="profile-content-container" style="flex: 1; min-height: 0; overflow-y: auto; padding: 35px 45px;">
                 <div id="tab-general">
                     <div class="general-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
                         <div>
@@ -781,41 +779,150 @@
             </div>
         </div>
     </div>
+{{-- MODAL: AGENDAR CITA (LOCAL) --}}
+<div id="modal-add-cita" class="modal-overlay">
+    <style>
+        /* Estilos específicos para restaurar la cuadrícula del calendario */
+        #reserva-grid-dias {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+        }
 
-    {{-- MODAL: AGENDAR CITA (LOCAL) --}}
-    <div id="modal-add-cita" class="modal-overlay">
-        <div class="modal-glass modal-xl" style="max-width: 1050px; width: 95vw; max-height: 95vh; overflow-y: auto;">
-            <button class="close-modal" onclick="closeModal('modal-add-cita')">&times;</button>
-            <h3 style="color: var(--secondary-color); margin-bottom: 20px; font-weight: 800; font-size: 1.6rem;">
-                <i class="fa-solid fa-calendar-plus"></i> Agendar Nueva Cita
-            </h3>
+        .dia-reserva {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            border: none;
+            font-size: 0.9rem;
+        }
 
+<<<<<<< HEAD
             <form id="form-add-cita" action="{{ route('citas.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="id_paciente" id="form-cita-paciente-id">
+=======
+        /* Clases de disponibilidad según la imagen */
+        .dia-libre { background-color: #e8f9ee; color: #22c55e; }
+        .dia-pocos { background-color: #fef3c7; color: #f59e0b; }
+        .dia-lleno { background-color: #fee2e2; color: #ef4444; }
+        
+        .dia-reserva:hover { transform: scale(1.05); filter: brightness(0.95); }
+        .dia-selected { outline: 2px solid #06b6d4; box-shadow: 0 0 10px rgba(6,182,212,0.3); }
+>>>>>>> 66451db0d14e939f31dd568f91653af885088535
 
-                {{-- Fila superior: Paciente + Servicio --}}
-                <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
-                    <div style="flex: 1; min-width: 200px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 700;">Paciente:</label>
-                        <input type="text" id="form-cita-paciente-nombre" class="modern-input" readonly
-                            style="background: #f8f9fa;">
+        .calendar-labels {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: 700;
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .legend-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    </style>
+
+    <div class="modal-glass modal-xl" style="max-width: 1050px; width: 95vw; max-height: 95vh; overflow-y: auto;">
+        
+        <button class="close-modal" onclick="closeModal('modal-add-cita')">&times;</button>
+
+        <h3 style="color: var(--secondary-color); margin-bottom: 20px; font-weight: 800; font-size: 1.6rem;">
+            <i class="fa-solid fa-calendar-plus"></i> Agendar Nueva Cita
+        </h3>
+
+        <form id="form-add-cita" action="{{ route('citas.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+
+            <input type="hidden" name="id_paciente" id="form-cita-paciente-id">
+
+            {{-- 🔹 Paciente + Servicio + Duración --}}
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-weight: 700;">Paciente:</label>
+                    <input type="text" id="form-cita-paciente-nombre" class="modern-input" readonly style="background: #f8f9fa;">
+                </div>
+
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-weight: 700;">Servicio:</label>
+                    <select name="id_servicio" class="modern-input" required>
+                        @foreach($servicios as $srv)
+                            <option value="{{ $srv->id_servicio }}">
+                                {{ $srv->nombre_servicio }} (${{ number_format($srv->precio_base, 2) }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div style="flex: 1; min-width: 150px;">
+                    <label style="font-weight: 700;">Duración:</label>
+                    <select name="duracion_minutos" class="modern-input">
+                        <option value="15">15 min</option>
+                        <option value="30" selected>30 min</option>
+                    </select>
+                </div>
+            </div>
+
+            {{-- CONTENEDOR PRINCIPAL --}}
+            <div style="display: flex; flex-wrap: wrap; gap: 30px; background: #ffffff; border-radius: 20px;">
+
+                {{-- CALENDARIO --}}
+                <div style="flex: 1; min-width: 320px; background: #F8FDFF; padding: 25px; border-radius: 16px; border: 1px solid #dceeef;">
+                    
+                    <h4 style="font-weight: 800;">
+                        <i class="fa-regular fa-calendar-days"></i> 1. Elige el Día
+                    </h4>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; margin-top: 15px;">
+                        <button type="button" onclick="cambiarMesReserva(-1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">❮</button>
+
+                        <span id="reserva-mes-anio" style="font-weight:800; color: #06b6d4; text-transform: capitalize; font-size: 1.1rem;">
+                            Cargando...
+                        </span>
+
+                        <button type="button" onclick="cambiarMesReserva(1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">❯</button>
                     </div>
-                    <div style="flex: 1; min-width: 200px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 700;">Servicio:</label>
-                        <select name="id_servicio" class="modern-input" required>
-                            @foreach($servicios as $srv)
-                                <option value="{{ $srv->id_servicio }}">{{ $srv->nombre_servicio }}
-                                    (${{ number_format($srv->precio_base, 2) }})</option>
-                            @endforeach
-                        </select>
+
+                    <div class="calendar-labels">
+                        <div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div>
+                    </div>
+
+                    <div id="reserva-grid-dias"></div>
+
+                    <div class="legend-container">
+                        <span><span class="dot" style="background:#22c55e;"></span> Libre</span>
+                        <span><span class="dot" style="background:#f59e0b;"></span> Pocos</span>
+                        <span><span class="dot" style="background:#ef4444;"></span> Lleno</span>
                     </div>
                 </div>
 
-                {{-- CONTENEDOR PRINCIPAL DE AGENDAMIENTO --}}
-                <div
-                    style="display: flex; flex-wrap: wrap; gap: 30px; background: #ffffff; padding: 0; border-radius: 20px;">
+                {{-- HORARIOS --}}
+                <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
+                    <h4 style="font-weight: 800;">
+                        <i class="fa-regular fa-clock"></i> 2. Elige la Hora
+                    </h4>
+                    <p id="lbl-fecha-seleccionada" style="color: #888; margin-top: 10px; margin-bottom: 15px;">
+                        Selecciona un día en el calendario primero.
+                    </p>
+                    <input type="hidden" name="fecha" id="input-reserva-fecha" required>
+                    <input type="hidden" name="hora" id="input-reserva-hora" required>
 
+<<<<<<< HEAD
                     {{-- COLUMNA IZQUIERDA: CALENDARIO --}}
                     <div
                         style="flex: 1; min-width: 300px; background: #F8FDFF; padding: 25px; border-radius: 16px; border: 1px solid #dceeef;">
@@ -910,19 +1017,129 @@
                                 style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px 20px; color: #aaa; font-weight: 600; text-align: center; height: 100%;">
                                 <p>Esperando selección de fecha...</p>
                             </div>
+=======
+                    <div id="reserva-contenedor-horarios" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; min-height: 200px;">
+                        <div style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px; color: #aaa;">
+                            <p>Esperando selección de fecha...</p>
+>>>>>>> 66451db0d14e939f31dd568f91653af885088535
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {{-- Botón confirmar --}}
-                <button type="submit" id="btn-confirmar-cita" class="ghost-btn"
-                    style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; margin-top: 25px; font-size: 1.1rem;">
-                    <i class="fa-solid fa-floppy-disk"></i> Confirmar Cita
-                </button>
-            </form>
-        </div>
+            {{-- 📄 CUIDADOS --}}
+            <div style="margin-top: 25px;">
+                <label style="font-weight: 700;">📄 Subir cuidados post-tratamiento (Máx. 2MB)</label>
+                <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 18px; background: #f9fafb; text-align: center; margin-top: 8px; transition: 0.2s;"
+                     onmouseover="this.style.borderColor='#06b6d4'; this.style.background='#ecfeff'"
+                     onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
+                    <input type="file" name="cuidados_pdf" accept="application/pdf" id="input-cuidados" style="display:none;"
+                           onchange="validarTamanoArchivo(this, 'nombre-cuidados')">
+                    <label for="input-cuidados" style="cursor:pointer;">
+                        <i class="fa-solid fa-file-pdf" style="font-size: 1.8rem; color:#ef4444;"></i>
+                        <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
+                        <span id="nombre-cuidados" style="font-size: 0.85rem; color:#666;">Ningún archivo seleccionado</span>
+                    </label>
+                </div>
+            </div>
+
+            {{-- 🪥 TIPS --}}
+            <div style="margin-top: 20px;">
+                <label style="font-weight: 700;">🪥 Subir tips de higiene (Máx. 2MB)</label>
+                <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 18px; background: #f9fafb; text-align: center; margin-top: 8px; transition: 0.2s;"
+                     onmouseover="this.style.borderColor='#22c55e'; this.style.background='#f0fdf4'"
+                     onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
+                    <input type="file" name="tips_pdf" accept="application/pdf" id="input-tips" style="display:none;"
+                           onchange="validarTamanoArchivo(this, 'nombre-tips')">
+                    <label for="input-tips" style="cursor:pointer;">
+                        <i class="fa-solid fa-tooth" style="font-size: 1.8rem; color:#22c55e;"></i>
+                        <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
+                        <span id="nombre-tips" style="font-size: 0.85rem; color:#666;">Ningún archivo seleccionado</span>
+                    </label>
+                </div>
+            </div>
+
+            {{-- BOTÓN FINAL --}}
+            <button type="submit" id="btn-confirmar-cita" class="ghost-btn"
+                style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; margin-top: 25px; background: #06b6d4; color: white; border: none; cursor: pointer;">
+                <i class="fa-solid fa-floppy-disk"></i> Confirmar Cita
+            </button>
+        </form>
     </div>
+
+    <script>
+        function validarTamanoArchivo(input, spanId) {
+            const file = input.files[0];
+            const maxKiloBytes = 2048; // 2MB
+            const span = document.getElementById(spanId);
+
+            if (file) {
+                if (file.size > maxKiloBytes * 1024) {
+                    alert("El archivo '" + file.name + "' es demasiado grande. El límite es de 2048 KB (2MB).");
+                    input.value = ""; // Limpia el input
+                    span.innerText = "Ningún archivo seleccionado";
+                    span.style.color = "#ef4444";
+                } else {
+                    span.innerText = file.name;
+                    span.style.color = "#666";
+                }
+            } else {
+                span.innerText = "Ningún archivo seleccionado";
+            }
+        }
+    </script>
+</div>
     {{-- Modal de Edición (Readonly: Nombre, Apellidos, Fecha Nac, Tipo Sangre) --}}
+    <style>
+        #modal-edit-patient .modal-glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+
+        #modal-edit-patient .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px 20px;
+            margin-bottom: 20px;
+        }
+
+        #modal-edit-patient .full-width {
+            grid-column: span 2;
+        }
+
+        #modal-edit-patient .modern-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f0f0f0;
+            font-size: 0.95rem;
+            outline: none;
+            box-sizing: border-box;
+            color: #555;
+        }
+
+        #modal-edit-patient .modern-input:focus {
+            background: #fff;
+            border-color: #00b4d8;
+            box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            #modal-edit-patient .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #modal-edit-patient .full-width {
+                grid-column: span 1;
+            }
+        }
+    </style>
     <div id="modal-edit-patient" class="modal-overlay">
         <div class="modal-glass modal-lg" style="width: 820px; max-width: 95vw; max-height: 90vh; overflow-y: auto;">
             <button class="close-modal" onclick="closeModal('modal-edit-patient')">&times;</button>
@@ -1117,28 +1334,6 @@
                 card.style.display = text.includes(query) ? 'flex' : 'none';
             });
         });
-        // --- UBICACIÓN: Después del Buscador y antes de verPerfil ---
-        document.getElementById('form-add-cita').addEventListener('submit', function(e) {
-            const fecha = document.getElementById('input-reserva-fecha').value;
-            const hora = document.getElementById('input-reserva-hora').value;
-
-            if (!fecha || !hora) {
-                e.preventDefault(); 
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Atención',
-                    text: 'Por favor, selecciona un día y una hora en el calendario.',
-                    confirmButtonColor: '#00b4d8'
-                });
-                return;
-            }
-
-            const btn = document.getElementById('btn-confirmar-cita');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
-            btn.style.opacity = '0.7';
-            // PREVENIR BUCLE: Solo desactivar visualmente, o hacerlo asíncrono para que el submit nativo se dispare
-            btn.style.pointerEvents = 'none';
-        });
 
         // ─── Perfil del Paciente ────────────────────────────────────────────────
         function verPerfil(paciente) {
@@ -1146,7 +1341,7 @@
             showTab('tab-general');
 
             document.getElementById('p-name').innerText = `${paciente.nombre} ${paciente.apellido_paterno} ${paciente.apellido_materno || ''}`;
-            document.getElementById('p-email').innerText = paciente.correo_electronico || paciente.usuario?.email || 'Sin correo';
+            document.getElementById('p-email').innerText = paciente.correo_electronico || 'Sin correo';
             document.getElementById('p-tel').innerText = paciente.telefono || 'Sin teléfono';
 
             document.getElementById('view-edad').innerText = calcularEdad(paciente.fecha_nacimiento);
@@ -1157,26 +1352,14 @@
             document.getElementById('view-ocupacion').innerText = paciente.ocupacion || 'S/D';
             document.getElementById('view-enfermedades').innerText = paciente.enfermedades_cronicas || 'Ninguna registrada';
 
-            // Alergias (texto libre): renderiza badges por coma, salto de línea o punto y coma
-            const alergiasContainer = document.getElementById('view-alergias-badges');
-            const alergiasRaw = (paciente.alergias || '').toString().trim();
-            if (!alergiasRaw || alergiasRaw.toLowerCase() === 'ninguna' || alergiasRaw.toLowerCase() === 'sin alergias') {
-                alergiasContainer.innerHTML = '<span style="color: #888; font-size: 0.9em;">Sin alergias registradas</span>';
-            } else {
-                const alergiasList = alergiasRaw
-                    .split(/[\n,;]+/)
-                    .map(item => item.trim())
-                    .filter(Boolean);
-
-                alergiasContainer.innerHTML = alergiasList.map(item =>
-                    `<span style="display:inline-block;margin:0 8px 8px 0;padding:6px 10px;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:0.8rem;font-weight:700;">${item}</span>`
-                ).join('');
-            }
-
             // Foto
-            const fotoUrl = paciente.archivos ? paciente.archivos.find(a => a.tipo === 'imagen') : null;
+            const fotoUrl = paciente.archivos
+                ? (paciente.archivos.find(a => a.tipo === 'imagen' && a.descripcion === 'Foto de perfil/progreso del paciente')
+                    || paciente.archivos.find(a => a.tipo === 'imagen'))
+                : null;
             if (fotoUrl) {
-                document.getElementById('p-foto').src = '/storage/' + fotoUrl.url_archivo.replace('public/', '');
+                const ruta = (fotoUrl.url_archivo || '').replace('public/', '').replace(/^\/+/, '');
+                document.getElementById('p-foto').src = '/storage-file/' + ruta;
                 document.getElementById('p-foto').style.display = 'block';
                 document.getElementById('p-foto-placeholder').style.display = 'none';
             } else {
@@ -1185,38 +1368,35 @@
             }
 
             // Contacto de Emergencia
-           const ce = paciente.contacto_emergencia;
+            const ce = paciente.contacto_emergencia;
             if (ce) {
-                document.getElementById('view-emergencia-nombre').innerText = `${ce.nombre} ${ce.apellido_paterno}`;
+                document.getElementById('view-emergencia-nombre').innerText = `${ce.nombre} ${ce.paterno || ''}`;
                 document.getElementById('view-emergencia-tel').innerText = ce.numero_telefono || 'S/D';
             } else {
                 document.getElementById('view-emergencia-nombre').innerText = 'No registrado';
-                document.getElementById('view-emergencia-tel').innerText = 'S/D';
+                document.getElementById('view-emergencia-tel').innerText = '---';
             }
 
-            // --- ESTO ES LO MÁS IMPORTANTE PARA LA CITA ---
-            // Inyectamos el ID y nombre en el formulario de citas
-            const inputIdCita = document.getElementById('form-cita-paciente-id');
-            const inputNomCita = document.getElementById('form-cita-paciente-nombre');
-            
-            if(inputIdCita) inputIdCita.value = paciente.id_paciente;
-            if(inputNomCita) inputNomCita.value = `${paciente.nombre} ${paciente.apellido_paterno}`;
+            // Alergias
+            const badges = document.getElementById('view-alergias-badges');
+            if (paciente.alergias) {
+                badges.innerHTML = `<span style="background:#ef4444; color:white; border-radius:20px; padding:5px 15px; font-size:0.9em; font-weight:700;">
+                                                                                                                                    <i class="fa-solid fa-pills"></i> ${paciente.alergias}</span>`;
+            } else {
+                badges.innerHTML = '<span style="color: #6c757d; font-style: italic;">Sin alergias registradas</span>';
+            }
 
-            // Abrir el modal de perfil
             openModal('modal-patient-profile');
         }
 
-        // Función auxiliar para la edad (si no la tienes)
         function calcularEdad(fecha) {
             if (!fecha) return 'S/D';
-            const hoy = new Date();
-            const cumple = new Date(fecha);
-            let edad = hoy.getFullYear() - cumple.getFullYear();
-            const m = hoy.getMonth() - cumple.getMonth();
-            if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) {
-                edad--;
-            }
-            return edad + ' años';
+            const birth = new Date(fecha);
+            const now = new Date();
+            let age = now.getFullYear() - birth.getFullYear();
+            const month = now.getMonth() - birth.getMonth();
+            if (month < 0 || (month === 0 && now.getDate() < birth.getDate())) age--;
+            return age + ' años';
         }
 
         // ─── Tabs ─────────────────────────────────────────────────────────────
@@ -1315,7 +1495,7 @@
 
                     let imageHtml = '';
                     if (ev.imagenes && ev.imagenes.length > 0) {
-                        const imgUrl = '/storage/' + ev.imagenes[0].ruta_imagen;
+                        const imgUrl = ev.imagenes[0].url_imagen || ('/storage/' + ev.imagenes[0].ruta_imagen);
                         imageHtml = `<div style="margin-top: 15px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; display: inline-block;">
                                                                                                                 <a href="${imgUrl}" target="_blank" title="Ver imagen completa">
                                                                                                                     <img src="${imgUrl}" alt="Evidencia" style="max-width: 200px; max-height: 150px; display: block; object-fit: cover;">
@@ -1402,13 +1582,9 @@
             document.getElementById('lbl-fecha-seleccionada').innerHTML = 'Selecciona un día en el calendario primero.';
             document.getElementById('reserva-contenedor-horarios').innerHTML = '<div style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px 20px; color: #aaa; font-weight: 600; text-align: center; height: 100%;"><p>Esperando selección de fecha...</p></div>';
 
-            // Inicializar calendario automáticamente un mes después de hoy
-            let fechaSiguienteMes = new Date();
-            fechaSiguienteMes.setMonth(fechaSiguienteMes.getMonth() + 1);
-            
-            reservaMes = fechaSiguienteMes.getMonth() + 1;
-            reservaAnio = fechaSiguienteMes.getFullYear();
-            
+            // Inicializar calendario al mes actual
+            reservaMes = new Date().getMonth() + 1;
+            reservaAnio = new Date().getFullYear();
             cargarCalendarioReserva(reservaMes, reservaAnio);
 
             openModal('modal-add-cita');
@@ -1429,7 +1605,7 @@
             document.getElementById('edit-tipo-sangre').value = currentPaciente.tipo_sangre || '';
 
             // Campos Editables
-            document.getElementById('edit-email').value = currentPaciente.correo_electronico || currentPaciente.usuario?.email || '';
+            document.getElementById('edit-email').value = currentPaciente.correo_electronico || '';
             document.getElementById('edit-telefono').value = currentPaciente.telefono || '';
             document.getElementById('edit-peso').value = currentPaciente.peso ? parseInt(currentPaciente.peso) : '';
             document.getElementById('edit-direccion').value = currentPaciente.direccion || '';
@@ -1444,11 +1620,6 @@
                 document.getElementById('edit-em-paterno').value = ce.apellido_paterno || '';
                 document.getElementById('edit-em-materno').value = ce.apellido_materno || '';
                 document.getElementById('edit-em-telefono').value = ce.numero_telefono || '';
-            } else {
-                document.getElementById('edit-em-nombre').value = '';
-                document.getElementById('edit-em-paterno').value = '';
-                document.getElementById('edit-em-materno').value = '';
-                document.getElementById('edit-em-telefono').value = '';
             }
         }
         function formatearNombre(input) {
@@ -1472,8 +1643,24 @@
         }
 
         // ─── Protección anti doble submit en el formulario de cita ───────────
-        // Este bloque fue eliminado porque causaba que se cancelara el evento submit 
-        // nativo y la página se quedara congelada. La lógica se combinó arriba.
+        document.getElementById('form-add-cita').addEventListener('submit', function (e) {
+            const fecha = document.getElementById('input-reserva-fecha').value;
+            const hora = document.getElementById('input-reserva-hora').value;
+
+            if (!fecha || !hora) {
+                e.preventDefault();
+                Swal.fire('Falta información', 'Selecciona fecha y hora antes de confirmar la cita.', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('btn-confirmar-cita');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+                btn.style.opacity = '0.7';
+                btn.style.cursor = 'not-allowed';
+            }
+        });
         // ─────────────────────────────────────────────
         // SOLO LETRAS (bloquea números en tiempo real)
         // ─────────────────────────────────────────────
@@ -1520,283 +1707,181 @@
         }
 
         // ─── Auto-abrir modal si hay errores de validación ──────────────
-        @if($errors->any() && old('_method') !== 'PUT')
+        @if($errors->any())
             openModal('modal-new-patient');
         @endif
+// ==========================================
+// CALENDARIO DE RESERVA DE CITAS
+// ==========================================
+let reservaMes = new Date().getMonth() + 1;
+let reservaAnio = new Date().getFullYear();
+const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-        // ==========================================
-        // CALENDARIO DE RESERVA DE CITAS
-        // ==========================================
-        let reservaMes = new Date().getMonth() + 1;
-        let reservaAnio = new Date().getFullYear();
-        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+function cambiarMesReserva(delta) {
+    reservaMes += delta;
+    if (reservaMes > 12) { reservaMes = 1; reservaAnio++; }
+    if (reservaMes < 1) { reservaMes = 12; reservaAnio--; }
+    cargarCalendarioReserva(reservaMes, reservaAnio);
+}
 
-        function cambiarMesReserva(delta) {
-            reservaMes += delta;
-            if (reservaMes > 12) { reservaMes = 1; reservaAnio++; }
-            if (reservaMes < 1) { reservaMes = 12; reservaAnio--; }
-            cargarCalendarioReserva(reservaMes, reservaAnio);
-        }
+function cargarCalendarioReserva(mes, anio) {
+    document.getElementById('reserva-mes-anio').innerText = `${nombresMeses[mes - 1]} ${anio}`;
+    const grid = document.getElementById('reserva-grid-dias');
 
-        function cargarCalendarioReserva(mes, anio) {
-            document.getElementById('reserva-mes-anio').innerText = `${nombresMeses[mes - 1]} ${anio}`;
-            const grid = document.getElementById('reserva-grid-dias');
+    grid.innerHTML = '<div style="grid-column:span 7; text-align:center; padding:30px;"><i class="fa-solid fa-circle-notch fa-spin" style="color: var(--primary-color); font-size: 2rem;"></i></div>';
 
-            // Loader elegante
-            grid.innerHTML = '<div style="grid-column:span 7; text-align:center; padding:30px;"><i class="fa-solid fa-circle-notch fa-spin" style="color: var(--primary-color); font-size: 2rem;"></i></div>';
+    fetch(`/api/calendario/disponibilidad?mes=${mes}&anio=${anio}`)
+        .then(res => res.json())
+        .then(disponibilidad => {
 
-            // Reutilizamos la API del DashboardController
-            fetch(`/api/calendario/disponibilidad?mes=${mes}&anio=${anio}`)
-                .then(res => res.json())
-                .then(disponibilidad => {
-                    grid.innerHTML = '';
+            grid.innerHTML = '';
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
 
-                    const hoy = new Date();
-                    hoy.setHours(0, 0, 0, 0);
+            const primerDiaSemana = new Date(anio, mes - 1, 1).getDay();
+            for (let i = 0; i < primerDiaSemana; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
 
-                    // Rellenar espacios vacíos del inicio del mes
-                    const primerDiaSemana = new Date(anio, mes - 1, 1).getDay();
-                    for (let i = 0; i < primerDiaSemana; i++) {
-                        grid.appendChild(document.createElement('div'));
-                    }
+            for (const [dia, data] of Object.entries(disponibilidad)) {
+                let div = document.createElement('div');
+                div.innerText = dia;
+                div.style.padding = '10px 5px';
+                div.style.borderRadius = '10px';
+                div.style.fontWeight = '700';
 
-                    // Crear los días
-                    for (const [dia, data] of Object.entries(disponibilidad)) {
-                        let div = document.createElement('div');
-                        div.innerText = dia;
-                        div.style.padding = '10px 5px';
-                        div.style.borderRadius = '10px';
-                        div.style.fontWeight = '700';
-                        div.style.transition = 'all 0.2s ease';
-                        div.style.userSelect = 'none';
+                const estaFecha = new Date(anio, mes - 1, parseInt(dia));
+                estaFecha.setHours(0, 0, 0, 0);
+                const esPasado = estaFecha < hoy;
 
-                        const estaFecha = new Date(anio, mes - 1, parseInt(dia));
-                        estaFecha.setHours(0, 0, 0, 0);
-                        const esPasado = estaFecha < hoy;
-
-                        if (esPasado) {
-                            div.style.background = '#f3f4f6';
-                            div.style.color = '#d1d5db';
-                            div.style.cursor = 'not-allowed';
-                        } else if (data.estado === 'verde') {
-                            div.style.background = 'rgba(50, 215, 75, 0.1)';
-                            div.style.color = '#15803d';
-                            div.style.border = '1px solid rgba(50, 215, 75, 0.3)';
-                        } else if (data.estado === 'amarillo') {
-                            div.style.background = 'rgba(255, 193, 7, 0.1)';
-                            div.style.color = '#b45309';
-                            div.style.border = '1px solid rgba(255, 193, 7, 0.3)';
-                        } else if (data.estado === 'rojo') {
-                            div.style.background = '#EF4444';
-                            div.style.color = 'white';
-                            div.style.boxShadow = '0 2px 8px rgba(239,68,68,0.3)';
-                        } else {
-                            div.style.background = '#fff';
-                            div.style.color = '#333';
-                        }
-
-                        // Interactividad
-                        if (!esPasado && data.estado !== 'rojo') {
-                            div.style.cursor = 'pointer';
-                            div.onmouseover = () => { div.style.transform = 'translateY(-2px)'; div.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)'; };
-                            div.onmouseout = () => { div.style.transform = 'translateY(0)'; div.style.boxShadow = 'none'; };
-
-                            div.onclick = () => {
-                                // Limpiar selecciones previas
-                                document.querySelectorAll('#reserva-grid-dias div').forEach(d => {
-                                    if (d.style.outline) d.style.outline = 'none';
-                                });
-                                // Marcar como seleccionado
-                                div.style.outline = '3px solid var(--primary-color)';
-                                div.style.outlineOffset = '1px';
-                                seleccionarFechaReserva(dia, mes, anio, data.hora_inicio, data.hora_fin);
-                            };
-                        } else if (!esPasado && data.estado === 'rojo') {
-                            div.style.cursor = 'not-allowed';
-                            div.onclick = () => alert('❌ Este día no tiene horarios disponibles.');
-                        }
-
-                        grid.appendChild(div);
-                    }
-                });
-        }
-
-        function seleccionarFechaReserva(dia, mes, anio, horaInicio, horaFin) {
-            const fechaString = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-
-            // Actualizar inputs
-            document.getElementById('input-reserva-fecha').value = fechaString;
-            document.getElementById('input-reserva-hora').value = ''; // Limpiar hora anterior
-
-            // Mostrar fecha amigable
-            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const fechaObj = new Date(anio, mes - 1, dia);
-            let fechaBonita = fechaObj.toLocaleDateString('es-MX', opciones);
-            document.getElementById('lbl-fecha-seleccionada').innerHTML = `<span style="color:var(--primary-color);">Fecha:</span> ${fechaBonita}`;
-
-            // Llamar usando los horarios dinámicos de la API de disponibilidad en vez de fijos
-            generarHorasReserva(fechaString, horaInicio || "08:00", horaFin || "20:00");
-        }
-
-        function recalcularHorasReserva() {
-            const fecha = document.getElementById('input-reserva-fecha').value;
-            if (!fecha) return;
-
-            const contexto = window.reservaContextoHorarios || { horaInicio: '08:00', horaFin: '20:00' };
-            generarHorasReserva(fecha, contexto.horaInicio || '08:00', contexto.horaFin || '20:00');
-        }
-
-        function generarHorasReserva(fecha, horaInicioStr, horaFinStr) {
-            const contenedor = document.getElementById('reserva-contenedor-horarios');
-            contenedor.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--primary-color); padding: 40px 20px;"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i></div>';
-            window.reservaContextoHorarios = { horaInicio: horaInicioStr, horaFin: horaFinStr };
-
-            let horariosClinica = [];
-
-            // Generar slots por intervalo dinámico (15 min por defecto)
-            if (horaInicioStr && horaFinStr) {
-                let [hInicio, mInicio] = horaInicioStr.split(':').map(Number);
-                let [hFin, mFin] = horaFinStr.split(':').map(Number);
-
-                let currentDate = new Date();
-                currentDate.setHours(hInicio, mInicio, 0, 0);
-
-                let endDate = new Date();
-                endDate.setHours(hFin, mFin, 0, 0);
-
-                // Prevenir loop infinito si la configuración es rara
-                while (currentDate < endDate && horariosClinica.length < 96) {
-                    let h = String(currentDate.getHours()).padStart(2, '0');
-                    let m = String(currentDate.getMinutes()).padStart(2, '0');
-                    horariosClinica.push(`${h}:${m}`);
-
-                    currentDate.setMinutes(currentDate.getMinutes() + 15);
+                if (esPasado) {
+                    div.style.background = '#f3f4f6';
+                    div.style.color = '#d1d5db';
+                } else if (data.estado === 'verde') {
+                    div.style.background = '#d1fae5';
+                } else if (data.estado === 'amarillo') {
+                    div.style.background = '#fef3c7';
+                } else if (data.estado === 'rojo') {
+                    div.style.background = '#ef4444';
+                    div.style.color = 'white';
                 }
+
+                if (!esPasado && data.estado !== 'rojo') {
+                    div.style.cursor = 'pointer';
+
+                    div.onclick = () => {
+                        document.querySelectorAll('#reserva-grid-dias div').forEach(d => d.style.outline = 'none');
+                        div.style.outline = '3px solid var(--primary-color)';
+
+                        seleccionarFechaReserva(dia, mes, anio, data.hora_inicio, data.hora_fin);
+                    };
+                }
+
+                grid.appendChild(div);
             }
+        });
+}
 
-            if (horariosClinica.length === 0) {
-                contenedor.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #888; font-style: italic;">No hay horarios configurados para este día.</p>';
-                return;
+function seleccionarFechaReserva(dia, mes, anio, horaInicio, horaFin) {
+    const fechaString = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+
+    document.getElementById('input-reserva-fecha').value = fechaString;
+    document.getElementById('input-reserva-hora').value = '';
+
+    generarHorasReserva(fechaString, horaInicio, horaFin);
+}
+
+// ==========================================
+// HORARIOS
+// ==========================================
+async function generarHorasReserva(fecha, horaInicioStr, horaFinStr) {
+
+    const contenedor = document.getElementById('reserva-contenedor-horarios');
+    contenedor.innerHTML = 'Cargando...';
+
+    let horariosClinica = [];
+
+    let current = new Date(`2000-01-01T${horaInicioStr}`);
+    let end = new Date(`2000-01-01T${horaFinStr}`);
+
+    while (current < end) {
+        horariosClinica.push(current.toTimeString().slice(0,5));
+        current.setMinutes(current.getMinutes() + 15);
+    }
+
+    let horasOcupadas = [];
+
+    try {
+        const res = await fetch(`/api/citas/ocupadas?fecha=${fecha}`);
+        const data = await res.json();
+        horasOcupadas = data.ocupadas || [];
+    } catch (e) {}
+
+    contenedor.innerHTML = '';
+
+    const ahora = new Date();
+
+    horariosClinica.forEach(hora => {
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'reserva-hora-btn';
+        btn.innerText = hora;
+
+        const fechaHora = new Date(`${fecha}T${hora}`);
+
+        const esPasado = fechaHora < ahora;
+
+        const duracion = parseInt(document.querySelector('[name="duracion_minutos"]').value);
+        const bloques = duracion / 15;
+
+        let indice = horariosClinica.indexOf(hora);
+
+        let disponible = true;
+
+        for (let i = 0; i < bloques; i++) {
+            let h = horariosClinica[indice + i];
+            if (!h || horasOcupadas.includes(h)) {
+                disponible = false;
+                break;
             }
-
-            // Consultar base de datos para ver qué horas están realmente ocupadas para esta fecha
-            fetch(`/api/calendario/horas-ocupadas?fecha=${fecha}`)
-                .then(res => res.json())
-                .then(data => {
-                    const intervaloMinutos = parseInt(data.intervalo_minutos || 15, 10);
-                    const horasOcupadasAPI = (data.horas_ocupadas || []).map(h => h.substring(0, 5));
-                    const horasOcupadasSet = new Set(horasOcupadasAPI);
-                    const duracion = parseInt(document.getElementById('input-reserva-duracion')?.value || '30', 10);
-                    const bloquesNecesarios = Math.max(1, Math.ceil(duracion / intervaloMinutos));
-
-                    // Regenerar slots con intervalo informado por backend para mantener consistencia
-                    horariosClinica = [];
-                    let [hInicio, mInicio] = horaInicioStr.split(':').map(Number);
-                    let [hFin, mFin] = horaFinStr.split(':').map(Number);
-                    let currentDate = new Date();
-                    currentDate.setHours(hInicio, mInicio, 0, 0);
-                    let endDate = new Date();
-                    endDate.setHours(hFin, mFin, 0, 0);
-                    while (currentDate < endDate && horariosClinica.length < 96) {
-                        let h = String(currentDate.getHours()).padStart(2, '0');
-                        let m = String(currentDate.getMinutes()).padStart(2, '0');
-                        horariosClinica.push(`${h}:${m}`);
-                        currentDate.setMinutes(currentDate.getMinutes() + intervaloMinutos);
-                    }
-
-                    contenedor.innerHTML = ''; // Limpiar loader
-
-                    horariosClinica.forEach(hora => {
-                        const btn = document.createElement('button');
-                        btn.type = 'button';
-                        btn.className = 'reserva-hora-btn';
-
-                        const indiceActual = horariosClinica.indexOf(hora);
-                        let puedeIniciar = true;
-                        for (let i = 0; i < bloquesNecesarios; i++) {
-                            const slot = horariosClinica[indiceActual + i];
-                            if (!slot || horasOcupadasSet.has(slot)) {
-                                puedeIniciar = false;
-                                break;
-                            }
-                        }
-                        
-                        // Validar si esta hora está ocupada o ya pasó (si es hoy)
-                        const esHoy = fecha === new Date().toISOString().split('T')[0];
-                        const [h, m] = hora.split(':');
-                        const horaSlotObj = new Date();
-                        horaSlotObj.setHours(parseInt(h), parseInt(m), 0, 0);
-                        
-                        const yaPaso = esHoy && horaSlotObj < new Date();
-                        const estaOcupada = !puedeIniciar || yaPaso;
-
-                        // Formato 12 hrs
-                        const ampm = h >= 12 ? 'PM' : 'AM';
-                        const hora12 = (h % 12 || 12) + ':' + m + ' ' + ampm;
-                        btn.innerText = hora12;
-
-                        // Estilo de las píldoras
-                        btn.style.padding = '12px 0';
-                        btn.style.background = '#fff';
-                        btn.style.border = '1px solid #ccc';
-                        btn.style.borderRadius = '10px';
-                        btn.style.color = '#333';
-                        btn.style.fontWeight = '700';
-                        btn.style.cursor = 'pointer';
-                        btn.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
-                        
-                        if (estaOcupada) {
-                            btn.style.background = '#f3f4f6';
-                            btn.style.color = '#9ca3af';
-                            btn.style.borderColor = '#e5e7eb';
-                            btn.style.textDecoration = 'line-through';
-                            btn.style.cursor = 'not-allowed';
-                            btn.disabled = true;
-                            // Optionally attach a tooltip info here
-                            btn.title = "No disponible";
-                        } else {
-                            btn.onmouseover = () => {
-                                if (document.getElementById('input-reserva-hora').value !== hora) {
-                                    btn.style.borderColor = 'var(--primary-color)';
-                                    btn.style.color = 'var(--primary-color)';
-                                }
-                            };
-                            btn.onmouseout = () => {
-                                if (document.getElementById('input-reserva-hora').value !== hora) {
-                                    btn.style.borderColor = '#ccc';
-                                    btn.style.color = '#333';
-                                }
-                            };
-
-                            btn.onclick = () => {
-                                // Reiniciar todos al estilo original
-                                document.querySelectorAll('.reserva-hora-btn:not(:disabled)').forEach(b => {
-                                    b.style.background = '#fff';
-                                    b.style.color = '#333';
-                                    b.style.borderColor = '#ccc';
-                                    b.style.boxShadow = 'none';
-                                    b.style.transform = 'scale(1)';
-                                });
-
-                                // Estilo ACTIVO
-                                btn.style.background = 'var(--primary-color)';
-                                btn.style.color = 'white';
-                                btn.style.borderColor = 'var(--primary-color)';
-                                btn.style.boxShadow = '0 6px 15px rgba(0, 209, 255, 0.3)';
-                                btn.style.transform = 'scale(1.05)';
-
-                                // Asignar valor para el backend
-                                document.getElementById('input-reserva-hora').value = hora;
-                            };
-                        }
-
-                        contenedor.appendChild(btn);
-                    });
-                })
-                .catch(err => {
-                    console.error('Error cargando horas ocupadas:', err);
-                    contenedor.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #ef4444;">Error de red. Intenta nuevamente.</p>';
-                });
         }
-    </script>
+
+        // PASADO
+        if (esPasado) {
+            btn.disabled = true;
+            btn.style.background = '#eee';
+        }
+
+        // OCUPADO
+        else if (horasOcupadas.includes(hora)) {
+            btn.disabled = true;
+            btn.style.background = '#fecaca';
+            btn.innerText += ' ❌';
+        }
+
+        // NO DISPONIBLE
+        else if (!disponible) {
+            btn.disabled = true;
+            btn.style.background = '#fde68a';
+            btn.innerText += ' ⚠️';
+        }
+
+        // DISPONIBLE
+        else {
+            btn.onclick = () => {
+
+                document.querySelectorAll('.reserva-hora-btn').forEach(b => {
+                    b.style.background = '#fff';
+                });
+
+                btn.style.background = '#22c55e';
+
+                document.getElementById('input-reserva-hora').value = hora;
+            };
+        }
+        contenedor.appendChild(btn);
+    });
+}
+</script>
 @endsection

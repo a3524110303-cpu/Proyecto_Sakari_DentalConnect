@@ -45,8 +45,12 @@ class PacienteHistorialController extends Controller
                 ->first();
 
             if ($archivo) {
+                $ruta = ltrim(str_replace('public/', '', (string) $archivo->url_archivo), '/');
                 $reg->imagenes = [
-                    ['ruta_imagen' => str_replace('public/', '', $archivo->url_archivo)]
+                    [
+                        'ruta_imagen' => $ruta,
+                        'url_imagen' => route('storage.file', ['path' => $ruta]),
+                    ]
                 ];
             } else {
                 $reg->imagenes = [];
@@ -128,6 +132,7 @@ class PacienteHistorialController extends Controller
             // Buscar si ya tiene una foto, si sí, actualizar, si no, crear.
             $archivo = Archivo::where('id_paciente', $idPaciente)
                 ->where('tipo', 'imagen')
+                ->where('descripcion', 'Foto de perfil/progreso del paciente')
                 ->first();
 
             if ($archivo) {
@@ -149,7 +154,7 @@ class PacienteHistorialController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Foto actualizada correctamente.',
-                'url' => asset('storage/' . $path)
+                'url' => route('storage.file', ['path' => ltrim($path, '/')])
             ]);
         }
 

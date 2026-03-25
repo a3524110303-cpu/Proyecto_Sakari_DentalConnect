@@ -22,14 +22,21 @@ use Illuminate\Database\Eloquent\Model;
 class Notificacion extends Model
 {
     use HasFactory;
+
     protected $table = 'notificaciones';
     protected $primaryKey = 'id_notificacion';
 
     protected $fillable = [
         'id_usuario',
+        'id_cita',
         'tipo',
         'mensaje',
+        'datos',
         'device_token',
         'estado',
+    ];
+
+    protected $casts = [
+        'datos' => 'array',
     ];
 }

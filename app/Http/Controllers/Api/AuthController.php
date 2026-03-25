@@ -62,52 +62,55 @@ class AuthController extends Controller
     // NUEVA FUNCIÓN PARA ACTIVAR CUENTA MÓVIL
     // ==========================================
     public function activarCuenta(Request $request)
-    {
-        // 1. Validar que la app envíe los datos correctamente
-        $request->validate([
-            'email' => 'required|email',
-            'telefono' => 'required|string',
-            'password' => 'required|string|min:6',
-        ]);
+{
 
-        // 2. Buscar al usuario en el sistema por su email
-        $user = User::where('email', $request->email)->first();
+    $request->merge([
+        'email' => trim($request->email),
+        'telefono' => trim($request->telefono),
+    ]);
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se encontró ninguna cuenta con este correo electrónico.'
-            ], 404);
-        }
+    $request->validate([
+        'email' => 'required|email',
+        'telefono' => 'required|string',
+        'password' => 'required|string|min:6',
+    ]);
 
-        if ($user->rol !== 'paciente') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Esta aplicación es exclusiva para pacientes.'
-            ], 403);
-        }
+    // 1. Buscar al usuario ignorando cualquier filtro oculto de clínica (Global Scopes)
+    $user = User::withoutGlobalScopes()
+                ->where('email', $request->email)
+                //->where('rol', 'paciente')
+                ->first();
 
-        // 3. Buscar al paciente ligado a ese usuario para verificar su teléfono
-        $paciente = Paciente::where('id_usuario', $user->id_usuario)
-                            ->where('telefono', $request->telefono)
-                            ->first();
+    if (!$user) {
+    return response()->json([
+        'success' => false,
+        'message' => 'No encontré: "' . $request->email . '" en la BD. Revisa mayúsculas, espacios o si la base de datos remota es la correcta.'
+    ], 404);
+}
 
-        if (!$paciente) {
-            return response()->json([
-                'success' => false,
-                'message' => 'El número de teléfono no coincide con los registros de la clínica.'
-            ], 400);
-        }
+    // 2. Verificar que el teléfono ingresado coincida con el registrado en la tabla pacientes,
+    // también ignorando filtros globales.
+    $paciente = Paciente::withoutGlobalScopes()
+                        ->where('id_usuario', $user->id_usuario)
+                        ->where('telefono', $request->telefono)
+                        ->first();
 
-        // 4. Si todo es correcto, actualizar la contraseña
-        $user->password = Hash::make($request->password);
-        $user->save();
-
+    if (!$paciente) {
         return response()->json([
-            'success' => true,
-            'message' => 'Cuenta activada exitosamente. Ya puedes iniciar sesión.'
-        ], 200);
+            'success' => false,
+            'message' => 'El número de teléfono no coincide con nuestros registros para este correo.'
+        ], 404);
     }
+
+    // 3. Si todo es correcto, actualizar la contraseña
+    $user->password = Hash::make($request->password);
+    $user->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Cuenta activada exitosamente. Ya puedes iniciar sesión en la aplicación.'
+    ], 200);
+}
 
     /**
      * Enviar correo de recuperación de contraseña desde la App Móvil

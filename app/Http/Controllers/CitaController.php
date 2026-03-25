@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Archivo;
 use App\Models\Cita;
+use App\Models\Archivo;
 use App\Models\Servicio;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class CitaController extends Controller
@@ -15,23 +17,18 @@ class CitaController extends Controller
     public function index()
     {
         $idClinica = Auth::user()->id_clinica;
+
         $citas = Cita::with(['paciente', 'servicio'])
             ->where('id_clinica', $idClinica)
             ->get();
+
         if (request()->wantsJson()) {
             return response()->json($citas);
         }
+
         return view('citas.index', compact('citas'));
     }
 
-    /**
-     * Almacena una nueva cita en la base de datos.
-     *
-     * Valida los datos recibidos, busca el precio del servicio y crea el registro de la cita.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -40,30 +37,91 @@ class CitaController extends Controller
             'fecha' => 'required|date_format:Y-m-d',
             'hora' => 'required|date_format:H:i',
             'duracion_minutos' => 'nullable|integer|in:15,30',
+<<<<<<< HEAD
             'cuidados_postratamiento_pdf' => 'nullable|file|mimes:pdf|max:10240',
+=======
+            'cuidados_pdf' => 'nullable|file|mimes:pdf|max:2048',
+            'tips_pdf' => 'nullable|file|mimes:pdf|max:2048',
+>>>>>>> 66451db0d14e939f31dd568f91653af885088535
         ]);
 
         try {
             $user = Auth::user();
             $idClinica = $user->id_clinica;
 
-            // Combinar fecha + hora en un solo datetime
-            $fechaHora = Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora);
-            $duracionMinutos = (int) ($request->input('duracion_minutos', 30));
+            // 🕒 Crear fecha inicio y fin
+            $fechaHora = Carbon::createFromFormat(
+                'Y-m-d H:i',
+                $request->fecha . ' ' . $request->hora
+            );
+
+            $duracionMinutos = (int) $request->input('duracion_minutos', 30);
             $finHora = $fechaHora->copy()->addMinutes($duracionMinutos);
 
-            // Buscar el servicio para obtener el precio y nombre
-            $servicio = Servicio::findOrFail($request->id_servicio);
-
-            $idDoctor = $this->buscarDoctorDisponible($idClinica, $fechaHora, $finHora);
-
-            if (!$idDoctor) {
-                return redirect()->route('pacientes.index')
-                    ->with('error', 'El horario seleccionado ya no está disponible para la duración elegida.')
+            // 🚫 VALIDACIÓN 1: no permitir horas pasadas
+            if ($fechaHora < Carbon::now()) {
+                return back()
+                    ->with('error', 'No puedes agendar en una hora pasada.')
                     ->withInput();
             }
 
+<<<<<<< HEAD
             $cita = Cita::create([
+=======
+            // 📦 Servicio
+            $servicio = Servicio::findOrFail($request->id_servicio);
+
+            // 🚫 VALIDACIÓN 2: evitar empalmes en TODA la clínica
+            $yaOcupada = Cita::where('id_clinica', $idClinica)
+                ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+                ->where('fecha_hora_inicio', '<', $finHora)
+                ->where('fecha_hora_fin', '>', $fechaHora)
+                ->exists();
+
+            if ($yaOcupada) {
+                return back()
+                    ->with('error', 'Ese horario ya está ocupado.')
+                    ->withInput();
+            }
+
+            // 👨‍⚕️ Buscar doctor disponible
+            $idDoctor = $this->buscarDoctorDisponible($idClinica, $fechaHora, $finHora);
+
+            if (!$idDoctor) {
+                return back()
+                    ->with('error', 'No hay doctores disponibles en ese horario.')
+                    ->withInput();
+            }
+
+            // 🚫 VALIDACIÓN 3: duplicado exacto del paciente
+            $duplicado = Cita::where('id_paciente', $request->id_paciente)
+                ->where('id_clinica', $idClinica)
+                ->where('estado_cita', 'pendiente')
+                ->where('fecha_hora_inicio', $fechaHora)
+                ->exists();
+
+            if ($duplicado) {
+                return back()
+                    ->with('error', 'El paciente ya tiene una cita en ese horario.')
+                    ->withInput();
+            }
+
+            // 📄 Guardar PDFs
+            $rutaCuidados = null;
+            $rutaTips = null;
+            $diskArchivos = env('CITAS_FILESYSTEM_DISK', 'public');
+
+            if ($request->hasFile('cuidados_pdf')) {
+                $rutaCuidados = $request->file('cuidados_pdf')->store('cuidados', $diskArchivos);
+            }
+
+            if ($request->hasFile('tips_pdf')) {
+                $rutaTips = $request->file('tips_pdf')->store('tips', $diskArchivos);
+            }
+
+            // ✅ Crear cita
+            $dataCita = [
+>>>>>>> 66451db0d14e939f31dd568f91653af885088535
                 'id_clinica' => $idClinica,
                 'id_paciente' => $request->id_paciente,
                 'id_doctor' => $idDoctor,
@@ -73,8 +131,9 @@ class CitaController extends Controller
                 'estado_cita' => 'pendiente',
                 'motivo' => $servicio->nombre_servicio,
                 'costo_estimado' => $servicio->precio_base,
-            ]);
+            ];
 
+<<<<<<< HEAD
             if ($request->hasFile('cuidados_postratamiento_pdf')) {
                 $archivoPdf = $request->file('cuidados_postratamiento_pdf');
                 $nombreArchivo = 'cuidados_postratamiento_' . $cita->id_cita . '_' . time() . '.pdf';
@@ -90,12 +149,52 @@ class CitaController extends Controller
             }
 
             return redirect()->route('pacientes.index')->with('success', '¡Cita agendada correctamente para el ' . $fechaHora->format('d/m/Y \a \l\a\s H:i') . '!');
+=======
+            // Compatibilidad: si en producción aún no han corrido migraciones,
+            // evitamos insertar columnas que no existen para no romper el flujo.
+            if (Schema::hasColumn('citas', 'cuidados_pdf')) {
+                $dataCita['cuidados_pdf'] = $rutaCuidados;
+            }
+
+            if (Schema::hasColumn('citas', 'tips_pdf')) {
+                $dataCita['tips_pdf'] = $rutaTips;
+            }
+
+            $cita = Cita::create($dataCita);
+
+            // Fuente de verdad de adjuntos: tabla archivos.
+            if ($rutaCuidados) {
+                Archivo::create([
+                    'id_paciente' => $request->id_paciente,
+                    'id_cita' => $cita->id_cita,
+                    'url_archivo' => $rutaCuidados,
+                    'tipo' => 'pdf',
+                    'descripcion' => 'cuidados_pdf',
+                ]);
+            }
+
+            if ($rutaTips) {
+                Archivo::create([
+                    'id_paciente' => $request->id_paciente,
+                    'id_cita' => $cita->id_cita,
+                    'url_archivo' => $rutaTips,
+                    'tipo' => 'pdf',
+                    'descripcion' => 'tips_pdf',
+                ]);
+            }
+
+            return redirect()->route('pacientes.index')
+                ->with('success', '¡Cita agendada correctamente!');
+>>>>>>> 66451db0d14e939f31dd568f91653af885088535
 
         } catch (\Exception $e) {
-            return redirect()->route('pacientes.index')->with('error', 'Error al agendar: ' . $e->getMessage())->withInput();
+            return back()
+                ->with('error', 'Error al agendar: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
+    // 👨‍⚕️ Buscar doctor disponible
     public function buscarDoctorDisponible(int $idClinica, Carbon $inicio, Carbon $fin): ?int
     {
         $doctores = DB::table('doctores')
@@ -104,6 +203,8 @@ class CitaController extends Controller
             ->pluck('doctores.id_doctor');
 
         foreach ($doctores as $idDoctor) {
+
+            // 🚫 Bloqueos manuales
             $tieneBloqueo = DB::table('horarios_bloqueados')
                 ->where('id_doctor', $idDoctor)
                 ->where('estatus_horario', 'activo')
@@ -111,10 +212,9 @@ class CitaController extends Controller
                 ->where('fecha_fin', '>', $inicio)
                 ->exists();
 
-            if ($tieneBloqueo) {
-                continue;
-            }
+            if ($tieneBloqueo) continue;
 
+            // 🚫 Empalmes con citas
             $empalme = Cita::where('id_clinica', $idClinica)
                 ->where('id_doctor', $idDoctor)
                 ->whereIn('estado_cita', ['pendiente', 'confirmada'])
@@ -129,4 +229,33 @@ class CitaController extends Controller
 
         return null;
     }
+
+    // 🔥 ENDPOINT PARA FRONTEND (horas ocupadas)
+  public function horasOcupadas(Request $request)
+{
+    $fecha = $request->fecha;
+    $idClinica = Auth::user()->id_clinica;
+
+    $citas = Cita::whereDate('fecha_hora_inicio', $fecha)
+        ->where('id_clinica', $idClinica)
+        ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+        ->get();
+
+    $horasOcupadas = [];
+
+    foreach ($citas as $cita) {
+
+        $inicio = Carbon::parse($cita->fecha_hora_inicio);
+        $fin = Carbon::parse($cita->fecha_hora_fin);
+
+        while ($inicio < $fin) {
+            $horasOcupadas[] = $inicio->format('H:i');
+            $inicio->addMinutes(15); // 🔥 clave
+        }
+    }
+
+    return response()->json([
+        'ocupadas' => $horasOcupadas
+    ]);
+}
 }

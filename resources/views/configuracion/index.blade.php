@@ -14,6 +14,12 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div style="background: #f8d7da; color: #842029; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <i class="fa-solid fa-circle-xmark"></i> {{ session('error') }}
+        </div>
+    @endif
+
     @if($errors->any())
         <div style="background: #f8d7da; color: #842029; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
             <i class="fa-solid fa-triangle-exclamation"></i>
@@ -108,6 +114,30 @@
                 <h3 style="color: #0077b6; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-top: 0;">
                     <i class="fa-solid fa-user-doctor"></i> Perfil del Doctor
                 </h3>
+
+                {{-- Foto de perfil del doctor --}}
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="position: relative; display: inline-block;">
+                        @if($doctorPerfil && $doctorPerfil->foto_perfil)
+                            <img src="{{ route('storage.file', ['path' => $doctorPerfil->foto_perfil]) }}"
+                                 alt="Foto del Doctor"
+                                 style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 15px rgba(0,119,182,0.25); cursor: pointer;"
+                                 onclick="document.getElementById('input-foto-doctor').click()">
+                        @else
+                            <div style="width: 100px; height: 100px; border-radius: 50%; background: #e0fbfc; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,119,182,0.25); cursor: pointer; margin: 0 auto;"
+                                 onclick="document.getElementById('input-foto-doctor').click()">
+                                <i class="fa-solid fa-camera" style="font-size: 2rem; color: #0077b6;"></i>
+                            </div>
+                        @endif
+                    </div>
+                    <form action="{{ route('configuracion.fotoDoctor') }}" method="POST" enctype="multipart/form-data" id="form-foto-doctor">
+                        @csrf
+                        <input type="file" id="input-foto-doctor" name="foto_perfil" accept="image/jpeg,image/png,image/webp" style="display: none;"
+                               onchange="document.getElementById('form-foto-doctor').submit();">
+                    </form>
+                    <p style="color: #888; font-size: 0.75rem; margin-top: 8px;">Haz clic para subir o cambiar la foto</p>
+                </div>
+
                 <form action="{{ route('configuracion.updateUsuario') }}" method="POST">
                     @csrf
                     <input type="hidden" name="id_usuario" value="{{ $doctorUser->id_usuario }}">
@@ -122,6 +152,14 @@
                     <div style="margin-bottom: 15px;">
                         <label>Correo Electrónico (Acceso)</label>
                         <input type="email" name="email" value="{{ $doctorUser->email }}" class="modern-input" required>
+                    </div>
+
+                    {{-- CAMPO AGREGADO --}}
+                    <div style="margin-top: 15px;">
+                        <label>Sobre mí</label>
+                        <textarea name="sobre_mi" class="modern-input" rows="4" 
+                            placeholder="Cuéntale a tus pacientes sobre tu experiencia..."
+                            style="resize: none; font-family: inherit;">{{ $doctorPerfil->sobre_mi ?? '' }}</textarea>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">

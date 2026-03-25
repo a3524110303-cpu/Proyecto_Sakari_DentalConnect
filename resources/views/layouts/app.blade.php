@@ -626,6 +626,134 @@ Incluye:
             text-decoration: none;
             font-weight: 500;
         }
+
+        .notif-bell-wrapper {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1100;
+        }
+
+        .notif-bell-btn {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border: 0;
+            border-radius: 999px;
+            background: #fff;
+            color: #4b5563;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+        }
+
+        .notif-bell-btn:hover {
+            color: #2563eb;
+        }
+
+        .notif-bell-count {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #dc2626;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notif-panel {
+            display: none;
+            position: absolute;
+            right: 0;
+            margin-top: 10px;
+            width: 340px;
+            max-height: 420px;
+            overflow: hidden;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.16);
+        }
+
+        .notif-panel.open {
+            display: block;
+        }
+
+        .notif-header {
+            padding: 12px 14px;
+            background: #eff6ff;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e40af;
+        }
+
+        .notif-list {
+            max-height: 360px;
+            overflow-y: auto;
+        }
+
+        .notif-item {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .notif-item-title {
+            color: #111827;
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .notif-item-sub {
+            color: #6b7280;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
+        .notif-item-date {
+            color: #2563eb;
+            font-weight: 700;
+        }
+
+        .notif-actions {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .notif-btn {
+            border: 0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 8px 10px;
+            cursor: pointer;
+        }
+
+        .notif-btn.ok {
+            background: #22c55e;
+            color: #fff;
+        }
+
+        .notif-btn.no {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .notif-empty {
+            padding: 18px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 13px;
+        }
     </style>
 </head>
 
@@ -633,47 +761,49 @@ Incluye:
 
     <nav class="dashboard-sidebar">
         <ul class="navbar">
-            <li class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                <a href="{{ route('dashboard') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-house"></i></span>
-                    <span class="text">Inicio</span>
-                </a>
-            </li>
+            @if(auth()->check() && auth()->user()->rol !== 'administrador')
+                <li class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                    <a href="{{ route('dashboard') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-house"></i></span>
+                        <span class="text">Inicio</span>
+                    </a>
+                </li>
 
-            <li class="nav-item {{ request()->routeIs('pacientes.index') ? 'active' : '' }}">
-                <a href="{{ route('pacientes.index') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-users"></i></span>
-                    <span class="text">Pacientes</span>
-                </a>
-            </li>
+                <li class="nav-item {{ request()->routeIs('pacientes.index') ? 'active' : '' }}">
+                    <a href="{{ route('pacientes.index') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-users"></i></span>
+                        <span class="text">Pacientes</span>
+                    </a>
+                </li>
 
-            <li class="nav-item {{ request()->routeIs('tratamientos.index') ? 'active' : '' }}">
-                <a href="{{ route('tratamientos.index') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-notes-medical"></i></span>
-                    <span class="text">Tratamientos</span>
-                </a>
-            </li>
+                <li class="nav-item {{ request()->routeIs('tratamientos.index') ? 'active' : '' }}">
+                    <a href="{{ route('tratamientos.index') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-notes-medical"></i></span>
+                        <span class="text">Tratamientos</span>
+                    </a>
+                </li>
 
-            <li class="nav-item {{ request()->routeIs('publicidad.index') ? 'active' : '' }}">
-                <a href="{{ route('publicidad.index') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-bullhorn"></i></span>
-                    <span class="text">Publicidad</span>
-                </a>
-            </li>
+                <li class="nav-item {{ request()->routeIs('publicidad.index') ? 'active' : '' }}">
+                    <a href="{{ route('publicidad.index') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-bullhorn"></i></span>
+                        <span class="text">Publicidad</span>
+                    </a>
+                </li>
 
-            <li class="nav-item {{ request()->routeIs('configuracion.index') ? 'active' : '' }}">
-                <a href="{{ route('configuracion.index') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-gear"></i></span>
-                    <span class="text">Configuración</span>
-                </a>
-            </li>
+                <li class="nav-item {{ request()->routeIs('configuracion.index') ? 'active' : '' }}">
+                    <a href="{{ route('configuracion.index') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-gear"></i></span>
+                        <span class="text">Configuración</span>
+                    </a>
+                </li>
 
-            <li class="nav-item {{ request()->routeIs('suscripciones.show') ? 'active' : '' }}">
-                <a href="{{ route('suscripciones.show') }}" class="nav-content">
-                    <span class="icon"><i class="fa-solid fa-crown"></i></span>
-                    <span class="text">Suscripción</span>
-                </a>
-            </li>
+                <li class="nav-item {{ request()->routeIs('suscripciones.show') ? 'active' : '' }}">
+                    <a href="{{ route('suscripciones.show') }}" class="nav-content">
+                        <span class="icon"><i class="fa-solid fa-crown"></i></span>
+                        <span class="text">Suscripción</span>
+                    </a>
+                </li>
+            @endif
 
             @if(auth()->check() && auth()->user()->rol === 'administrador')
                 <li class="nav-item {{ request()->routeIs('admin.panel') ? 'active' : '' }}">
@@ -698,17 +828,156 @@ Incluye:
     </nav>
 
     <main>
+        <div id="notif-bell" class="notif-bell-wrapper">
+            <button id="notif-bell-btn" class="notif-bell-btn" type="button" aria-label="Notificaciones">
+                <i class="fas fa-bell"></i>
+                <span id="notif-bell-count" class="notif-bell-count">0</span>
+            </button>
+
+            <div id="notif-panel" class="notif-panel">
+                <div class="notif-header">Peticiones de Reagenda</div>
+                <div id="notif-list" class="notif-list">
+                    <div class="notif-empty">Todo al día.</div>
+                </div>
+            </div>
+        </div>
+
         @yield('contenido')
     </main>
 
     @yield('modales')
 
     <script>
+        const notifUi = {
+            wrapper: null,
+            panel: null,
+            list: null,
+            count: null,
+        };
+
+        function renderNotificaciones(items) {
+            if (!notifUi.list) return;
+
+            if (!items || items.length === 0) {
+                notifUi.list.innerHTML = '<div class="notif-empty">Todo al día.</div>';
+                notifUi.count.style.display = 'none';
+                return;
+            }
+
+            notifUi.count.textContent = String(items.length);
+            notifUi.count.style.display = 'inline-flex';
+
+            notifUi.list.innerHTML = items.map(function (notif) {
+                let datosObj = {};
+                if (notif && notif.datos) {
+                    try {
+                        datosObj = typeof notif.datos === 'string' ? JSON.parse(notif.datos) : notif.datos;
+                    } catch (e) {
+                        datosObj = typeof notif.datos === 'object' ? notif.datos : {};
+                    }
+                }
+                const paciente = datosObj.paciente ? datosObj.paciente : 'Paciente';
+
+                let nuevaFecha = datosObj.nueva_fecha || datosObj.fecha || datosObj.fecha_nueva || '-';
+                let nuevaHora = datosObj.nueva_hora || datosObj.hora || datosObj.hora_nueva || '-';
+
+                if ((nuevaFecha === '-' || nuevaHora === '-') && (datosObj.nueva_fecha_hora || datosObj.fecha_hora || datosObj.fecha_sugerida)) {
+                    const fechaHoraRaw = datosObj.nueva_fecha_hora || datosObj.fecha_hora || datosObj.fecha_sugerida;
+                    const dt = new Date(fechaHoraRaw);
+                    if (!isNaN(dt.getTime())) {
+                        if (nuevaFecha === '-') nuevaFecha = dt.toISOString().slice(0, 10);
+                        if (nuevaHora === '-') nuevaHora = dt.toTimeString().slice(0, 5);
+                    }
+                }
+
+                return '<div class="notif-item">'
+                    + '<p class="notif-item-title">' + paciente + '</p>'
+                    + '<div class="notif-item-sub">Sugiere cambiar al: <span class="notif-item-date">' + nuevaFecha + ' ' + nuevaHora + '</span></div>'
+                    + '<div class="notif-actions">'
+                    + '<button class="notif-btn ok" type="button" onclick="procesarReagendaNotificacion(' + notif.id_notificacion + ', \'aceptar\')"><i class="fas fa-check"></i> Aceptar</button>'
+                    + '<button class="notif-btn no" type="button" onclick="procesarReagendaNotificacion(' + notif.id_notificacion + ', \'rechazar\')"><i class="fas fa-times"></i> Ignorar</button>'
+                    + '</div>'
+                    + '</div>';
+            }).join('');
+        }
+
+        function cargarNotificacionesReagenda() {
+            fetch('/api/notificaciones/reagenda', { credentials: 'same-origin' })
+                .then(function (res) { 
+                    if (!res.ok) throw new Error('API Error');
+                    return res.json(); 
+                })
+                .then(function (data) {
+                    const items = Array.isArray(data) ? data : [];
+                    renderNotificaciones(items);
+                })
+                .catch(function (error) {
+                    console.error('Error fetching notifications:', error);
+                    renderNotificaciones([]);
+                });
+        }
+
+        function procesarReagendaNotificacion(id, accion) {
+            fetch('/api/notificaciones/' + id + '/procesar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ accion: accion }),
+                credentials: 'same-origin'
+            }).then(function () {
+                cargarNotificacionesReagenda();
+                if (accion === 'aceptar') {
+                    window.location.reload();
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            notifUi.wrapper = document.getElementById('notif-bell');
+            notifUi.panel = document.getElementById('notif-panel');
+            notifUi.list = document.getElementById('notif-list');
+            notifUi.count = document.getElementById('notif-bell-count');
+
+            const btn = document.getElementById('notif-bell-btn');
+            if (btn && notifUi.panel) {
+                btn.addEventListener('click', function () {
+                    notifUi.panel.classList.toggle('open');
+                });
+            }
+
+            document.addEventListener('click', function (event) {
+                if (!notifUi.wrapper || !notifUi.panel) return;
+                if (!notifUi.wrapper.contains(event.target)) {
+                    notifUi.panel.classList.remove('open');
+                }
+            });
+
+            cargarNotificacionesReagenda();
+        });
+
         // --- Modal System ---
         // Abre un modal por id reutilizable en todas las secciones del panel.
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+            modal.style.opacity = '1';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+        }
         // Cierra un modal por id reutilizable en todas las secciones del panel.
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.classList.remove('active');
+            modal.style.display = '';
+            modal.style.opacity = '';
+            modal.style.justifyContent = '';
+            modal.style.alignItems = '';
+        }
         window.onclick = function (event) {
             if (event.target.classList.contains('modal-overlay')) {
                 event.target.classList.remove('active');
