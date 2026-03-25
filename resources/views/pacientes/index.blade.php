@@ -470,13 +470,14 @@
                         maxlength="15" value="{{ old('telefono') }}" oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
 
                    <input type="date" 
-                   name="fecha_nacimiento"
-                   class="modern-input" 
-                   required
-                   value="{{ old('fecha_nacimiento') }}" 
-                   max="{{ date('Y-m-d', strtotime('-2 years')) }}"
-                   title="El paciente debe tener al menos 2 años de edad">
-                   
+       name="fecha_nacimiento" 
+       class="modern-input" 
+       required
+       value="{{ old('fecha_nacimiento') }}" 
+       max="{{ date('Y-m-d', strtotime('-2 years')) }}"
+       oninvalid="this.setCustomValidity('La fecha de nacimiento no es válida')"
+       oninput="this.setCustomValidity('')">
+
                     <select name="sexo" class="modern-input" required>
                         <option value="" disabled selected>Sexo*</option>
                         <option value="M" {{ old('sexo') == 'M' ? 'selected' : '' }}>Masculino</option>
@@ -1543,228 +1544,171 @@
         @if($errors->any())
             openModal('modal-new-patient');
         @endif
+// ==========================================
+// CALENDARIO DE RESERVA DE CITAS
+// ==========================================
+let reservaMes = new Date().getMonth() + 1;
+let reservaAnio = new Date().getFullYear();
+const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-        // ==========================================
-        // CALENDARIO DE RESERVA DE CITAS
-        // ==========================================
-        let reservaMes = new Date().getMonth() + 1;
-        let reservaAnio = new Date().getFullYear();
-        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+function cambiarMesReserva(delta) {
+    reservaMes += delta;
+    if (reservaMes > 12) { reservaMes = 1; reservaAnio++; }
+    if (reservaMes < 1) { reservaMes = 12; reservaAnio--; }
+    cargarCalendarioReserva(reservaMes, reservaAnio);
+}
 
-        function cambiarMesReserva(delta) {
-            reservaMes += delta;
-            if (reservaMes > 12) { reservaMes = 1; reservaAnio++; }
-            if (reservaMes < 1) { reservaMes = 12; reservaAnio--; }
-            cargarCalendarioReserva(reservaMes, reservaAnio);
-        }
+function cargarCalendarioReserva(mes, anio) {
+    document.getElementById('reserva-mes-anio').innerText = `${nombresMeses[mes - 1]} ${anio}`;
+    const grid = document.getElementById('reserva-grid-dias');
 
-        function cargarCalendarioReserva(mes, anio) {
-            document.getElementById('reserva-mes-anio').innerText = `${nombresMeses[mes - 1]} ${anio}`;
-            const grid = document.getElementById('reserva-grid-dias');
+    grid.innerHTML = '<div style="grid-column:span 7; text-align:center; padding:30px;"><i class="fa-solid fa-circle-notch fa-spin" style="color: var(--primary-color); font-size: 2rem;"></i></div>';
 
-            // Loader elegante
-            grid.innerHTML = '<div style="grid-column:span 7; text-align:center; padding:30px;"><i class="fa-solid fa-circle-notch fa-spin" style="color: var(--primary-color); font-size: 2rem;"></i></div>';
+    fetch(`/api/calendario/disponibilidad?mes=${mes}&anio=${anio}`)
+        .then(res => res.json())
+        .then(disponibilidad => {
 
-            // Reutilizamos la API del DashboardController
-            fetch(`/api/calendario/disponibilidad?mes=${mes}&anio=${anio}`)
-                .then(res => res.json())
-                .then(disponibilidad => {
-                    grid.innerHTML = '';
+            grid.innerHTML = '';
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
 
-                    const hoy = new Date();
-                    hoy.setHours(0, 0, 0, 0);
+            const primerDiaSemana = new Date(anio, mes - 1, 1).getDay();
+            for (let i = 0; i < primerDiaSemana; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
 
-                    // Rellenar espacios vacíos del inicio del mes
-                    const primerDiaSemana = new Date(anio, mes - 1, 1).getDay();
-                    for (let i = 0; i < primerDiaSemana; i++) {
-                        grid.appendChild(document.createElement('div'));
-                    }
+            for (const [dia, data] of Object.entries(disponibilidad)) {
+                let div = document.createElement('div');
+                div.innerText = dia;
+                div.style.padding = '10px 5px';
+                div.style.borderRadius = '10px';
+                div.style.fontWeight = '700';
 
-                    // Crear los días
-                    for (const [dia, data] of Object.entries(disponibilidad)) {
-                        let div = document.createElement('div');
-                        div.innerText = dia;
-                        div.style.padding = '10px 5px';
-                        div.style.borderRadius = '10px';
-                        div.style.fontWeight = '700';
-                        div.style.transition = 'all 0.2s ease';
-                        div.style.userSelect = 'none';
+                const estaFecha = new Date(anio, mes - 1, parseInt(dia));
+                estaFecha.setHours(0, 0, 0, 0);
+                const esPasado = estaFecha < hoy;
 
-                        const estaFecha = new Date(anio, mes - 1, parseInt(dia));
-                        estaFecha.setHours(0, 0, 0, 0);
-                        const esPasado = estaFecha < hoy;
+                if (esPasado) {
+                    div.style.background = '#f3f4f6';
+                    div.style.color = '#d1d5db';
+                } else if (data.estado === 'verde') {
+                    div.style.background = '#d1fae5';
+                } else if (data.estado === 'amarillo') {
+                    div.style.background = '#fef3c7';
+                } else if (data.estado === 'rojo') {
+                    div.style.background = '#ef4444';
+                    div.style.color = 'white';
+                }
 
-                        if (esPasado) {
-                            div.style.background = '#f3f4f6';
-                            div.style.color = '#d1d5db';
-                            div.style.cursor = 'not-allowed';
-                        } else if (data.estado === 'verde') {
-                            div.style.background = 'rgba(50, 215, 75, 0.1)';
-                            div.style.color = '#15803d';
-                            div.style.border = '1px solid rgba(50, 215, 75, 0.3)';
-                        } else if (data.estado === 'amarillo') {
-                            div.style.background = 'rgba(255, 193, 7, 0.1)';
-                            div.style.color = '#b45309';
-                            div.style.border = '1px solid rgba(255, 193, 7, 0.3)';
-                        } else if (data.estado === 'rojo') {
-                            div.style.background = '#EF4444';
-                            div.style.color = 'white';
-                            div.style.boxShadow = '0 2px 8px rgba(239,68,68,0.3)';
-                        } else {
-                            div.style.background = '#fff';
-                            div.style.color = '#333';
-                        }
+                if (!esPasado && data.estado !== 'rojo') {
+                    div.style.cursor = 'pointer';
 
-                        // Interactividad
-                        if (!esPasado && data.estado !== 'rojo') {
-                            div.style.cursor = 'pointer';
-                            div.onmouseover = () => { div.style.transform = 'translateY(-2px)'; div.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)'; };
-                            div.onmouseout = () => { div.style.transform = 'translateY(0)'; div.style.boxShadow = 'none'; };
+                    div.onclick = () => {
+                        document.querySelectorAll('#reserva-grid-dias div').forEach(d => d.style.outline = 'none');
+                        div.style.outline = '3px solid var(--primary-color)';
 
-                            div.onclick = () => {
-                                // Limpiar selecciones previas
-                                document.querySelectorAll('#reserva-grid-dias div').forEach(d => {
-                                    if (d.style.outline) d.style.outline = 'none';
-                                });
-                                // Marcar como seleccionado
-                                div.style.outline = '3px solid var(--primary-color)';
-                                div.style.outlineOffset = '1px';
-                                seleccionarFechaReserva(dia, mes, anio, data.hora_inicio, data.hora_fin);
-                            };
-                        } else if (!esPasado && data.estado === 'rojo') {
-                            div.style.cursor = 'not-allowed';
-                            div.onclick = () => alert('❌ Este día no tiene horarios disponibles.');
-                        }
+                        seleccionarFechaReserva(dia, mes, anio, data.hora_inicio, data.hora_fin);
+                    };
+                }
 
-                        grid.appendChild(div);
-                    }
-                });
-        }
+                grid.appendChild(div);
+            }
+        });
+}
 
-        function seleccionarFechaReserva(dia, mes, anio, horaInicio, horaFin) {
-            const fechaString = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+function seleccionarFechaReserva(dia, mes, anio, horaInicio, horaFin) {
+    const fechaString = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
-            // Actualizar inputs
-            document.getElementById('input-reserva-fecha').value = fechaString;
-            document.getElementById('input-reserva-hora').value = ''; // Limpiar hora anterior
+    document.getElementById('input-reserva-fecha').value = fechaString;
+    document.getElementById('input-reserva-hora').value = '';
 
-            // Mostrar fecha amigable
-            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const fechaObj = new Date(anio, mes - 1, dia);
-            let fechaBonita = fechaObj.toLocaleDateString('es-MX', opciones);
-            document.getElementById('lbl-fecha-seleccionada').innerHTML = `<span style="color:var(--primary-color);">Fecha:</span> ${fechaBonita}`;
+    generarHorasReserva(fechaString, horaInicio, horaFin);
+}
 
-            generarHorasReserva(fechaString, horaInicio, horaFin);
-        }
+// ==========================================
+// HORARIOS
+// ==========================================
+async function generarHorasReserva(fecha, horaInicioStr, horaFinStr) {
 
-        async function generarHorasReserva(fecha, horaInicioStr, horaFinStr) {
     const contenedor = document.getElementById('reserva-contenedor-horarios');
-    contenedor.innerHTML = '<p style="text-align:center;">Cargando horarios...</p>';
+    contenedor.innerHTML = 'Cargando...';
 
     let horariosClinica = [];
 
-    // 🔹 Generar horarios base (AHORA EN BLOQUES DE 15 MIN)
-    if (horaInicioStr && horaFinStr) {
-        let [hInicio, mInicio] = horaInicioStr.split(':').map(Number);
-        let [hFin, mFin] = horaFinStr.split(':').map(Number);
+    let current = new Date(`2000-01-01T${horaInicioStr}`);
+    let end = new Date(`2000-01-01T${horaFinStr}`);
 
-        let currentDate = new Date();
-        currentDate.setHours(hInicio, mInicio, 0, 0);
-
-        let endDate = new Date();
-        endDate.setHours(hFin, mFin, 0, 0);
-
-        while (currentDate < endDate && horariosClinica.length < 96) {
-            let h = String(currentDate.getHours()).padStart(2, '0');
-            let m = String(currentDate.getMinutes()).padStart(2, '0');
-            horariosClinica.push(`${h}:${m}`);
-
-            // 🔥 CLAVE: 15 MIN
-            currentDate.setMinutes(currentDate.getMinutes() + 15);
-        }
+    while (current < end) {
+        horariosClinica.push(current.toTimeString().slice(0,5));
+        current.setMinutes(current.getMinutes() + 15);
     }
 
-    // 🔹 Obtener horas ocupadas
     let horasOcupadas = [];
+
     try {
         const res = await fetch(`/api/citas/ocupadas?fecha=${fecha}`);
         const data = await res.json();
         horasOcupadas = data.ocupadas || [];
-    } catch (error) {
-        console.error("Error cargando horas ocupadas", error);
-    }
+    } catch (e) {}
 
     contenedor.innerHTML = '';
 
     const ahora = new Date();
 
     horariosClinica.forEach(hora => {
+
         const btn = document.createElement('button');
-        btn.type = 'button';
         btn.className = 'reserva-hora-btn';
+        btn.innerText = hora;
 
-        const [h, m] = hora.split(':');
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const hora12 = (h % 12 || 12) + ':' + m + ' ' + ampm;
-        btn.innerText = hora12;
+        const fechaHora = new Date(`${fecha}T${hora}`);
 
-        const fechaHoraSlot = new Date(`${fecha}T${hora}:00`);
+        const esPasado = fechaHora < ahora;
 
-        const esPasado = fechaHoraSlot < ahora;
-        const estaOcupada = horasOcupadas.includes(hora);
+        const duracion = parseInt(document.querySelector('[name="duracion_minutos"]').value);
+        const bloques = duracion / 15;
 
-        // 🚫 PASADO
+        let indice = horariosClinica.indexOf(hora);
+
+        let disponible = true;
+
+        for (let i = 0; i < bloques; i++) {
+            let h = horariosClinica[indice + i];
+            if (!h || horasOcupadas.includes(h)) {
+                disponible = false;
+                break;
+            }
+        }
+
+        // PASADO
         if (esPasado) {
-            btn.style.background = '#f3f4f6';
-            btn.style.color = '#9ca3af';
-            btn.style.cursor = 'not-allowed';
             btn.disabled = true;
+            btn.style.background = '#eee';
         }
 
-        // 🚫 OCUPADO
-        else if (estaOcupada) {
-            btn.style.background = '#fee2e2';
-            btn.style.color = '#ef4444';
-            btn.style.cursor = 'not-allowed';
-            btn.innerText += ' (Ocupado)';
+        // OCUPADO
+        else if (horasOcupadas.includes(hora)) {
             btn.disabled = true;
+            btn.style.background = '#fecaca';
+            btn.innerText += ' ❌';
         }
 
-        // ✅ DISPONIBLE
+        // NO DISPONIBLE
+        else if (!disponible) {
+            btn.disabled = true;
+            btn.style.background = '#fde68a';
+            btn.innerText += ' ⚠️';
+        }
+
+        // DISPONIBLE
         else {
-            btn.style.background = '#fff';
-            btn.style.border = '1px solid #ccc';
-            btn.style.borderRadius = '10px';
-            btn.style.fontWeight = '700';
-            btn.style.cursor = 'pointer';
-
             btn.onclick = () => {
 
-                // 🔥 duración dinámica
-                const duracion = parseInt(document.querySelector('[name="duracion_minutos"]').value);
-                const bloquesNecesarios = duracion / 15;
-
-                let indice = horariosClinica.indexOf(hora);
-
-                // 🚫 VALIDAR BLOQUES COMPLETOS
-                for (let i = 0; i < bloquesNecesarios; i++) {
-                    let siguiente = horariosClinica[indice + i];
-
-                    if (!siguiente || horasOcupadas.includes(siguiente)) {
-                        alert('❌ No hay espacio suficiente para la duración seleccionada.');
-                        return;
-                    }
-                }
-
-                // 🔄 RESET
                 document.querySelectorAll('.reserva-hora-btn').forEach(b => {
                     b.style.background = '#fff';
-                    b.style.color = '#333';
                 });
 
-                // ✅ ACTIVO
-                btn.style.background = 'var(--primary-color)';
-                btn.style.color = 'white';
+                btn.style.background = '#22c55e';
 
                 document.getElementById('input-reserva-hora').value = hora;
             };
@@ -1773,5 +1717,3 @@
         contenedor.appendChild(btn);
     });
 }
-    </script>
-@endsection

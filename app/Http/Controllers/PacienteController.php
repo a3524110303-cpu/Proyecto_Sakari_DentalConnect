@@ -39,10 +39,10 @@ class PacienteController extends Controller
         $fechaLimite = Carbon::now()->subYears(2)->format('Y-m-d');
 
         $request->validate([
-            'fecha_nacimiento' => "required|date|before_or_equal:$fechaLimite",
-        ], [
-            'fecha_nacimiento.before_or_equal' => 'El año de nacimiento es inválido. El paciente debe tener al menos 2 años de edad.',
-        ]);
+    'fecha_nacimiento' => "required|date|before_or_equal:$fechaLimite",
+], [
+    'fecha_nacimiento.before_or_equal' => 'La fecha de nacimiento no es válida.',
+]);
 
         $idClinica = Auth::user()->id_clinica;
 

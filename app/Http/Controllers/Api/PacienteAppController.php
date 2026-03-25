@@ -14,6 +14,7 @@ use App\Models\Doctor;
 use App\Models\Notificacion;
 use App\Models\Publicidad;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 class PacienteAppController extends Controller
 {
@@ -620,6 +621,72 @@ class PacienteAppController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error al confirmar la cita.'], 500);
         }
+    }
+
+    // --- FUNCIÓN 1: ACTUALIZAR DATOS BÁSICOS ---
+    public function updateProfile(Request $request)
+    {
+        $user = auth()->user();
+        
+        // Buscar al paciente relacionado a este usuario
+        $paciente = Paciente::withoutGlobalScopes()
+            ->where('id_usuario', $user->id_usuario)
+            ->first();
+
+        if (!$paciente) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Paciente no encontrado.'
+            ], 404);
+        }
+
+        // Validar qué datos se pueden actualizar (Añade los que consideres necesarios)
+        $request->validate([
+            'telefono' => 'nullable|string|max:20',
+            'calle' => 'nullable|string|max:100',
+            'numero_exterior' => 'nullable|string|max:20',
+            'colonia' => 'nullable|string|max:100',
+            'ciudad' => 'nullable|string|max:100',
+        ]);
+
+        // Actualizamos los datos
+        $paciente->update($request->only([
+            'telefono', 'calle', 'numero_exterior', 'colonia', 'ciudad'
+        ]));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Perfil actualizado correctamente.',
+            'paciente' => $paciente
+        ], 200);
+    }
+
+    // --- FUNCIÓN 2: ACTUALIZAR CONTRASEÑA ---
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:6',
+        ]);
+
+        $user = auth()->user();
+
+        // Verificar que la contraseña actual ingresada coincida con la de la BD
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'La contraseña actual es incorrecta.'
+            ], 400);
+        }
+
+        // Guardar la nueva contraseña
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Tu contraseña se ha actualizado con éxito.'
+        ], 200);
     }
 
 }

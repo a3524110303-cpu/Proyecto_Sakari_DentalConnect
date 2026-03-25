@@ -63,37 +63,52 @@ class AuthController extends Controller
     // ==========================================
     public function activarCuenta(Request $request)
 {
+
+    $request->merge([
+        'email' => trim($request->email),
+        'telefono' => trim($request->telefono),
+    ]);
+
     $request->validate([
         'email' => 'required|email',
         'telefono' => 'required|string',
         'password' => 'required|string|min:6',
     ]);
 
-    // 1. Buscar al paciente primero, usando el teléfono (que está en la tabla pacientes)
-    // Usamos whereHas para asegurarnos de que el usuario asociado tenga el mismo email
-    $paciente = Paciente::where('telefono', $request->telefono)
-        ->whereHas('usuario', function ($query) use ($request) {
-            $query->where('email', $request->email)
-                  ->where('rol', 'paciente');
-        })->first();
+    // 1. Buscar al usuario ignorando cualquier filtro oculto de clínica (Global Scopes)
+    $user = User::withoutGlobalScopes()
+                ->where('email', $request->email)
+                //->where('rol', 'paciente')
+                ->first();
+
+    if (!$user) {
+    return response()->json([
+        'success' => false,
+        'message' => 'No encontré: "' . $request->email . '" en la BD. Revisa mayúsculas, espacios o si la base de datos remota es la correcta.'
+    ], 404);
+}
+
+    // 2. Verificar que el teléfono ingresado coincida con el registrado en la tabla pacientes,
+    // también ignorando filtros globales.
+    $paciente = Paciente::withoutGlobalScopes()
+                        ->where('id_usuario', $user->id_usuario)
+                        ->where('telefono', $request->telefono)
+                        ->first();
 
     if (!$paciente) {
-         return response()->json([
+        return response()->json([
             'success' => false,
-            'message' => 'No se encontró ninguna cuenta que coincida con este correo y teléfono.'
+            'message' => 'El número de teléfono no coincide con nuestros registros para este correo.'
         ], 404);
     }
 
-    // 2. Obtener el usuario relacionado a ese paciente específico
-    $user = $paciente->usuario;
-
-    // 3. Actualizar la contraseña
+    // 3. Si todo es correcto, actualizar la contraseña
     $user->password = Hash::make($request->password);
     $user->save();
 
     return response()->json([
         'success' => true,
-        'message' => 'Cuenta activada exitosamente. Ya puedes iniciar sesión.'
+        'message' => 'Cuenta activada exitosamente. Ya puedes iniciar sesión en la aplicación.'
     ], 200);
 }
 
