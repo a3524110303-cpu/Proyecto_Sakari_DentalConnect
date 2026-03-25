@@ -957,7 +957,7 @@
             </div>
 
             {{-- BOTÓN FINAL --}}
-            <button type="submit" class="ghost-btn"
+            <button type="submit" id="btn-confirmar-cita" class="ghost-btn"
                 style="width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; margin-top: 25px; background: #06b6d4; color: white; border: none; cursor: pointer;">
                 <i class="fa-solid fa-floppy-disk"></i> Confirmar Cita
             </button>
@@ -1540,7 +1540,16 @@
         }
 
         // ─── Protección anti doble submit en el formulario de cita ───────────
-        document.getElementById('form-add-cita').addEventListener('submit', function () {
+        document.getElementById('form-add-cita').addEventListener('submit', function (e) {
+            const fecha = document.getElementById('input-reserva-fecha').value;
+            const hora = document.getElementById('input-reserva-hora').value;
+
+            if (!fecha || !hora) {
+                e.preventDefault();
+                Swal.fire('Falta información', 'Selecciona fecha y hora antes de confirmar la cita.', 'warning');
+                return;
+            }
+
             const btn = document.getElementById('btn-confirmar-cita');
             if (btn) {
                 btn.disabled = true;
@@ -1712,6 +1721,7 @@ async function generarHorasReserva(fecha, horaInicioStr, horaFinStr) {
     horariosClinica.forEach(hora => {
 
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'reserva-hora-btn';
         btn.innerText = hora;
 
