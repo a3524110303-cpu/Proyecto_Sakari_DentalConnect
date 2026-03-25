@@ -21,19 +21,25 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        if (!Auth::attempt($credentials)) {
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (!$user || !Hash::check($credentials['password'], $user->password)) {
             return response()->json(['success' => false, 'message' => 'Credenciales inválidas'], 401);
         }
-
-        $user = User::where('email', $request->email)->firstOrFail();
 
         // RESTRICCIÓN DE SEGURIDAD:
         // La App Móvil es exclusiva para Pacientes.
         if ($user->rol !== 'paciente') {
-            Auth::logout();
             return response()->json([
                 'success' => false,
                 'message' => 'Acceso denegado. Esta aplicación es exclusiva para pacientes.'
+            ], 403);
+        }
+
+        if (isset($user->is_active) && !$user->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tu cuenta está inactiva. Contacta a la clínica.'
             ], 403);
         }
 
@@ -54,7 +60,10 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $token = $request->user()?->currentAccessToken();
+        if ($token) {
+            $token->delete();
+        }
         return response()->json(['message' => 'Sesión cerrada correctamente']);
     }
 

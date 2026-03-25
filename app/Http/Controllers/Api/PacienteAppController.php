@@ -56,7 +56,9 @@ class PacienteAppController extends Controller
      */
     public function citasProximas()
     {
-        $paciente = Paciente::where('id_usuario', Auth::id())->first();
+        $user = Auth::user();
+        $idUsuario = $user->id_usuario ?? $user->id ?? Auth::id();
+        $paciente = Paciente::where('id_usuario', $idUsuario)->first();
 
         if (!$paciente) {
             return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
@@ -101,7 +103,9 @@ class PacienteAppController extends Controller
      */
     public function citasPasadas(Request $request)
     {
-        $paciente = Paciente::where('id_usuario', Auth::id())->first();
+        $user = Auth::user();
+        $idUsuario = $user->id_usuario ?? $user->id ?? Auth::id();
+        $paciente = Paciente::where('id_usuario', $idUsuario)->first();
 
         if (!$paciente)
             return response()->json(['success' => false, 'data' => []], 404);
@@ -143,7 +147,9 @@ class PacienteAppController extends Controller
      */
     public function estadoCuenta(Request $request)
     {
-        $paciente = Paciente::where('id_usuario', Auth::id())->first();
+        $user = Auth::user();
+        $idUsuario = $user->id_usuario ?? $user->id ?? Auth::id();
+        $paciente = Paciente::where('id_usuario', $idUsuario)->first();
 
         if (!$paciente)
             return response()->json(['success' => false], 404);
@@ -200,7 +206,8 @@ class PacienteAppController extends Controller
         return response()->json([
             'success' => true,
             'fecha_solicitada' => $fecha->format('Y-m'),
-            'disponibilidad_mes' => $citasDiasMes
+            'disponibilidad_mes' => $citasDiasMes,
+            'data' => $citasDiasMes,
         ]);
     }
 
@@ -386,13 +393,22 @@ class PacienteAppController extends Controller
     public function horasDisponiblesDia(Request $request)
     {
         $fecha = $request->query('fecha');
+        if (empty($fecha)) {
+            return response()->json(['success' => false, 'message' => 'Parametro fecha es requerido.'], 422);
+        }
+
+        try {
+            $fechaCarbon = \Carbon\Carbon::parse($fecha);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Parametro fecha invalido.'], 422);
+        }
+
         $idClinica = $this->resolveClinicaId(Auth::user());
         if (!$idClinica) {
             return response()->json(['success' => true, 'data' => []]);
         }
 
         // 1. Averiguar qué día de la semana es la fecha que nos piden (1 = Lunes, 7 = Domingo)
-        $fechaCarbon = \Carbon\Carbon::parse($fecha);
         $diaSemanaNumero = $fechaCarbon->dayOfWeekIso; 
 
         // 2. Mapear ese número con los textos que podrían estar en tu Base de Datos
@@ -469,7 +485,11 @@ class PacienteAppController extends Controller
             $inicio->addMinutes(30);
         }
 
-        return response()->json(['success' => true, 'data' => $horariosLibres]);
+        return response()->json([
+            'success' => true,
+            'data' => $horariosLibres,
+            'horas_disponibles' => $horariosLibres,
+        ]);
     }
 
     /**
@@ -477,7 +497,9 @@ class PacienteAppController extends Controller
      */
     public function tratamientosActivos(Request $request)
     {
-        $paciente = Paciente::where('id_usuario', Auth::id())->first();
+        $user = Auth::user();
+        $idUsuario = $user->id_usuario ?? $user->id ?? Auth::id();
+        $paciente = Paciente::where('id_usuario', $idUsuario)->first();
         if (!$paciente) return response()->json(['success' => false, 'data' => []], 404);
 
         $citas = Cita::with('servicio')
