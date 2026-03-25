@@ -137,8 +137,12 @@ Route::get('/storage-file/{path}', function ($path) {
     ]));
 
     $disk = Storage::disk('public');
-    $root = rtrim((string) config('filesystems.disks.public.root'), DIRECTORY_SEPARATOR);
-    $fallbackRoot = rtrim(storage_path('app/public'), DIRECTORY_SEPARATOR);
+    $roots = array_values(array_unique(array_filter([
+        config('filesystems.disks.public.root'),
+        env('PUBLIC_DISK_ROOT'),
+        env('RAILWAY_VOLUME_MOUNT_PATH') ? rtrim(env('RAILWAY_VOLUME_MOUNT_PATH'), '/\\') . '/public' : null,
+        storage_path('app/public'),
+    ])));
 
     $fullPath = null;
     foreach ($candidatos as $rel) {
@@ -147,14 +151,21 @@ Route::get('/storage-file/{path}', function ($path) {
         }
 
         if ($disk->exists($rel)) {
-            $fullPath = $root . DIRECTORY_SEPARATOR . $rel;
-            break;
-        }
-
-        $fallbackPath = $fallbackRoot . DIRECTORY_SEPARATOR . $rel;
-        if (file_exists($fallbackPath)) {
-            $fullPath = $fallbackPath;
-            break;
+            foreach ($roots as $root) {
+                $pathCandidate = rtrim((string) $root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $rel;
+                if (file_exists($pathCandidate)) {
+                    $fullPath = $pathCandidate;
+                    break 2;
+                }
+            }
+        } else {
+            foreach ($roots as $root) {
+                $pathCandidate = rtrim((string) $root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $rel;
+                if (file_exists($pathCandidate)) {
+                    $fullPath = $pathCandidate;
+                    break 2;
+                }
+            }
         }
     }
 
