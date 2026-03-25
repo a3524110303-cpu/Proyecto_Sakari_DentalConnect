@@ -99,13 +99,14 @@ class CitaController extends Controller
             // 📄 Guardar PDFs
             $rutaCuidados = null;
             $rutaTips = null;
+            $diskArchivos = env('CITAS_FILESYSTEM_DISK', 'public');
 
             if ($request->hasFile('cuidados_pdf')) {
-                $rutaCuidados = $request->file('cuidados_pdf')->store('cuidados', 'public');
+                $rutaCuidados = $request->file('cuidados_pdf')->store('cuidados', $diskArchivos);
             }
 
             if ($request->hasFile('tips_pdf')) {
-                $rutaTips = $request->file('tips_pdf')->store('tips', 'public');
+                $rutaTips = $request->file('tips_pdf')->store('tips', $diskArchivos);
             }
 
             // ✅ Crear cita

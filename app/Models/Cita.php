@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Modelo que representa una cita médica en el sistema.
@@ -42,8 +43,33 @@ class Cita extends Model
         'estado_cita',
         'costo_estimado',
         'motivo',
-        'notas'
+        'notas',
+        'cuidados_pdf',
+        'tips_pdf',
     ];
+
+    protected $appends = [
+        'cuidados_pdf_url',
+        'tips_pdf_url',
+    ];
+
+    public function getCuidadosPdfUrlAttribute(): ?string
+    {
+        if (!$this->cuidados_pdf) {
+            return null;
+        }
+
+        return Storage::disk(env('CITAS_FILESYSTEM_DISK', 'public'))->url($this->cuidados_pdf);
+    }
+
+    public function getTipsPdfUrlAttribute(): ?string
+    {
+        if (!$this->tips_pdf) {
+            return null;
+        }
+
+        return Storage::disk(env('CITAS_FILESYSTEM_DISK', 'public'))->url($this->tips_pdf);
+    }
 
     // Relación: Paciente
     public function paciente()
