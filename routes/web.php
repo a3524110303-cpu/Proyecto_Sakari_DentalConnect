@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\DashboardController;
@@ -127,7 +128,14 @@ Route::get('/storage-file/{path}', function ($path) {
         abort(403);
     }
 
-    $fullPath = storage_path('app/public/' . $path);
+    $disk = Storage::disk('public');
+    $root = config('filesystems.disks.public.root');
+    $relativePath = ltrim($path, '/');
+    $fullPath = rtrim((string) $root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $relativePath;
+
+    if (!$disk->exists($relativePath)) {
+        abort(404);
+    }
 
     if (!file_exists($fullPath)) {
         abort(404);
