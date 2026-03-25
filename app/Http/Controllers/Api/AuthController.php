@@ -62,52 +62,40 @@ class AuthController extends Controller
     // NUEVA FUNCIÓN PARA ACTIVAR CUENTA MÓVIL
     // ==========================================
     public function activarCuenta(Request $request)
-    {
-        // 1. Validar que la app envíe los datos correctamente
-        $request->validate([
-            'email' => 'required|email',
-            'telefono' => 'required|string',
-            'password' => 'required|string|min:6',
-        ]);
+{
+    $request->validate([
+        'email' => 'required|email',
+        'telefono' => 'required|string',
+        'password' => 'required|string|min:6',
+    ]);
 
-        // 2. Buscar al usuario en el sistema por su email
-        $user = User::where('email', $request->email)->first();
+    // 1. Buscar al paciente primero, usando el teléfono (que está en la tabla pacientes)
+    // Usamos whereHas para asegurarnos de que el usuario asociado tenga el mismo email
+    $paciente = Paciente::where('telefono', $request->telefono)
+        ->whereHas('usuario', function ($query) use ($request) {
+            $query->where('email', $request->email)
+                  ->where('rol', 'paciente');
+        })->first();
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se encontró ninguna cuenta con este correo electrónico.'
-            ], 404);
-        }
-
-        if ($user->rol !== 'paciente') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Esta aplicación es exclusiva para pacientes.'
-            ], 403);
-        }
-
-        // 3. Buscar al paciente ligado a ese usuario para verificar su teléfono
-        $paciente = Paciente::where('id_usuario', $user->id_usuario)
-                            ->where('telefono', $request->telefono)
-                            ->first();
-
-        if (!$paciente) {
-            return response()->json([
-                'success' => false,
-                'message' => 'El número de teléfono no coincide con los registros de la clínica.'
-            ], 400);
-        }
-
-        // 4. Si todo es correcto, actualizar la contraseña
-        $user->password = Hash::make($request->password);
-        $user->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Cuenta activada exitosamente. Ya puedes iniciar sesión.'
-        ], 200);
+    if (!$paciente) {
+         return response()->json([
+            'success' => false,
+            'message' => 'No se encontró ninguna cuenta que coincida con este correo y teléfono.'
+        ], 404);
     }
+
+    // 2. Obtener el usuario relacionado a ese paciente específico
+    $user = $paciente->usuario;
+
+    // 3. Actualizar la contraseña
+    $user->password = Hash::make($request->password);
+    $user->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Cuenta activada exitosamente. Ya puedes iniciar sesión.'
+    ], 200);
+}
 
     /**
      * Enviar correo de recuperación de contraseña desde la App Móvil
