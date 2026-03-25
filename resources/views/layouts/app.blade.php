@@ -22,8 +22,6 @@ Incluye:
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
         :root {
@@ -628,6 +626,134 @@ Incluye:
             text-decoration: none;
             font-weight: 500;
         }
+
+        .notif-bell-wrapper {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1100;
+        }
+
+        .notif-bell-btn {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border: 0;
+            border-radius: 999px;
+            background: #fff;
+            color: #4b5563;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+        }
+
+        .notif-bell-btn:hover {
+            color: #2563eb;
+        }
+
+        .notif-bell-count {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #dc2626;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notif-panel {
+            display: none;
+            position: absolute;
+            right: 0;
+            margin-top: 10px;
+            width: 340px;
+            max-height: 420px;
+            overflow: hidden;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.16);
+        }
+
+        .notif-panel.open {
+            display: block;
+        }
+
+        .notif-header {
+            padding: 12px 14px;
+            background: #eff6ff;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e40af;
+        }
+
+        .notif-list {
+            max-height: 360px;
+            overflow-y: auto;
+        }
+
+        .notif-item {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .notif-item-title {
+            color: #111827;
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .notif-item-sub {
+            color: #6b7280;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
+        .notif-item-date {
+            color: #2563eb;
+            font-weight: 700;
+        }
+
+        .notif-actions {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .notif-btn {
+            border: 0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 8px 10px;
+            cursor: pointer;
+        }
+
+        .notif-btn.ok {
+            background: #22c55e;
+            color: #fff;
+        }
+
+        .notif-btn.no {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .notif-empty {
+            padding: 18px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 13px;
+        }
     </style>
 </head>
 
@@ -702,77 +828,19 @@ Incluye:
     </nav>
 
     <main>
-        <div x-data="notificacionesCampana()" x-init="cargarNotificaciones()" class="absolute top-6 right-8 z-50">
-            <div class="relative">
-                <button @click="abrir = !abrir" class="p-2 bg-white rounded-full shadow-md text-gray-500 hover:text-blue-600 transition">
-                    <i class="fas fa-bell text-xl"></i>
-                    <span x-show="cantidad > 0" x-text="cantidad" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full" style="display: none;"></span>
-                </button>
+        <div id="notif-bell" class="notif-bell-wrapper">
+            <button id="notif-bell-btn" class="notif-bell-btn" type="button" aria-label="Notificaciones">
+                <i class="fas fa-bell"></i>
+                <span id="notif-bell-count" class="notif-bell-count">0</span>
+            </button>
 
-                <div x-show="abrir" @click.away="abrir = false" class="absolute right-0 mt-3 w-80 bg-white rounded-lg shadow-xl overflow-hidden border border-gray-100" style="display: none;" x-transition>
-                    <div class="py-3 bg-blue-50 border-b border-gray-200 px-4 flex justify-between items-center">
-                        <h3 class="text-sm font-bold text-blue-800">Peticiones de Reagenda</h3>
-                    </div>
-                    <div class="max-h-80 overflow-y-auto">
-                        <template x-for="notif in lista" :key="notif.id_notificacion">
-                            <div class="p-4 border-b hover:bg-gray-50 transition">
-                                <p class="text-sm text-gray-800 font-semibold" x-text="notif.datos?.paciente || 'Paciente'"></p>
-                                <p class="text-xs text-gray-500 mt-1">Sugiere cambiar al: <span class="font-bold text-blue-600" x-text="(notif.datos?.nueva_fecha || '-') + ' ' + (notif.datos?.nueva_hora || '-')"></span></p>
-
-                                <div class="mt-3 flex space-x-2">
-                                    <button @click="procesar(notif.id_notificacion, 'aceptar')" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 px-3 rounded shadow-sm transition">
-                                        <i class="fas fa-check mr-1"></i> Aceptar
-                                    </button>
-                                    <button @click="procesar(notif.id_notificacion, 'rechazar')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold py-2 px-3 rounded shadow-sm transition">
-                                        <i class="fas fa-times mr-1"></i> Ignorar
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
-                        <div x-show="lista.length === 0" class="p-6 text-center text-sm text-gray-400">
-                            <i class="fas fa-check-circle text-3xl mb-2 text-gray-300"></i><br>Todo al día.
-                        </div>
-                    </div>
+            <div id="notif-panel" class="notif-panel">
+                <div class="notif-header">Peticiones de Reagenda</div>
+                <div id="notif-list" class="notif-list">
+                    <div class="notif-empty">Todo al día.</div>
                 </div>
             </div>
         </div>
-
-        <script>
-        function notificacionesCampana() {
-            return {
-                abrir: false,
-                cantidad: 0,
-                lista: [],
-                cargarNotificaciones() {
-                    fetch('/api/notificaciones/reagenda')
-                        .then(res => res.json())
-                        .then(data => {
-                            this.lista = Array.isArray(data) ? data : [];
-                            this.cantidad = this.lista.length;
-                        })
-                        .catch(() => {
-                            this.lista = [];
-                            this.cantidad = 0;
-                        });
-                },
-                procesar(id, accion) {
-                    fetch(`/api/notificaciones/${id}/procesar`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({ accion: accion })
-                    }).then(() => {
-                        this.cargarNotificaciones();
-                        if (accion === 'aceptar') {
-                            window.location.reload();
-                        }
-                    });
-                }
-            }
-        }
-        </script>
 
         @yield('contenido')
     </main>
@@ -780,6 +848,94 @@ Incluye:
     @yield('modales')
 
     <script>
+        const notifUi = {
+            wrapper: null,
+            panel: null,
+            list: null,
+            count: null,
+        };
+
+        function renderNotificaciones(items) {
+            if (!notifUi.list) return;
+
+            if (!items || items.length === 0) {
+                notifUi.list.innerHTML = '<div class="notif-empty">Todo al día.</div>';
+                notifUi.count.style.display = 'none';
+                return;
+            }
+
+            notifUi.count.textContent = String(items.length);
+            notifUi.count.style.display = 'inline-flex';
+
+            notifUi.list.innerHTML = items.map(function (notif) {
+                const datos = notif && notif.datos ? notif.datos : {};
+                const paciente = datos.paciente ? datos.paciente : 'Paciente';
+                const nuevaFecha = datos.nueva_fecha ? datos.nueva_fecha : '-';
+                const nuevaHora = datos.nueva_hora ? datos.nueva_hora : '-';
+
+                return '<div class="notif-item">'
+                    + '<p class="notif-item-title">' + paciente + '</p>'
+                    + '<div class="notif-item-sub">Sugiere cambiar al: <span class="notif-item-date">' + nuevaFecha + ' ' + nuevaHora + '</span></div>'
+                    + '<div class="notif-actions">'
+                    + '<button class="notif-btn ok" type="button" onclick="procesarReagendaNotificacion(' + notif.id_notificacion + ', \'aceptar\')"><i class="fas fa-check"></i> Aceptar</button>'
+                    + '<button class="notif-btn no" type="button" onclick="procesarReagendaNotificacion(' + notif.id_notificacion + ', \'rechazar\')"><i class="fas fa-times"></i> Ignorar</button>'
+                    + '</div>'
+                    + '</div>';
+            }).join('');
+        }
+
+        function cargarNotificacionesReagenda() {
+            fetch('/api/notificaciones/reagenda', { credentials: 'same-origin' })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    const items = Array.isArray(data) ? data : [];
+                    renderNotificaciones(items);
+                })
+                .catch(function () {
+                    renderNotificaciones([]);
+                });
+        }
+
+        function procesarReagendaNotificacion(id, accion) {
+            fetch('/api/notificaciones/' + id + '/procesar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ accion: accion }),
+                credentials: 'same-origin'
+            }).then(function () {
+                cargarNotificacionesReagenda();
+                if (accion === 'aceptar') {
+                    window.location.reload();
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            notifUi.wrapper = document.getElementById('notif-bell');
+            notifUi.panel = document.getElementById('notif-panel');
+            notifUi.list = document.getElementById('notif-list');
+            notifUi.count = document.getElementById('notif-bell-count');
+
+            const btn = document.getElementById('notif-bell-btn');
+            if (btn && notifUi.panel) {
+                btn.addEventListener('click', function () {
+                    notifUi.panel.classList.toggle('open');
+                });
+            }
+
+            document.addEventListener('click', function (event) {
+                if (!notifUi.wrapper || !notifUi.panel) return;
+                if (!notifUi.wrapper.contains(event.target)) {
+                    notifUi.panel.classList.remove('open');
+                }
+            });
+
+            cargarNotificacionesReagenda();
+        });
+
         // --- Modal System ---
         // Abre un modal por id reutilizable en todas las secciones del panel.
         function openModal(id) { document.getElementById(id).classList.add('active'); }
