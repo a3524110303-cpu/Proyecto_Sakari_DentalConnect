@@ -63,6 +63,12 @@ class AuthController extends Controller
     // ==========================================
     public function activarCuenta(Request $request)
 {
+
+    $request->merge([
+        'email' => trim($request->email),
+        'telefono' => trim($request->telefono),
+    ]);
+
     $request->validate([
         'email' => 'required|email',
         'telefono' => 'required|string',
@@ -72,15 +78,15 @@ class AuthController extends Controller
     // 1. Buscar al usuario ignorando cualquier filtro oculto de clínica (Global Scopes)
     $user = User::withoutGlobalScopes()
                 ->where('email', $request->email)
-                ->where('rol', 'paciente')
+                //->where('rol', 'paciente')
                 ->first();
 
     if (!$user) {
-        return response()->json([
-            'success' => false,
-            'message' => 'No se encontró ninguna cuenta de paciente con este correo electrónico.'
-        ], 404);
-    }
+    return response()->json([
+        'success' => false,
+        'message' => 'No encontré: "' . $request->email . '" en la BD. Revisa mayúsculas, espacios o si la base de datos remota es la correcta.'
+    ], 404);
+}
 
     // 2. Verificar que el teléfono ingresado coincida con el registrado en la tabla pacientes,
     // también ignorando filtros globales.
