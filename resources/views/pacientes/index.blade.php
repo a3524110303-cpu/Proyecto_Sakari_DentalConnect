@@ -987,6 +987,56 @@
     </script>
 </div>
     {{-- Modal de Edición (Readonly: Nombre, Apellidos, Fecha Nac, Tipo Sangre) --}}
+    <style>
+        #modal-edit-patient .modal-glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+
+        #modal-edit-patient .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px 20px;
+            margin-bottom: 20px;
+        }
+
+        #modal-edit-patient .full-width {
+            grid-column: span 2;
+        }
+
+        #modal-edit-patient .modern-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f0f0f0;
+            font-size: 0.95rem;
+            outline: none;
+            box-sizing: border-box;
+            color: #555;
+        }
+
+        #modal-edit-patient .modern-input:focus {
+            background: #fff;
+            border-color: #00b4d8;
+            box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            #modal-edit-patient .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #modal-edit-patient .full-width {
+                grid-column: span 1;
+            }
+        }
+    </style>
     <div id="modal-edit-patient" class="modal-overlay">
         <div class="modal-glass modal-lg" style="width: 820px; max-width: 95vw; max-height: 90vh; overflow-y: auto;">
             <button class="close-modal" onclick="closeModal('modal-edit-patient')">&times;</button>

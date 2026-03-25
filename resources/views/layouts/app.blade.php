@@ -938,9 +938,25 @@ Incluye:
 
         // --- Modal System ---
         // Abre un modal por id reutilizable en todas las secciones del panel.
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+            modal.style.opacity = '1';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+        }
         // Cierra un modal por id reutilizable en todas las secciones del panel.
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.classList.remove('active');
+            modal.style.display = '';
+            modal.style.opacity = '';
+            modal.style.justifyContent = '';
+            modal.style.alignItems = '';
+        }
         window.onclick = function (event) {
             if (event.target.classList.contains('modal-overlay')) {
                 event.target.classList.remove('active');
