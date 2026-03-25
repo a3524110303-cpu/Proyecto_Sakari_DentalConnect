@@ -580,10 +580,36 @@ class DashboardController extends Controller
             ->take(20)
             ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $notificaciones,
-        ]);
+        return response()->json($notificaciones);
+    }
+
+    /**
+     * Procesa una solicitud de reagenda (aceptar/rechazar) desde el dashboard.
+     */
+    public function procesarReagenda(Request $request, $id)
+    {
+        $notificacion = Notificacion::where('id_notificacion', $id)
+            ->where('id_usuario', Auth::user()->id_usuario)
+            ->firstOrFail();
+
+        if ($request->accion === 'aceptar') {
+            $cita = Cita::find($notificacion->id_cita);
+            if ($cita && $notificacion->datos) {
+                $datos = $notificacion->datos;
+                $nuevaFecha = \Carbon\Carbon::parse($datos['nueva_fecha_hora']);
+
+                $cita->fecha_hora_inicio = $nuevaFecha;
+                $cita->fecha_hora_fin = $nuevaFecha->copy()->addMinutes(30);
+                $cita->estado_cita = 'pendiente';
+                $cita->notas = "⚠️ REAGENDADA POR PACIENTE.\n" . ($cita->notas ?? '');
+                $cita->save();
+            }
+        }
+
+        $notificacion->estado = 'leida';
+        $notificacion->save();
+
+        return response()->json(['success' => true]);
     }
 
     /**

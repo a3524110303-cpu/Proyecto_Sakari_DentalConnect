@@ -549,7 +549,6 @@ class PacienteAppController extends Controller
             return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
         }
 
-        // CANDADO 1: No reagendar si ya está confirmada
         if (strtolower($cita->estado_cita) === 'confirmada') {
             return response()->json([
                 'success' => false, 
@@ -557,47 +556,46 @@ class PacienteAppController extends Controller
             ], 400);
         }
 
-        // CANDADO 2 (EL TRUCO): Validar si ya fue reagendada leyendo el historial de notas
-        if ($cita->notas && strpos($cita->notas, '⚠️ REAGENDADA POR PACIENTE') !== false) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Límite alcanzado. Solo puedes reagendar tu cita una vez.'
-            ], 400);
+        // Revisar si ya tiene una petición pendiente para evitar spam.
+        $peticionPrevia = Notificacion::where('id_cita', $cita->id_cita)
+            ->where('estado', 'no_leida')
+            ->where('tipo', 'reagenda')
+            ->exists();
+        if ($peticionPrevia) {
+            return response()->json(['success' => false, 'message' => 'Ya tienes una solicitud de reagenda en proceso.'], 400);
         }
 
         $fechaCitaOriginal = \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
-
-        // ACTUALIZAMOS LOS DATOS SEGUROS
-        $nuevaFechaHora = $request->fecha . ' ' . $request->hora . ':00';
-        $cita->fecha_hora_inicio = $nuevaFechaHora;
-        $cita->estado_cita = 'pendiente'; // Lo regresamos al estado por defecto para evitar errores de ENUM
-
-        // Usamos la nota como nuestra "Bandera" eterna de que ya se reagendó
-        $notaReagenda = "⚠️ REAGENDADA POR PACIENTE: La cita original era el " . $fechaCitaOriginal . ".";
-        $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
-        
-        // AHORA SÍ GUARDARÁ PERFECTAMENTE
-        $cita->save();
-
-        // Notificar al Doctor
-        $paciente = Paciente::where('id_usuario', Auth::id())->first();
         $idUsuarioDoctor = optional($cita->doctor)->id_usuario;
-        
+
         if ($idUsuarioDoctor) {
-            $nombrePaciente = optional($paciente)->nombre . ' ' . optional($paciente)->apellido_paterno;
+            $paciente = $cita->paciente;
+            $nombrePaciente = $paciente
+                ? trim(($paciente->nombre ?? '') . ' ' . ($paciente->apellido_paterno ?? ''))
+                : 'Paciente';
+            if ($nombrePaciente === '') {
+                $nombrePaciente = 'Paciente';
+            }
 
             Notificacion::create([
                 'id_usuario' => $idUsuarioDoctor,
+                'id_cita'    => $cita->id_cita,
                 'tipo'       => 'reagenda',
-                'mensaje'    => "El paciente {$nombrePaciente} ha reagendado su cita del "
-                    . "{$fechaCitaOriginal} para el {$request->fecha} a las {$request->hora}.",
+                'mensaje'    => "El paciente {$nombrePaciente} solicita reagendar su cita.",
+                'datos'      => [
+                    'paciente'         => $nombrePaciente,
+                    'fecha_original'   => $fechaCitaOriginal,
+                    'nueva_fecha'      => $request->fecha,
+                    'nueva_hora'       => $request->hora,
+                    'nueva_fecha_hora' => $request->fecha . ' ' . $request->hora . ':00',
+                ],
                 'estado'     => 'no_leida',
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Cita reagendada correctamente a las ' . $request->hora,
+            'message' => 'Tu solicitud de reagenda fue enviada a la clínica. Te confirmaremos pronto.',
         ], 200);
     }
 

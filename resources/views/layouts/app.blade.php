@@ -22,6 +22,8 @@ Incluye:
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
         :root {
@@ -700,6 +702,78 @@ Incluye:
     </nav>
 
     <main>
+        <div x-data="notificacionesCampana()" x-init="cargarNotificaciones()" class="absolute top-6 right-8 z-50">
+            <div class="relative">
+                <button @click="abrir = !abrir" class="p-2 bg-white rounded-full shadow-md text-gray-500 hover:text-blue-600 transition">
+                    <i class="fas fa-bell text-xl"></i>
+                    <span x-show="cantidad > 0" x-text="cantidad" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full" style="display: none;"></span>
+                </button>
+
+                <div x-show="abrir" @click.away="abrir = false" class="absolute right-0 mt-3 w-80 bg-white rounded-lg shadow-xl overflow-hidden border border-gray-100" style="display: none;" x-transition>
+                    <div class="py-3 bg-blue-50 border-b border-gray-200 px-4 flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-blue-800">Peticiones de Reagenda</h3>
+                    </div>
+                    <div class="max-h-80 overflow-y-auto">
+                        <template x-for="notif in lista" :key="notif.id_notificacion">
+                            <div class="p-4 border-b hover:bg-gray-50 transition">
+                                <p class="text-sm text-gray-800 font-semibold" x-text="notif.datos?.paciente || 'Paciente'"></p>
+                                <p class="text-xs text-gray-500 mt-1">Sugiere cambiar al: <span class="font-bold text-blue-600" x-text="(notif.datos?.nueva_fecha || '-') + ' ' + (notif.datos?.nueva_hora || '-')"></span></p>
+
+                                <div class="mt-3 flex space-x-2">
+                                    <button @click="procesar(notif.id_notificacion, 'aceptar')" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 px-3 rounded shadow-sm transition">
+                                        <i class="fas fa-check mr-1"></i> Aceptar
+                                    </button>
+                                    <button @click="procesar(notif.id_notificacion, 'rechazar')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold py-2 px-3 rounded shadow-sm transition">
+                                        <i class="fas fa-times mr-1"></i> Ignorar
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="lista.length === 0" class="p-6 text-center text-sm text-gray-400">
+                            <i class="fas fa-check-circle text-3xl mb-2 text-gray-300"></i><br>Todo al día.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        function notificacionesCampana() {
+            return {
+                abrir: false,
+                cantidad: 0,
+                lista: [],
+                cargarNotificaciones() {
+                    fetch('/api/notificaciones/reagenda')
+                        .then(res => res.json())
+                        .then(data => {
+                            this.lista = Array.isArray(data) ? data : [];
+                            this.cantidad = this.lista.length;
+                        })
+                        .catch(() => {
+                            this.lista = [];
+                            this.cantidad = 0;
+                        });
+                },
+                procesar(id, accion) {
+                    fetch(`/api/notificaciones/${id}/procesar`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ accion: accion })
+                    }).then(() => {
+                        this.cargarNotificaciones();
+                        if (accion === 'aceptar') {
+                            window.location.reload();
+                        }
+                    });
+                }
+            }
+        }
+        </script>
+
         @yield('contenido')
     </main>
 

@@ -105,6 +105,7 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
 
     Route::get('/api/notificaciones/reagenda', [DashboardController::class, 'notificacionesReagenda'])->name('api.notificaciones.reagenda');
     Route::post('/api/notificaciones/{id}/leer', [DashboardController::class, 'marcarNotificacionLeida'])->name('api.notificaciones.leer');
+    Route::post('/api/notificaciones/{id}/procesar', [DashboardController::class, 'procesarReagenda'])->name('api.notificaciones.procesar');
 
     // ============================
     // 📅 CITAS
