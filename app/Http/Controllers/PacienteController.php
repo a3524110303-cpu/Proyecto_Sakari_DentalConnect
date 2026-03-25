@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Carbon\Carbon; // <--- SE MANTIENE PARA LA VALIDACIÓN DE EDAD
 
 class PacienteController extends Controller
 {
@@ -33,6 +34,16 @@ class PacienteController extends Controller
 
     public function store(StorePacienteRequest $request)
     {
+        // ── VALIDACIÓN DE EDAD (Mínimo 2 años) ──
+        // Calculamos la fecha de hace 2 años exactos
+        $fechaLimite = Carbon::now()->subYears(2)->format('Y-m-d');
+
+        $request->validate([
+            'fecha_nacimiento' => "required|date|before_or_equal:$fechaLimite",
+        ], [
+            'fecha_nacimiento.before_or_equal' => 'El año de nacimiento es inválido. El paciente debe tener al menos 2 años de edad.',
+        ]);
+
         $idClinica = Auth::user()->id_clinica;
 
         try {
@@ -41,8 +52,6 @@ class PacienteController extends Controller
             // ── 1. Contacto de Emergencia ──
             $idContactoEmergencia = null;
 
-            // Solo creamos el contacto si al menos el nombre y el apellido paterno están presentes
-            // Esto evita el error de "Integrity violation" en MySQL
             if ($request->filled('emergencia_nombre') && $request->filled('emergencia_apellido_paterno')) {
                 $idContactoEmergencia = DB::table('contacto_emergencia')->insertGetId([
                     'nombre' => $request->emergencia_nombre,
@@ -65,7 +74,7 @@ class PacienteController extends Controller
                 'id_clinica' => $idClinica,
                 'nombre_completo' => $nombreCompleto,
                 'email' => $request->email,
-                'password' => 'dental123',
+                'password' => Hash::make('dental123'), // <--- CORREGIDO: Se usa Hash para que no de error al loguear
                 'rol' => 'paciente',
                 'is_active' => true,
             ]);
@@ -122,7 +131,6 @@ class PacienteController extends Controller
                 $q->where('id_clinica', $idClinica);
             })->firstOrFail();
 
-        // Validación más estricta para evitar nulos en cascada
         $request->validate([
             'email' => [
                 'required',
@@ -151,7 +159,6 @@ class PacienteController extends Controller
                 'email' => $request->email,
             ]);
 
-            // Contacto de emergencia: soporta actualización parcial cuando ya existe.
             $hayDatosEmergencia = $request->filled('emergencia_nombre')
                 || $request->filled('emergencia_apellido_paterno')
                 || $request->filled('emergencia_apellido_materno')
