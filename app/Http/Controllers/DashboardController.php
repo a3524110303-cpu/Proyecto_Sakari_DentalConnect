@@ -580,6 +580,73 @@ class DashboardController extends Controller
             ->take(20)
             ->get();
 
+        $idsCita = $notificaciones
+            ->pluck('id_cita')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $citasById = Cita::with('paciente')
+            ->whereIn('id_cita', $idsCita)
+            ->get()
+            ->keyBy('id_cita');
+
+        $notificaciones->transform(function ($notif) use ($citasById) {
+            $datos = $notif->datos;
+            if (is_string($datos)) {
+                $decoded = json_decode($datos, true);
+                $datos = is_array($decoded) ? $decoded : [];
+            }
+            if (!is_array($datos)) {
+                $datos = [];
+            }
+
+            $cita = $notif->id_cita ? ($citasById[$notif->id_cita] ?? null) : null;
+
+            if (empty($datos['paciente'])) {
+                if ($cita && $cita->paciente) {
+                    $datos['paciente'] = trim(
+                        ($cita->paciente->nombre ?? '') . ' ' .
+                        ($cita->paciente->apellido_paterno ?? '') . ' ' .
+                        ($cita->paciente->apellido_materno ?? '')
+                    );
+                }
+
+                if (empty($datos['paciente']) && !empty($notif->mensaje)) {
+                    if (preg_match('/paciente\s+(.+?)\s+(solicita|ha)\s+/iu', $notif->mensaje, $m)) {
+                        $datos['paciente'] = trim($m[1]);
+                    }
+                }
+            }
+
+            if (empty($datos['nueva_fecha']) || empty($datos['nueva_hora'])) {
+                if (!empty($datos['nueva_fecha_hora'])) {
+                    try {
+                        $fecha = Carbon::parse($datos['nueva_fecha_hora']);
+                        $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? $fecha->format('Y-m-d');
+                        $datos['nueva_hora'] = $datos['nueva_hora'] ?? $fecha->format('H:i');
+                    } catch (\Throwable $e) {
+                    }
+                }
+
+                if (($cita && $cita->fecha_hora_inicio) && (empty($datos['nueva_fecha']) || empty($datos['nueva_hora']))) {
+                    try {
+                        $inicio = Carbon::parse($cita->fecha_hora_inicio);
+                        $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? $inicio->format('Y-m-d');
+                        $datos['nueva_hora'] = $datos['nueva_hora'] ?? $inicio->format('H:i');
+                    } catch (\Throwable $e) {
+                    }
+                }
+            }
+
+            $datos['paciente'] = trim($datos['paciente'] ?? '') ?: 'Paciente';
+            $datos['nueva_fecha'] = trim((string) ($datos['nueva_fecha'] ?? '')) ?: '-';
+            $datos['nueva_hora'] = trim((string) ($datos['nueva_hora'] ?? '')) ?: '-';
+
+            $notif->datos = $datos;
+            return $notif;
+        });
+
         return response()->json($notificaciones);
     }
 
