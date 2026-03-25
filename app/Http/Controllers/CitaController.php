@@ -170,25 +170,35 @@ class CitaController extends Controller
     }
 
     // 🔥 ENDPOINT PARA FRONTEND (horas ocupadas)
-    public function horasOcupadas(Request $request)
-    {
-        $request->validate([
-            'fecha' => 'required|date_format:Y-m-d'
-        ]);
+   public function horasOcupadas(Request $request)
+{
+    $request->validate([
+        'fecha' => 'required|date_format:Y-m-d'
+    ]);
 
-        $idClinica = Auth::user()->id_clinica;
-        $fecha = $request->fecha;
+    $idClinica = Auth::user()->id_clinica;
+    $fecha = $request->fecha;
 
-        $horas = Cita::where('id_clinica', $idClinica)
-            ->whereDate('fecha_hora_inicio', $fecha)
-            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
-            ->pluck('fecha_hora_inicio')
-            ->map(function ($hora) {
-                return Carbon::parse($hora)->format('H:i');
-            });
+    $citas = Cita::where('id_clinica', $idClinica)
+        ->whereDate('fecha_hora_inicio', $fecha)
+        ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+        ->get();
 
-        return response()->json([
-            'ocupadas' => $horas
-        ]);
+    $horasBloqueadas = [];
+
+    foreach ($citas as $cita) {
+        $inicio = Carbon::parse($cita->fecha_hora_inicio);
+        $fin = Carbon::parse($cita->fecha_hora_fin);
+
+        // 🔥 recorrer cada bloque de 15 min
+        while ($inicio < $fin) {
+            $horasBloqueadas[] = $inicio->format('H:i');
+            $inicio->addMinutes(15);
+        }
     }
+
+    return response()->json([
+        'ocupadas' => array_unique($horasBloqueadas)
+    ]);
+}
 }

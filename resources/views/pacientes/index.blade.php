@@ -1724,26 +1724,45 @@
             btn.disabled = true;
         }
 
-        // 🎯 DISPONIBLE
-        else {
-            btn.style.background = '#fff';
-            btn.style.border = '1px solid #ccc';
-            btn.style.borderRadius = '10px';
-            btn.style.fontWeight = '700';
-            btn.style.cursor = 'pointer';
+       // 🎯 DISPONIBLE
+else {
+    btn.style.background = '#fff';
+    btn.style.border = '1px solid #ccc';
+    btn.style.borderRadius = '10px';
+    btn.style.fontWeight = '700';
+    btn.style.cursor = 'pointer';
 
-            btn.onclick = () => {
-                document.querySelectorAll('.reserva-hora-btn').forEach(b => {
-                    b.style.background = '#fff';
-                    b.style.color = '#333';
-                });
+    btn.onclick = () => {
 
-                btn.style.background = 'var(--primary-color)';
-                btn.style.color = 'white';
+        // 🔥 OBTENER DURACIÓN ACTUAL (15 o 30)
+        const duracion = parseInt(document.querySelector('[name="duracion_minutos"]').value);
+        const bloquesNecesarios = duracion / 15;
 
-                document.getElementById('input-reserva-hora').value = hora;
-            };
+        let indice = horariosClinica.indexOf(hora);
+
+        // 🚫 VALIDAR SI LOS BLOQUES SIGUIENTES ESTÁN OCUPADOS
+        for (let i = 0; i < bloquesNecesarios; i++) {
+            let siguienteHora = horariosClinica[indice + i];
+
+            if (!siguienteHora || horasOcupadas.includes(siguienteHora)) {
+                alert('❌ Este horario no tiene espacio suficiente para la duración seleccionada.');
+                return;
+            }
         }
+
+        // 🔄 RESET VISUAL
+        document.querySelectorAll('.reserva-hora-btn').forEach(b => {
+            b.style.background = '#fff';
+            b.style.color = '#333';
+        });
+
+        // ✅ SELECCIÓN
+        btn.style.background = 'var(--primary-color)';
+        btn.style.color = 'white';
+
+        document.getElementById('input-reserva-hora').value = hora;
+    };
+}
 
         contenedor.appendChild(btn);
     });
