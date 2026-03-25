@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Archivo;
 use App\Models\Cita;
-use App\Models\Archivo;
+use App\Models\Paciente;
 use App\Models\Servicio;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -43,7 +43,12 @@ class CitaController extends Controller
 
         try {
             $user = Auth::user();
-            $idClinica = $user->id_clinica;
+            $idClinica = $this->resolveClinicaId($user, $request->input('id_paciente'));
+            if (!$idClinica) {
+                return back()
+                    ->with('error', 'No se pudo determinar la clinica para agendar la cita.')
+                    ->withInput();
+            }
 
             // 🕒 Crear fecha inicio y fin
             $fechaHora = Carbon::createFromFormat(
@@ -161,7 +166,7 @@ class CitaController extends Controller
             return redirect()->route('pacientes.index')
                 ->with('success', '¡Cita agendada correctamente!');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return back()
                 ->with('error', 'Error al agendar: ' . $e->getMessage())
                 ->withInput();
@@ -207,8 +212,16 @@ class CitaController extends Controller
     // 🔥 ENDPOINT PARA FRONTEND (horas ocupadas)
   public function horasOcupadas(Request $request)
 {
-    $fecha = $request->fecha;
-    $idClinica = Auth::user()->id_clinica;
+    $fecha = $request->input('fecha');
+    $user = Auth::user();
+    $idClinica = $this->resolveClinicaId($user);
+
+    if (empty($fecha) || !$idClinica) {
+        return response()->json([
+            'ocupadas' => [],
+            'horas_ocupadas' => [],
+        ]);
+    }
 
     $citas = Cita::whereDate('fecha_hora_inicio', $fecha)
         ->where('id_clinica', $idClinica)
@@ -229,7 +242,34 @@ class CitaController extends Controller
     }
 
     return response()->json([
-        'ocupadas' => $horasOcupadas
+        'ocupadas' => $horasOcupadas,
+        'horas_ocupadas' => $horasOcupadas,
     ]);
 }
+
+    private function resolveClinicaId($user, ?int $idPaciente = null): ?int
+    {
+        if ($user && !empty($user->id_clinica)) {
+            return (int) $user->id_clinica;
+        }
+
+        if ($idPaciente) {
+            $paciente = Paciente::find($idPaciente);
+            if ($paciente && !empty($paciente->id_clinica)) {
+                return (int) $paciente->id_clinica;
+            }
+        }
+
+        if ($user) {
+            $idUsuario = $user->id_usuario ?? $user->id ?? null;
+            if ($idUsuario) {
+                $paciente = Paciente::where('id_usuario', $idUsuario)->first();
+                if ($paciente && !empty($paciente->id_clinica)) {
+                    return (int) $paciente->id_clinica;
+                }
+            }
+        }
+
+        return null;
+    }
 }
