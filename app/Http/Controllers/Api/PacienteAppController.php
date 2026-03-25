@@ -669,13 +669,6 @@ class PacienteAppController extends Controller
             return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
         }
 
-        if (strtolower($cita->estado_cita) === 'confirmada') {
-            return response()->json([
-                'success' => false, 
-                'message' => 'No es posible reagendar una cita que ya ha sido confirmada.'
-            ], 400);
-        }
-
         if (!in_array($cita->estado_cita, ['pendiente', 'confirmada'], true)) {
             return response()->json([
                 'success' => false,

@@ -810,15 +810,62 @@ class DashboardController extends Controller
                 ], 422);
             }
 
-            $cita->fecha_hora_inicio = $nuevaFecha;
-            $cita->fecha_hora_fin = $nuevaFecha->copy()->addMinutes(30);
-            $cita->estado_cita = 'pendiente';
-            $cita->notas = "[REAGENDADA POR PACIENTE]\n" . ($cita->notas ?? '');
-            $cita->save();
+            $duracionMinutos = 30;
+            if (!empty($cita->fecha_hora_inicio) && !empty($cita->fecha_hora_fin)) {
+                try {
+                    $inicioOriginal = Carbon::parse($cita->fecha_hora_inicio);
+                    $finOriginal = Carbon::parse($cita->fecha_hora_fin);
+                    $duracionDetectada = max(15, $inicioOriginal->diffInMinutes($finOriginal));
+                    $duracionMinutos = in_array($duracionDetectada, [15, 30], true) ? $duracionDetectada : 30;
+                } catch (\Throwable $e) {
+                    $duracionMinutos = 30;
+                }
+            }
+
+            $nuevaFechaFin = $nuevaFecha->copy()->addMinutes($duracionMinutos);
+
+            $idDoctorDisponible = $this->buscarDoctorDisponible(
+                (int) $cita->id_clinica,
+                $nuevaFecha,
+                $nuevaFechaFin
+            );
+
+            if (!$idDoctorDisponible) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No hay doctores disponibles para la fecha y hora solicitadas.',
+                ], 422);
+            }
+
+            DB::transaction(function () use ($cita, $nuevaFecha, $nuevaFechaFin, $idDoctorDisponible, $notificacion) {
+                $cita->estado_cita = 'completada';
+                $cita->reagenda_estatus = 'aplicada';
+                $cita->notas = "[REAGENDADA POR PACIENTE - CITA ORIGINAL COMPLETADA]\n" . ($cita->notas ?? '');
+                $cita->save();
+
+                Cita::create([
+                    'id_clinica' => $cita->id_clinica,
+                    'id_paciente' => $cita->id_paciente,
+                    'id_doctor' => $idDoctorDisponible,
+                    'id_servicio' => $cita->id_servicio,
+                    'fecha_hora_inicio' => $nuevaFecha,
+                    'fecha_hora_fin' => $nuevaFechaFin,
+                    'estado_cita' => 'pendiente',
+                    'costo_estimado' => $cita->costo_estimado,
+                    'motivo' => $cita->motivo,
+                    'notas' => "[NUEVA CITA POR REAGENDA DE PACIENTE]",
+                    'reagenda_estatus' => 'aplicada',
+                ]);
+
+                $notificacion->estado = 'leido';
+                $notificacion->save();
+            });
         }
 
-        $notificacion->estado = 'leido';
-        $notificacion->save();
+        if ($request->accion !== 'aceptar') {
+            $notificacion->estado = 'leido';
+            $notificacion->save();
+        }
 
         return response()->json([
             'success' => true,
