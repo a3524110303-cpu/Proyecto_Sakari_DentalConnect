@@ -878,8 +878,8 @@ Incluye:
                 }
                 const paciente = datosObj.paciente ? datosObj.paciente : 'Paciente';
 
-                let nuevaFecha = datosObj.nueva_fecha || datosObj.fecha || '-';
-                let nuevaHora = datosObj.nueva_hora || datosObj.hora || '-';
+                let nuevaFecha = datosObj.nueva_fecha || datosObj.fecha || datosObj.fecha_nueva || '-';
+                let nuevaHora = datosObj.nueva_hora || datosObj.hora || datosObj.hora_nueva || '-';
 
                 if ((nuevaFecha === '-' || nuevaHora === '-') && (datosObj.nueva_fecha_hora || datosObj.fecha_hora || datosObj.fecha_sugerida)) {
                     const fechaHoraRaw = datosObj.nueva_fecha_hora || datosObj.fecha_hora || datosObj.fecha_sugerida;

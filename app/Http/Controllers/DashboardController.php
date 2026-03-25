@@ -646,6 +646,31 @@ class DashboardController extends Controller
                 if (empty($datos['nueva_hora']) && !empty($datos['hora'])) {
                     $datos['nueva_hora'] = $datos['hora'];
                 }
+                if (empty($datos['nueva_fecha']) && !empty($datos['fecha_nueva'])) {
+                    $datos['nueva_fecha'] = $datos['fecha_nueva'];
+                }
+                if (empty($datos['nueva_hora']) && !empty($datos['hora_nueva'])) {
+                    $datos['nueva_hora'] = $datos['hora_nueva'];
+                }
+
+                // Fallback legacy: intentar extraer fecha/hora desde el mensaje.
+                if ((!empty($notif->mensaje)) && (empty($datos['nueva_fecha']) || empty($datos['nueva_hora']))) {
+                    $mensaje = (string) $notif->mensaje;
+
+                    // Ejemplo: "... para el 2026-03-25 a las 14:30"
+                    if (preg_match('/para\s+el\s+(\d{4}-\d{2}-\d{2})\s+a\s+las\s+(\d{1,2}:\d{2})/iu', $mensaje, $m)) {
+                        $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? $m[1];
+                        $datos['nueva_hora'] = $datos['nueva_hora'] ?? $m[2];
+                    }
+
+                    // Ejemplo: "... para el 25/03/2026 a las 14:30"
+                    if (empty($datos['nueva_fecha']) || empty($datos['nueva_hora'])) {
+                        if (preg_match('/para\s+el\s+(\d{2})\/(\d{2})\/(\d{4})\s+a\s+las\s+(\d{1,2}:\d{2})/iu', $mensaje, $m)) {
+                            $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? ($m[3] . '-' . $m[2] . '-' . $m[1]);
+                            $datos['nueva_hora'] = $datos['nueva_hora'] ?? $m[4];
+                        }
+                    }
+                }
 
                 if (($cita && $cita->fecha_hora_inicio) && (empty($datos['nueva_fecha']) || empty($datos['nueva_hora']))) {
                     try {

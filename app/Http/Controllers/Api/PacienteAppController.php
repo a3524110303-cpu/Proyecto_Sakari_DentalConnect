@@ -582,7 +582,7 @@ class PacienteAppController extends Controller
                 'id_usuario' => $idUsuarioDoctor,
                 'id_cita'    => $cita->id_cita,
                 'tipo'       => 'reagenda',
-                'mensaje'    => "El paciente {$nombrePaciente} solicita reagendar su cita.",
+                'mensaje'    => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$request->fecha} a las {$request->hora}.",
                 'datos'      => [
                     'paciente'         => $nombrePaciente,
                     'fecha_original'   => $fechaCitaOriginal,
