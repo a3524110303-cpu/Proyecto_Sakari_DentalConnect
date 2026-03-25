@@ -926,11 +926,28 @@ Incluye:
                 },
                 body: JSON.stringify({ accion: accion }),
                 credentials: 'same-origin'
-            }).then(function () {
+            })
+            .then(function (res) {
+                return res.json().catch(function () { return {}; }).then(function (body) {
+                    return { ok: res.ok, body: body };
+                });
+            })
+            .then(function (result) {
+                if (!result.ok) {
+                    const msg = result.body && result.body.message
+                        ? result.body.message
+                        : 'No se pudo procesar la solicitud de reagenda.';
+                    alert(msg);
+                    return;
+                }
+
                 cargarNotificacionesReagenda();
                 if (accion === 'aceptar') {
                     window.location.reload();
                 }
+            })
+            .catch(function () {
+                alert('Error de red al procesar la solicitud. Intenta de nuevo.');
             });
         }
 

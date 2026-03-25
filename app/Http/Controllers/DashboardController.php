@@ -741,28 +741,84 @@ class DashboardController extends Controller
      */
     public function procesarReagenda(Request $request, $id)
     {
+        $request->validate([
+            'accion' => 'required|string|in:aceptar,rechazar,cancelar,ignorar',
+        ]);
+
         $notificacion = Notificacion::where('id_notificacion', $id)
             ->where('id_usuario', Auth::user()->id_usuario)
             ->firstOrFail();
 
         if ($request->accion === 'aceptar') {
             $cita = Cita::find($notificacion->id_cita);
-            if ($cita && $notificacion->datos) {
-                $datos = $notificacion->datos;
-                $nuevaFecha = \Carbon\Carbon::parse($datos['nueva_fecha_hora']);
-
-                $cita->fecha_hora_inicio = $nuevaFecha;
-                $cita->fecha_hora_fin = $nuevaFecha->copy()->addMinutes(30);
-                $cita->estado_cita = 'pendiente';
-                $cita->notas = "⚠️ REAGENDADA POR PACIENTE.\n" . ($cita->notas ?? '');
-                $cita->save();
+            if (!$cita) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La cita asociada a la notificacion no existe.',
+                ], 404);
             }
+
+            $datos = $notificacion->datos;
+            if (is_string($datos)) {
+                $decoded = json_decode($datos, true);
+                $datos = is_array($decoded) ? $decoded : [];
+            }
+            if (!is_array($datos)) {
+                $datos = [];
+            }
+
+            $fechaHoraRaw = $datos['nueva_fecha_hora']
+                ?? $datos['fecha_hora']
+                ?? $datos['fecha_sugerida']
+                ?? null;
+
+            if (empty($fechaHoraRaw)) {
+                $fecha = $datos['nueva_fecha']
+                    ?? $datos['fecha']
+                    ?? $datos['fecha_nueva']
+                    ?? null;
+                $hora = $datos['nueva_hora']
+                    ?? $datos['hora']
+                    ?? $datos['hora_nueva']
+                    ?? null;
+
+                if (!empty($fecha) && !empty($hora)) {
+                    $fechaHoraRaw = trim((string) $fecha) . ' ' . trim((string) $hora);
+                }
+            }
+
+            if (empty($fechaHoraRaw)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La solicitud de reagenda no contiene fecha y hora validas.',
+                ], 422);
+            }
+
+            try {
+                $nuevaFecha = Carbon::parse($fechaHoraRaw);
+            } catch (\Throwable $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo interpretar la fecha y hora solicitadas para reagendar.',
+                ], 422);
+            }
+
+            $cita->fecha_hora_inicio = $nuevaFecha;
+            $cita->fecha_hora_fin = $nuevaFecha->copy()->addMinutes(30);
+            $cita->estado_cita = 'pendiente';
+            $cita->notas = "[REAGENDADA POR PACIENTE]\n" . ($cita->notas ?? '');
+            $cita->save();
         }
 
         $notificacion->estado = 'leida';
         $notificacion->save();
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'message' => $request->accion === 'aceptar'
+                ? 'Solicitud de reagenda aceptada y aplicada correctamente.'
+                : 'Solicitud de reagenda descartada correctamente.',
+        ]);
     }
 
     /**

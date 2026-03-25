@@ -37,12 +37,8 @@ class CitaController extends Controller
             'fecha' => 'required|date_format:Y-m-d',
             'hora' => 'required|date_format:H:i',
             'duracion_minutos' => 'nullable|integer|in:15,30',
-<<<<<<< HEAD
-            'cuidados_postratamiento_pdf' => 'nullable|file|mimes:pdf|max:10240',
-=======
             'cuidados_pdf' => 'nullable|file|mimes:pdf|max:2048',
             'tips_pdf' => 'nullable|file|mimes:pdf|max:2048',
->>>>>>> 66451db0d14e939f31dd568f91653af885088535
         ]);
 
         try {
@@ -65,9 +61,6 @@ class CitaController extends Controller
                     ->withInput();
             }
 
-<<<<<<< HEAD
-            $cita = Cita::create([
-=======
             // 📦 Servicio
             $servicio = Servicio::findOrFail($request->id_servicio);
 
@@ -121,7 +114,6 @@ class CitaController extends Controller
 
             // ✅ Crear cita
             $dataCita = [
->>>>>>> 66451db0d14e939f31dd568f91653af885088535
                 'id_clinica' => $idClinica,
                 'id_paciente' => $request->id_paciente,
                 'id_doctor' => $idDoctor,
@@ -133,23 +125,6 @@ class CitaController extends Controller
                 'costo_estimado' => $servicio->precio_base,
             ];
 
-<<<<<<< HEAD
-            if ($request->hasFile('cuidados_postratamiento_pdf')) {
-                $archivoPdf = $request->file('cuidados_postratamiento_pdf');
-                $nombreArchivo = 'cuidados_postratamiento_' . $cita->id_cita . '_' . time() . '.pdf';
-                $rutaArchivo = $archivoPdf->storeAs('cuidados_postratamiento', $nombreArchivo, 'public');
-
-                Archivo::create([
-                    'id_paciente' => $request->id_paciente,
-                    'id_cita' => $cita->id_cita,
-                    'url_archivo' => $rutaArchivo,
-                    'tipo' => 'pdf',
-                    'descripcion' => 'Cuidados post tratamiento',
-                ]);
-            }
-
-            return redirect()->route('pacientes.index')->with('success', '¡Cita agendada correctamente para el ' . $fechaHora->format('d/m/Y \a \l\a\s H:i') . '!');
-=======
             // Compatibilidad: si en producción aún no han corrido migraciones,
             // evitamos insertar columnas que no existen para no romper el flujo.
             if (Schema::hasColumn('citas', 'cuidados_pdf')) {
@@ -185,7 +160,6 @@ class CitaController extends Controller
 
             return redirect()->route('pacientes.index')
                 ->with('success', '¡Cita agendada correctamente!');
->>>>>>> 66451db0d14e939f31dd568f91653af885088535
 
         } catch (\Exception $e) {
             return back()
