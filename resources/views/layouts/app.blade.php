@@ -868,10 +868,17 @@ Incluye:
             notifUi.count.style.display = 'inline-flex';
 
             notifUi.list.innerHTML = items.map(function (notif) {
-                const datos = notif && notif.datos ? notif.datos : {};
-                const paciente = datos.paciente ? datos.paciente : 'Paciente';
-                const nuevaFecha = datos.nueva_fecha ? datos.nueva_fecha : '-';
-                const nuevaHora = datos.nueva_hora ? datos.nueva_hora : '-';
+                let datosObj = {};
+                if (notif && notif.datos) {
+                    try {
+                        datosObj = typeof notif.datos === 'string' ? JSON.parse(notif.datos) : notif.datos;
+                    } catch (e) {
+                        datosObj = typeof notif.datos === 'object' ? notif.datos : {};
+                    }
+                }
+                const paciente = datosObj.paciente ? datosObj.paciente : 'Paciente';
+                const nuevaFecha = datosObj.nueva_fecha ? datosObj.nueva_fecha : '-';
+                const nuevaHora = datosObj.nueva_hora ? datosObj.nueva_hora : '-';
 
                 return '<div class="notif-item">'
                     + '<p class="notif-item-title">' + paciente + '</p>'
@@ -886,12 +893,16 @@ Incluye:
 
         function cargarNotificacionesReagenda() {
             fetch('/api/notificaciones/reagenda', { credentials: 'same-origin' })
-                .then(function (res) { return res.json(); })
+                .then(function (res) { 
+                    if (!res.ok) throw new Error('API Error');
+                    return res.json(); 
+                })
                 .then(function (data) {
                     const items = Array.isArray(data) ? data : [];
                     renderNotificaciones(items);
                 })
-                .catch(function () {
+                .catch(function (error) {
+                    console.error('Error fetching notifications:', error);
                     renderNotificaciones([]);
                 });
         }

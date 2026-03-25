@@ -1763,7 +1763,8 @@ async function generarHorasReserva(fecha, horaInicioStr, horaFinStr) {
                 document.getElementById('input-reserva-hora').value = hora;
             };
         }
-
         contenedor.appendChild(btn);
     });
 }
+</script>
+@endsection
