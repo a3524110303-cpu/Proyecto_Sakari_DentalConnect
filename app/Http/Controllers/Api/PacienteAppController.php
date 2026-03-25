@@ -217,6 +217,12 @@ class PacienteAppController extends Controller
             ], 404);
         }
         $clinica   = Clinica::find($idClinica);
+        if (!$clinica) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La clinica asociada no existe o esta inactiva.',
+            ], 404);
+        }
 
         // Construir dirección legible
         $partesDireccion = array_filter([
