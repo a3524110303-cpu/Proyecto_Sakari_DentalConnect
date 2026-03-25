@@ -55,20 +55,40 @@ class Cita extends Model
 
     public function getCuidadosPdfUrlAttribute(): ?string
     {
-        if (!$this->cuidados_pdf) {
+        $ruta = $this->cuidados_pdf;
+
+        if (!$ruta) {
+            $archivo = $this->relationLoaded('archivos')
+                ? $this->archivos->firstWhere('descripcion', 'cuidados_pdf')
+                : $this->archivos()->where('tipo', 'pdf')->where('descripcion', 'cuidados_pdf')->first();
+
+            $ruta = $archivo->url_archivo ?? null;
+        }
+
+        if (!$ruta) {
             return null;
         }
 
-        return Storage::disk(env('CITAS_FILESYSTEM_DISK', 'public'))->url($this->cuidados_pdf);
+        return Storage::disk(env('CITAS_FILESYSTEM_DISK', 'public'))->url($ruta);
     }
 
     public function getTipsPdfUrlAttribute(): ?string
     {
-        if (!$this->tips_pdf) {
+        $ruta = $this->tips_pdf;
+
+        if (!$ruta) {
+            $archivo = $this->relationLoaded('archivos')
+                ? $this->archivos->firstWhere('descripcion', 'tips_pdf')
+                : $this->archivos()->where('tipo', 'pdf')->where('descripcion', 'tips_pdf')->first();
+
+            $ruta = $archivo->url_archivo ?? null;
+        }
+
+        if (!$ruta) {
             return null;
         }
 
-        return Storage::disk(env('CITAS_FILESYSTEM_DISK', 'public'))->url($this->tips_pdf);
+        return Storage::disk(env('CITAS_FILESYSTEM_DISK', 'public'))->url($ruta);
     }
 
     // Relación: Paciente
@@ -94,6 +114,11 @@ class Cita extends Model
     public function detalles()
     {
         return $this->hasMany(CitaDetalle::class, 'id_cita');
+    }
+
+    public function archivos()
+    {
+        return $this->hasMany(Archivo::class, 'id_cita', 'id_cita');
     }
 
     // Relación: Pagos/Abonos

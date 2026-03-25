@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Cita;
+use App\Models\Archivo;
 use App\Models\Servicio;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class CitaController extends Controller
@@ -110,7 +112,7 @@ class CitaController extends Controller
             }
 
             // ✅ Crear cita
-            Cita::create([
+            $dataCita = [
                 'id_clinica' => $idClinica,
                 'id_paciente' => $request->id_paciente,
                 'id_doctor' => $idDoctor,
@@ -120,9 +122,40 @@ class CitaController extends Controller
                 'estado_cita' => 'pendiente',
                 'motivo' => $servicio->nombre_servicio,
                 'costo_estimado' => $servicio->precio_base,
-                'cuidados_pdf' => $rutaCuidados,
-                'tips_pdf' => $rutaTips,
-            ]);
+            ];
+
+            // Compatibilidad: si en producción aún no han corrido migraciones,
+            // evitamos insertar columnas que no existen para no romper el flujo.
+            if (Schema::hasColumn('citas', 'cuidados_pdf')) {
+                $dataCita['cuidados_pdf'] = $rutaCuidados;
+            }
+
+            if (Schema::hasColumn('citas', 'tips_pdf')) {
+                $dataCita['tips_pdf'] = $rutaTips;
+            }
+
+            $cita = Cita::create($dataCita);
+
+            // Fuente de verdad de adjuntos: tabla archivos.
+            if ($rutaCuidados) {
+                Archivo::create([
+                    'id_paciente' => $request->id_paciente,
+                    'id_cita' => $cita->id_cita,
+                    'url_archivo' => $rutaCuidados,
+                    'tipo' => 'pdf',
+                    'descripcion' => 'cuidados_pdf',
+                ]);
+            }
+
+            if ($rutaTips) {
+                Archivo::create([
+                    'id_paciente' => $request->id_paciente,
+                    'id_cita' => $cita->id_cita,
+                    'url_archivo' => $rutaTips,
+                    'tipo' => 'pdf',
+                    'descripcion' => 'tips_pdf',
+                ]);
+            }
 
             return redirect()->route('pacientes.index')
                 ->with('success', '¡Cita agendada correctamente!');

@@ -63,7 +63,10 @@ class PacienteAppController extends Controller
         }
 
         // Solo pedimos el doctor, para evitar errores de relaciones complejas
-        $citas = Cita::with(['doctor.usuario'])
+        $citas = Cita::with([
+            'doctor.usuario',
+            'archivos:id_archivo,id_cita,url_archivo,tipo,descripcion',
+        ])
             ->where('id_paciente', $paciente->id_paciente)
             // Filtramos las que ya pasaron
             ->whereNotIn('estado_cita', ['cancelada', 'completada'])
@@ -86,7 +89,11 @@ class PacienteAppController extends Controller
         if (!$paciente)
             return response()->json(['success' => false, 'data' => []], 404);
 
-        $citas = Cita::with(['servicio:id_servicio,nombre_servicio', 'doctor:id_doctor,id_usuario,cedula_profesional'])
+        $citas = Cita::with([
+            'servicio:id_servicio,nombre_servicio',
+            'doctor:id_doctor,id_usuario,cedula_profesional',
+            'archivos:id_archivo,id_cita,url_archivo,tipo,descripcion',
+        ])
             ->where('id_paciente', $paciente->id_paciente)
             ->where('fecha_hora_inicio', '<', now())
             ->whereIn('estado_cita', ['completada', 'cancelada'])
