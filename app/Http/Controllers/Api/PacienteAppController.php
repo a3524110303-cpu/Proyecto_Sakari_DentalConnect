@@ -948,29 +948,45 @@ class PacienteAppController extends Controller
 
     // --- 6. OBTENER DOCTORES DE LA CLÍNICA DEL PACIENTE ---
     // --- 6. OBTENER DOCTORES (MODIFICADO TEMPORALMENTE PARA PRUEBAS) ---
+    // --- 6. OBTENER DOCTORES (VERSIÓN CORREGIDA) ---
     public function getDoctores()
     {
-        // TRUCO: Quitamos el filtro de ->where('id_clinica', $paciente->id_clinica)
-        // para que traiga a todos los doctores del sistema sin importar la clínica.
+        // 1. Buscamos a los doctores sin que los bloqueen los "Scopes"
         $doctores = \App\Models\Doctor::withoutGlobalScopes()
-            ->with('usuario') 
+            ->with(['usuario' => function($query) {
+                // 2. MAGIA AQUÍ: Obligamos a que también nos traiga los datos del usuario sin bloqueos
+                $query->withoutGlobalScopes(); 
+            }]) 
             ->get();
 
         $listaDoctores = $doctores->map(function ($doctor) {
             $usuario = $doctor->usuario;
-            // Evitamos que truene si el doctor no tiene usuario asignado
-            $nombreCompleto = $usuario ? trim($usuario->nombre . ' ' . $usuario->apellido_paterno . ' ' . $usuario->apellido_materno) : 'Dentista';
+            
+            // 3. Armamos el nombre real
+            $nombreCompleto = '';
+            if ($usuario) {
+                $nombreCompleto = trim($usuario->nombre . ' ' . $usuario->apellido_paterno . ' ' . $usuario->apellido_materno);
+            }
+            if (empty($nombreCompleto)) {
+                $nombreCompleto = 'Doctor sin nombre';
+            }
 
             return [
                 'id_doctor' => $doctor->id_doctor,
                 'nombre_completo' => 'Dr. ' . $nombreCompleto,
                 'cedula' => $doctor->cedula_profesional ?? 'Sin registro',
+                
+                // Si la foto viene vacía, mandamos nulo para que Flutter ponga el ícono
                 'foto_perfil' => $doctor->foto_perfil, 
                 
-                // Campos Simulados
-                'especialidad' => $doctor->especialidad ?? 'Odontología General',
-                'telefono' => $usuario->telefono ?? '2381234567',
-                'sobre_mi' => $usuario->sobre_mi ?? 'Hola, me apasiona cuidar de tu sonrisa. ¡Estoy aquí para brindarte la mejor atención y hacer de tu visita una experiencia agradable!',
+                // Especialidad aún no existe en tu BD, la dejamos fija por ahora
+                'especialidad' => 'Odontología General',
+                
+                // 4. Traemos los datos REALES de tu tabla de usuarios
+                'telefono' => $usuario->telefono ?? '0000000000',
+                
+                // 5. Traemos el "Sobre mí" REAL que agregaron tus compañeros
+                'sobre_mi' => $usuario->sobre_mi ?? 'Hola, me apasiona cuidar de tu sonrisa. ¡Estoy aquí para brindarte la mejor atención!',
             ];
         });
 
