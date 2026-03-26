@@ -946,47 +946,40 @@ class PacienteAppController extends Controller
         return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
     }
 
-    // --- 6. OBTENER DOCTORES DE LA CLÍNICA DEL PACIENTE ---
-    // --- 6. OBTENER DOCTORES (MODIFICADO TEMPORALMENTE PARA PRUEBAS) ---
-    // --- 6. OBTENER DOCTORES (VERSIÓN CORREGIDA) ---
+    // --- 6. OBTENER DOCTORES (CON DATOS REALES Y ESTÁTICOS) ---
     public function getDoctores()
     {
-        // 1. Buscamos a los doctores sin que los bloqueen los "Scopes"
-        $doctores = \App\Models\Doctor::withoutGlobalScopes()
-            ->with(['usuario' => function($query) {
-                // 2. MAGIA AQUÍ: Obligamos a que también nos traiga los datos del usuario sin bloqueos
-                $query->withoutGlobalScopes(); 
-            }]) 
+        // Usamos DB::table para hacer un JOIN directo y saltarnos cualquier bloqueo de Laravel.
+        // Esto une la tabla 'doctores' con la tabla 'usuarios' a la fuerza.
+        $doctores = \Illuminate\Support\Facades\DB::table('doctores')
+            ->join('usuarios', 'doctores.id_usuario', '=', 'usuarios.id_usuario')
+            ->select(
+                'doctores.id_doctor',
+                'doctores.cedula_profesional',
+                'doctores.foto_perfil',
+                'usuarios.nombre',
+                'usuarios.apellido_paterno',
+                'usuarios.apellido_materno',
+                'usuarios.telefono',
+                'usuarios.sobre_mi'
+            )
             ->get();
 
         $listaDoctores = $doctores->map(function ($doctor) {
-            $usuario = $doctor->usuario;
-            
-            // 3. Armamos el nombre real
-            $nombreCompleto = '';
-            if ($usuario) {
-                $nombreCompleto = trim($usuario->nombre . ' ' . $usuario->apellido_paterno . ' ' . $usuario->apellido_materno);
-            }
-            if (empty($nombreCompleto)) {
-                $nombreCompleto = 'Doctor sin nombre';
-            }
+            // Unimos el nombre real de la BD
+            $nombreCompleto = trim($doctor->nombre . ' ' . $doctor->apellido_paterno . ' ' . $doctor->apellido_materno);
 
             return [
+                // --- DATOS REALES QUE SÍ ESTÁN EN LA SAAS ---
                 'id_doctor' => $doctor->id_doctor,
-                'nombre_completo' => 'Dr. ' . $nombreCompleto,
-                'cedula' => $doctor->cedula_profesional ?? 'Sin registro',
+                'nombre_completo' => 'Dr. ' . ($nombreCompleto ?: 'Dentista'),
+                'cedula' => $doctor->cedula_profesional ?: 'Sin registro',
+                'foto_perfil' => $doctor->foto_perfil,
+                'telefono' => $doctor->telefono ?: '0000000000',
+                'sobre_mi' => $doctor->sobre_mi ?: 'Hola, me apasiona cuidar de tu sonrisa. ¡Estoy aquí para brindarte la mejor atención!',
                 
-                // Si la foto viene vacía, mandamos nulo para que Flutter ponga el ícono
-                'foto_perfil' => $doctor->foto_perfil, 
-                
-                // Especialidad aún no existe en tu BD, la dejamos fija por ahora
+                // --- DATO 100% ESTÁTICO (Porque no existe la columna en la BD aún) ---
                 'especialidad' => 'Odontología General',
-                
-                // 4. Traemos los datos REALES de tu tabla de usuarios
-                'telefono' => $usuario->telefono ?? '0000000000',
-                
-                // 5. Traemos el "Sobre mí" REAL que agregaron tus compañeros
-                'sobre_mi' => $usuario->sobre_mi ?? 'Hola, me apasiona cuidar de tu sonrisa. ¡Estoy aquí para brindarte la mejor atención!',
             ];
         });
 
@@ -995,5 +988,4 @@ class PacienteAppController extends Controller
             'doctores' => $listaDoctores
         ], 200);
     }
-
 }
