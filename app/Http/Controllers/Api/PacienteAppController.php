@@ -756,6 +756,35 @@ class PacienteAppController extends Controller
         ], 200);
     }
 
+    // --- OBTENER PERFIL DEL PACIENTE ---
+    public function getProfile()
+    {
+        $user = auth()->user();
+        
+        $paciente = Paciente::withoutGlobalScopes()
+            ->where('id_usuario', $user->id_usuario)
+            ->first();
+
+        if (!$paciente) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Paciente no encontrado.'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'paciente' => [
+                'nombre_completo' => $paciente->nombre . ' ' . $paciente->apellido_paterno . ' ' . $paciente->apellido_materno,
+                'email' => $user->email,
+                'telefono' => $paciente->telefono ?? '',
+                'calle' => $paciente->calle ?? '',
+                'colonia' => $paciente->colonia ?? '',
+                'ciudad' => $paciente->ciudad ?? '',
+            ]
+        ], 200);
+    }
+
     public function confirmarCita($id)
     {
         try {

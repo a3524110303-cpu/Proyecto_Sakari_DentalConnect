@@ -83,6 +83,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/citas/{id}/confirmar', [App\Http\Controllers\Api\PacienteAppController::class, 'confirmarCita']);
 
     // Rutas de Configuración / Perfil del Paciente
+    Route::get('/paciente/perfil', [PacienteAppController::class, 'getProfile']);
     Route::post('/paciente/perfil/actualizar', [PacienteAppController::class, 'updateProfile']);
     Route::post('/paciente/perfil/password', [PacienteAppController::class, 'updatePassword']);
 
