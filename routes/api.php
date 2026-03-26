@@ -90,4 +90,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/paciente/perfil/actualizar', [\App\Http\Controllers\Api\PacienteAppController::class, 'updateProfile']);
     Route::post('/paciente/perfil/password', [\App\Http\Controllers\Api\PacienteAppController::class, 'updatePassword']);
     Route::post('/paciente/perfil/foto', [\App\Http\Controllers\Api\PacienteAppController::class, 'uploadProfileImage']);
+
+    // --- RUTAS DE DOCTOR ---
+    Route::get('/paciente/doctores', [\App\Http\Controllers\Api\PacienteAppController::class, 'getDoctores']);
 });
