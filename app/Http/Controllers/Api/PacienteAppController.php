@@ -949,10 +949,9 @@ class PacienteAppController extends Controller
     // --- 6. OBTENER DOCTORES (CON DATOS REALES Y ESTÁTICOS) ---
     public function getDoctores()
     {
-        // Usamos DB::table para hacer un JOIN directo y saltarnos cualquier bloqueo de Laravel.
-        // Esto une la tabla 'doctores' con la tabla 'usuarios' a la fuerza.
+        // Usamos LEFT JOIN para que traiga al doctor AUNQUE NO TENGA usuario asignado.
         $doctores = \Illuminate\Support\Facades\DB::table('doctores')
-            ->join('usuarios', 'doctores.id_usuario', '=', 'usuarios.id_usuario')
+            ->leftJoin('usuarios', 'doctores.id_usuario', '=', 'usuarios.id_usuario')
             ->select(
                 'doctores.id_doctor',
                 'doctores.cedula_profesional',
@@ -966,17 +965,17 @@ class PacienteAppController extends Controller
             ->get();
 
         $listaDoctores = $doctores->map(function ($doctor) {
-            // Unimos el nombre real de la BD
-            $nombreCompleto = trim($doctor->nombre . ' ' . $doctor->apellido_paterno . ' ' . $doctor->apellido_materno);
+            // Unimos el nombre real de la BD (si vienen nulos, quedará vacío)
+            $nombreCompleto = trim(($doctor->nombre ?? '') . ' ' . ($doctor->apellido_paterno ?? '') . ' ' . ($doctor->apellido_materno ?? ''));
 
             return [
                 // --- DATOS REALES QUE SÍ ESTÁN EN LA SAAS ---
                 'id_doctor' => $doctor->id_doctor,
-                'nombre_completo' => 'Dr. ' . ($nombreCompleto ?: 'Dentista'),
+                'nombre_completo' => 'Dr. ' . ($nombreCompleto ?: 'Doctor sin nombre'),
                 'cedula' => $doctor->cedula_profesional ?: 'Sin registro',
                 'foto_perfil' => $doctor->foto_perfil,
                 'telefono' => $doctor->telefono ?: '0000000000',
-                'sobre_mi' => $doctor->sobre_mi ?: 'Hola, me apasiona cuidar de tu sonrisa. ¡Estoy aquí para brindarte la mejor atención!',
+                'sobre_mi' => $doctor->sobre_mi ?: 'Hola, me apasiona cuidar de tu sonrisa. ¡Estoy aquí para brindarte la mejor atención y hacer de tu visita una experiencia agradable!',
                 
                 // --- DATO 100% ESTÁTICO (Porque no existe la columna en la BD aún) ---
                 'especialidad' => 'Odontología General',
