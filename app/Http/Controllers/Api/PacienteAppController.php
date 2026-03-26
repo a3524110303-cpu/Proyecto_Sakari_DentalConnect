@@ -918,9 +918,8 @@ class PacienteAppController extends Controller
             $urlCompleta = asset('storage/' . $rutaNueva);
 
             // 5. Guardamos ese link en la base de datos
-            $paciente->update([
-                'foto_perfil' => $urlCompleta
-            ]);
+            $paciente->foto_perfil = $urlCompleta;
+            $paciente->save();
 
             return response()->json([
                 'success' => true, 
