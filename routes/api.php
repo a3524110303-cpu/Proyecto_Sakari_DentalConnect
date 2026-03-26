@@ -23,6 +23,9 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 // AGREGAR ESTA LÍNEA NUEVA PARA ACTIVAR LA CUENTA
 Route::post('/activar', [AuthController::class, 'activarCuenta']);
 
+// Pégala fuera del middleware auth:sanctum
+Route::get('/paciente/foto/{filename}', [\App\Http\Controllers\Api\PacienteAppController::class, 'getProfileImage']);
+
 // Ruta duplicada eliminada — ya existe en línea 17
 
 Route::middleware('auth:sanctum')->group(function () {

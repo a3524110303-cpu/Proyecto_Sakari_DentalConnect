@@ -912,12 +912,13 @@ class PacienteAppController extends Controller
             }
 
             // 3. Guardamos la nueva foto en la carpeta public/perfiles_pacientes
+            // 3. Guardamos la nueva foto
             $rutaNueva = $request->file('foto_perfil')->store('perfiles_pacientes', 'public');
             
-            // 4. Creamos el link completo (ej. https://tu-dominio.com/storage/perfiles_pacientes/foto.jpg)
-            $urlCompleta = asset('storage/' . $rutaNueva);
+            // 4. NUEVO: Armamos la URL para que apunte a nuestra nueva ruta puente en /api/paciente/foto/...
+            $urlCompleta = url('/api/paciente/foto/' . basename($rutaNueva));
 
-            // 5. Guardamos ese link en la base de datos
+            // 5. Guardamos en la base de datos saltando la protección
             $paciente->foto_perfil = $urlCompleta;
             $paciente->save();
 
@@ -929,6 +930,20 @@ class PacienteAppController extends Controller
         }
 
         return response()->json(['success' => false, 'message' => 'No se recibió ninguna imagen.'], 400);
+    }
+
+    // --- 5. SERVIR LA FOTO ESQUIVANDO EL BLOQUEO DE RAILWAY ---
+    public function getProfileImage($filename)
+    {
+        $path = 'perfiles_pacientes/' . $filename;
+        
+        // Verificamos si el archivo realmente existe
+        if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return response()->json(['success' => false, 'message' => 'Foto no encontrada'], 404);
+        }
+        
+        // Devolvemos el archivo directamente como si fuera una imagen real
+        return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
     }
 
 }
