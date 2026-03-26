@@ -16,6 +16,10 @@ Route::post('/login', [AuthController::class, 'login']);
 // Recuperar Contraseña App Móvil
 Route::post('/recuperar-password', [AuthController::class, 'enviarCorreoRecuperacion']);
 
+// Compatibilidad con vistas web (forgot/reset)
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+
 // AGREGAR ESTA LÍNEA NUEVA PARA ACTIVAR LA CUENTA
 Route::post('/activar', [AuthController::class, 'activarCuenta']);
 

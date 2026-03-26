@@ -11,9 +11,69 @@ use App\Models\Paciente;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
+use Carbon\Carbon;
 
 class AuthController extends Controller
 {
+    /**
+     * Alias web-friendly para enviar correo de recuperación.
+     */
+    public function forgotPassword(Request $request)
+    {
+        return $this->enviarCorreoRecuperacion($request);
+    }
+
+    /**
+     * Restablece contraseña validando token temporal.
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $row = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->first();
+
+        if (!$row || !Hash::check($request->token, $row->token)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token de recuperación inválido o expirado.'
+            ], 422);
+        }
+
+        $expiraMinutos = (int) config('auth.passwords.users.expire', 60);
+        $creado = Carbon::parse($row->created_at);
+        if ($creado->addMinutes($expiraMinutos)->isPast()) {
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            return response()->json([
+                'success' => false,
+                'message' => 'El enlace de recuperación ya expiró. Solicita uno nuevo.'
+            ], 422);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No existe una cuenta asociada a ese correo.'
+            ], 404);
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Contraseña actualizada correctamente.'
+        ], 200);
+    }
+
     public function login(Request $request)
     {
         $credentials = $request->validate([
