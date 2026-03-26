@@ -82,9 +82,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/citas/{id}/reagendar', [PacienteAppController::class, 'reagendarCita']);
     Route::post('/citas/{id}/confirmar', [App\Http\Controllers\Api\PacienteAppController::class, 'confirmarCita']);
 
-    // Rutas de Configuración / Perfil del Paciente
-    Route::get('/paciente/perfil', [PacienteAppController::class, 'getProfile']);
-    Route::post('/paciente/perfil/actualizar', [PacienteAppController::class, 'updateProfile']);
-    Route::post('/paciente/perfil/password', [PacienteAppController::class, 'updatePassword']);
-
+    // --- RUTAS DE CONFIGURACIÓN DEL PACIENTE (App Móvil) ---
+    Route::get('/paciente/perfil', [\App\Http\Controllers\Api\PacienteAppController::class, 'getProfile']);
+    Route::post('/paciente/perfil/actualizar', [\App\Http\Controllers\Api\PacienteAppController::class, 'updateProfile']);
+    Route::post('/paciente/perfil/password', [\App\Http\Controllers\Api\PacienteAppController::class, 'updatePassword']);
+    Route::post('/paciente/perfil/foto', [\App\Http\Controllers\Api\PacienteAppController::class, 'uploadProfileImage']);
 });

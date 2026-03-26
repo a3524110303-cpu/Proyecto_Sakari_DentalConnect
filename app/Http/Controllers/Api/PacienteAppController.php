@@ -756,34 +756,36 @@ class PacienteAppController extends Controller
         ], 200);
     }
 
-    // --- OBTENER PERFIL DEL PACIENTE ---
     public function getProfile()
     {
         $user = auth()->user();
         
-        $paciente = Paciente::withoutGlobalScopes()
+        $paciente = \App\Models\Paciente::withoutGlobalScopes()
             ->where('id_usuario', $user->id_usuario)
             ->first();
 
         if (!$paciente) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Paciente no encontrado.'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
         }
 
         return response()->json([
             'success' => true,
             'paciente' => [
-                'nombre_completo' => $paciente->nombre . ' ' . $paciente->apellido_paterno . ' ' . $paciente->apellido_materno,
+                // Unimos los nombres solo para mostrarlo bonito
+                'nombre_completo' => trim($paciente->nombre . ' ' . $paciente->apellido_paterno . ' ' . $paciente->apellido_materno),
                 'email' => $user->email,
                 'telefono' => $paciente->telefono ?? '',
-                // AQUÍ: Solo mandamos la dirección unida tal cual viene de la BD
-                'direccion' => $paciente->direccion ?? '', 
-                'foto_perfil' => $paciente->foto_perfil ?? null,
+                
+                // Mandamos la dirección separada tal cual está en la base de datos
+                'calle' => $paciente->calle ?? '',
+                'colonia' => $paciente->colonia ?? '',
+                'ciudad' => $paciente->ciudad ?? '',
+                
+                'foto_perfil' => $paciente->foto_perfil, 
             ]
         ], 200);
     }
+
     public function confirmarCita($id)
     {
         try {
@@ -832,11 +834,11 @@ class PacienteAppController extends Controller
     }
 
     // --- FUNCIÓN 1: ACTUALIZAR DATOS BÁSICOS ---
-    public function updateProfile(Request $request)
+    public function updateProfile(\Illuminate\Http\Request $request)
     {
         $user = auth()->user();
         
-        $paciente = Paciente::withoutGlobalScopes()
+        $paciente = \App\Models\Paciente::withoutGlobalScopes()
             ->where('id_usuario', $user->id_usuario)
             ->first();
 
@@ -844,14 +846,11 @@ class PacienteAppController extends Controller
             return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
         }
 
-        // AQUÍ: Solo validamos el campo direccion
-        $request->validate([
-            'direccion' => 'nullable|string|max:255', 
-        ]);
-
-        // Actualizamos
+        // Guardamos los campos por separado
         $paciente->update([
-            'direccion' => $request->direccion
+            'calle' => $request->calle,
+            'colonia' => $request->colonia,
+            'ciudad' => $request->ciudad,
         ]);
 
         return response()->json([
@@ -887,6 +886,55 @@ class PacienteAppController extends Controller
             'success' => true, 
             'message' => 'Tu contraseña se ha actualizado con éxito.'
         ], 200);
+    }
+
+    // --- 4. SUBIR FOTO DE PERFIL (VERSIÓN REAL) ---
+    public function uploadProfileImage(\Illuminate\Http\Request $request)
+    {
+        // 1. Validamos que realmente venga una imagen y no pese más de 5MB
+        $request->validate([
+            'foto_perfil' => 'required|image|mimes:jpeg,png,jpg|max:5120', 
+        ]);
+
+        $user = auth()->user();
+        
+        $paciente = \App\Models\Paciente::withoutGlobalScopes()
+            ->where('id_usuario', $user->id_usuario)
+            ->first();
+
+        if (!$paciente) {
+            return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
+        }
+
+        // 2. Verificamos si la petición trae el archivo
+        if ($request->hasFile('foto_perfil')) {
+            
+            // (Opcional) Si ya tenía una foto antes, la borramos para no llenar el servidor de basura
+            if ($paciente->foto_perfil) {
+                // Extraemos solo la ruta interna para borrarla
+                $rutaVieja = str_replace(asset('storage/'), '', $paciente->foto_perfil);
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($rutaVieja);
+            }
+
+            // 3. Guardamos la nueva foto en la carpeta public/perfiles_pacientes
+            $rutaNueva = $request->file('foto_perfil')->store('perfiles_pacientes', 'public');
+            
+            // 4. Creamos el link completo (ej. https://tu-dominio.com/storage/perfiles_pacientes/foto.jpg)
+            $urlCompleta = asset('storage/' . $rutaNueva);
+
+            // 5. Guardamos ese link en la base de datos
+            $paciente->update([
+                'foto_perfil' => $urlCompleta
+            ]);
+
+            return response()->json([
+                'success' => true, 
+                'message' => '¡Foto actualizada correctamente!',
+                'foto_perfil' => $urlCompleta
+            ], 200);
+        }
+
+        return response()->json(['success' => false, 'message' => 'No se recibió ninguna imagen.'], 400);
     }
 
 }
