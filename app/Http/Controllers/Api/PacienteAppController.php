@@ -778,13 +778,12 @@ class PacienteAppController extends Controller
                 'nombre_completo' => $paciente->nombre . ' ' . $paciente->apellido_paterno . ' ' . $paciente->apellido_materno,
                 'email' => $user->email,
                 'telefono' => $paciente->telefono ?? '',
-                'calle' => $paciente->calle ?? '',
-                'colonia' => $paciente->colonia ?? '',
-                'ciudad' => $paciente->ciudad ?? '',
+                // AQUÍ: Solo mandamos la dirección unida tal cual viene de la BD
+                'direccion' => $paciente->direccion ?? '', 
+                'foto_perfil' => $paciente->foto_perfil ?? null,
             ]
         ], 200);
     }
-
     public function confirmarCita($id)
     {
         try {
@@ -837,31 +836,23 @@ class PacienteAppController extends Controller
     {
         $user = auth()->user();
         
-        // Buscar al paciente relacionado a este usuario
         $paciente = Paciente::withoutGlobalScopes()
             ->where('id_usuario', $user->id_usuario)
             ->first();
 
         if (!$paciente) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Paciente no encontrado.'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
         }
 
-        // Validar qué datos se pueden actualizar (Añade los que consideres necesarios)
+        // AQUÍ: Solo validamos el campo direccion
         $request->validate([
-            'telefono' => 'nullable|string|max:20',
-            'calle' => 'nullable|string|max:100',
-            'numero_exterior' => 'nullable|string|max:20',
-            'colonia' => 'nullable|string|max:100',
-            'ciudad' => 'nullable|string|max:100',
+            'direccion' => 'nullable|string|max:255', 
         ]);
 
-        // Actualizamos los datos
-        $paciente->update($request->only([
-            'telefono', 'calle', 'numero_exterior', 'colonia', 'ciudad'
-        ]));
+        // Actualizamos
+        $paciente->update([
+            'direccion' => $request->direccion
+        ]);
 
         return response()->json([
             'success' => true,
