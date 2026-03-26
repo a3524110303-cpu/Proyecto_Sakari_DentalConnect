@@ -18,11 +18,43 @@ class CitaController extends Controller
     {
         $idClinica = Auth::user()->id_clinica;
 
-        $citas = Cita::with(['paciente', 'servicio'])
+        $citas = Cita::with(['paciente', 'servicio', 'archivos'])
             ->where('id_clinica', $idClinica)
             ->get();
 
         if (request()->wantsJson()) {
+            $citas->transform(function ($cita) {
+                $normalizarPath = function (?string $path): ?string {
+                    if (!$path) {
+                        return null;
+                    }
+                    return ltrim(str_replace('public/', '', $path), '/');
+                };
+
+                $cuidadosPath = $normalizarPath($cita->cuidados_pdf);
+                if (!$cuidadosPath) {
+                    $archivoCuidados = $cita->archivos
+                        ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'cuidados_pdf');
+                    $cuidadosPath = $normalizarPath($archivoCuidados->url_archivo ?? null);
+                }
+
+                $tipsPath = $normalizarPath($cita->tips_pdf);
+                if (!$tipsPath) {
+                    $archivoTips = $cita->archivos
+                        ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'tips_pdf');
+                    $tipsPath = $normalizarPath($archivoTips->url_archivo ?? null);
+                }
+
+                $cita->cuidados_pdf_url = $cuidadosPath
+                    ? route('storage.file', ['path' => $cuidadosPath])
+                    : null;
+                $cita->tips_pdf_url = $tipsPath
+                    ? route('storage.file', ['path' => $tipsPath])
+                    : null;
+
+                return $cita;
+            });
+
             return response()->json($citas);
         }
 

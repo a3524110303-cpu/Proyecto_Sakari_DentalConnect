@@ -389,7 +389,10 @@
             <div class="patient-card"
                 onclick='verPerfil(@json($paciente->load(["usuario", "contactoEmergencia", "archivos"])))'>
                 <div class="avatar-circle">
-                    <i class="fa-solid fa-user"></i>
+                    <img src="{{ $paciente->full_foto_url }}" alt="Foto de {{ $paciente->nombre }}"
+                        style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+                        onerror="this.style.display='none'; this.parentElement.querySelector('i').style.display='block';">
+                    <i class="fa-solid fa-user" style="display:none;"></i>
                 </div>
 
                 @php
@@ -444,7 +447,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('pacientes.store') }}" method="POST">
+            <form action="{{ route('pacientes.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="form-grid">
                     {{-- Datos Personales --}}
@@ -1251,13 +1254,9 @@
             document.getElementById('view-enfermedades').innerText = paciente.enfermedades_cronicas || 'Ninguna registrada';
 
             // Foto
-            const fotoUrl = paciente.archivos
-                ? (paciente.archivos.find(a => a.tipo === 'imagen' && a.descripcion === 'Foto de perfil/progreso del paciente')
-                    || paciente.archivos.find(a => a.tipo === 'imagen'))
-                : null;
+            const fotoUrl = paciente.full_foto_url || null;
             if (fotoUrl) {
-                const ruta = (fotoUrl.url_archivo || '').replace('public/', '').replace(/^\/+/, '');
-                document.getElementById('p-foto').src = '/storage-file/' + ruta;
+                document.getElementById('p-foto').src = fotoUrl;
                 document.getElementById('p-foto').style.display = 'block';
                 document.getElementById('p-foto-placeholder').style.display = 'none';
             } else {

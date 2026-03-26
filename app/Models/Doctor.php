@@ -31,8 +31,33 @@ class Doctor extends Model
         'foto_perfil',
     ];
 
+    protected $appends = ['full_foto_url'];
+
     public function usuario()
     {
         return $this->belongsTo(User::class, 'id_usuario');
+    }
+
+    public function usuarioSistema()
+    {
+        return $this->belongsTo(User::class, 'id_usuario', 'id_usuario');
+    }
+
+    public function getFullFotoUrlAttribute(): string
+    {
+        if (empty($this->foto_perfil)) {
+            return asset('assets/default-avatar.svg');
+        }
+
+        if (filter_var($this->foto_perfil, FILTER_VALIDATE_URL)) {
+            return $this->foto_perfil;
+        }
+
+        $ruta = ltrim(str_replace('public/', '', (string) $this->foto_perfil), '/');
+        if (str_starts_with($ruta, 'fotos_doctores/')) {
+            return url('/api/doctor/foto/' . basename($ruta));
+        }
+
+        return route('storage.file', ['path' => $ruta]);
     }
 }

@@ -25,6 +25,7 @@ Route::post('/activar', [AuthController::class, 'activarCuenta']);
 
 // Pégala fuera del middleware auth:sanctum
 Route::get('/paciente/foto/{filename}', [\App\Http\Controllers\Api\PacienteAppController::class, 'getProfileImage']);
+Route::get('/publicidad/foto/{filename}', [\App\Http\Controllers\Api\PacienteAppController::class, 'getPublicidadImage']);
 
 // Ruta duplicada eliminada — ya existe en línea 17
 

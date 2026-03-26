@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Modelo que representa una cita médica en el sistema.
@@ -74,7 +73,9 @@ class Cita extends Model
             return null;
         }
 
-        return Storage::disk(env('CITAS_FILESYSTEM_DISK', 'public'))->url($ruta);
+        $ruta = ltrim(str_replace('public/', '', (string) $ruta), '/');
+
+        return route('storage.file', ['path' => $ruta]);
     }
 
     public function getTipsPdfUrlAttribute(): ?string
@@ -93,7 +94,9 @@ class Cita extends Model
             return null;
         }
 
-        return Storage::disk(env('CITAS_FILESYSTEM_DISK', 'public'))->url($ruta);
+        $ruta = ltrim(str_replace('public/', '', (string) $ruta), '/');
+
+        return route('storage.file', ['path' => $ruta]);
     }
 
     // Relación: Paciente

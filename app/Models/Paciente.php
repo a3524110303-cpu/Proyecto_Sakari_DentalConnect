@@ -83,11 +83,40 @@ class Paciente extends Model
         'peso' => 'decimal:2',
     ];
 
+    protected $appends = ['full_foto_url', 'foto_url'];
+
     // 4. Accessor: Obtener Nombre Completo fácilmente
     // Uso: $paciente->nombre_completo
     public function getNombreCompletoAttribute()
     {
         return "{$this->nombre} {$this->apellido_paterno} {$this->apellido_materno}";
+    }
+
+    public function getFullFotoUrlAttribute(): string
+    {
+        if (empty($this->foto_perfil)) {
+            return asset('assets/default-avatar.svg');
+        }
+
+        if (filter_var($this->foto_perfil, FILTER_VALIDATE_URL)) {
+            return $this->foto_perfil;
+        }
+
+        $ruta = ltrim(str_replace('public/', '', (string) $this->foto_perfil), '/');
+        if (str_starts_with($ruta, 'perfiles_pacientes/')) {
+            return url('/api/paciente/foto/' . basename($ruta));
+        }
+
+        return route('storage.file', ['path' => $ruta]);
+    }
+
+    public function getFotoUrlAttribute(): ?string
+    {
+        if (empty($this->foto_perfil)) {
+            return null;
+        }
+
+        return $this->full_foto_url;
     }
 
     // ==========================================================

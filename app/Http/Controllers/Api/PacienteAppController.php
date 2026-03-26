@@ -268,10 +268,28 @@ class PacienteAppController extends Controller
      */
     public function publicidad()
     {
-        // Leemos TODAS las promociones reales que hayas guardado en tu base de datos
-        $promociones = \App\Models\Publicidad::all();
+        // Filtrar por clínica y solo anuncios activos
+        $idClinica = $this->resolveClinicaId(auth()->user());
+        if (!$idClinica) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+            ], 200);
+        }
 
-        // Le enviamos la lista completa a la aplicación de Flutter
+        $promociones = \App\Models\Publicidad::whereHas('usuario', function($q) use ($idClinica) {
+            $q->where('id_clinica', $idClinica);
+        })
+        ->where('activo', 1)
+        ->latest()
+        ->get();
+
+        // Formatear la URL de la imagen antes de enviar
+        $promociones->transform(function($anuncio) {
+            $anuncio->imagen_url = url('/api/publicidad/foto/' . basename($anuncio->imagen_path));
+            return $anuncio;
+        });
+
         return response()->json([
             'success' => true,
             'data' => $promociones
@@ -777,8 +795,8 @@ class PacienteAppController extends Controller
                 
                 // MANDA SOLO EL CAMPO DIRECCION
                 'direccion' => $paciente->direccion ?? '',
-                
-                'foto_perfil' => $paciente->foto_perfil ?? null,
+
+                'foto_perfil' => $paciente->full_foto_url,
             ]
         ], 200);
     }
@@ -906,26 +924,27 @@ class PacienteAppController extends Controller
             
             // (Opcional) Si ya tenía una foto antes, la borramos para no llenar el servidor de basura
             if ($paciente->foto_perfil) {
-                // Extraemos solo la ruta interna para borrarla
-                $rutaVieja = str_replace(asset('storage/'), '', $paciente->foto_perfil);
+                // Acepta tanto URLs antiguas como rutas relativas actuales
+                $rutaVieja = ltrim((string) $paciente->foto_perfil, '/');
+                if (filter_var($rutaVieja, FILTER_VALIDATE_URL)) {
+                    $rutaVieja = basename(parse_url($rutaVieja, PHP_URL_PATH));
+                    $rutaVieja = 'perfiles_pacientes/' . $rutaVieja;
+                }
+                $rutaVieja = str_replace('public/', '', $rutaVieja);
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($rutaVieja);
             }
 
             // 3. Guardamos la nueva foto en la carpeta public/perfiles_pacientes
-            // 3. Guardamos la nueva foto
             $rutaNueva = $request->file('foto_perfil')->store('perfiles_pacientes', 'public');
-            
-            // 4. NUEVO: Armamos la URL para que apunte a nuestra nueva ruta puente en /api/paciente/foto/...
-            $urlCompleta = url('/api/paciente/foto/' . basename($rutaNueva));
 
-            // 5. Guardamos en la base de datos saltando la protección
-            $paciente->foto_perfil = $urlCompleta;
+            // 4. Guardamos solo ruta relativa para mantener consistencia web/app
+            $paciente->foto_perfil = $rutaNueva;
             $paciente->save();
 
             return response()->json([
                 'success' => true, 
                 'message' => '¡Foto actualizada correctamente!',
-                'foto_perfil' => $urlCompleta
+                'foto_perfil' => $paciente->full_foto_url
             ], 200);
         }
 
@@ -946,38 +965,36 @@ class PacienteAppController extends Controller
         return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
     }
 
+    public function getPublicidadImage($filename)
+    {
+        $path = 'ads/' . $filename;
+
+        if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return response()->json(['success' => false, 'message' => 'Imagen no encontrada'], 404);
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
+    }
+
     // --- 6. OBTENER DOCTORES (CON DATOS REALES Y ESTÁTICOS) ---
     public function getDoctores()
     {
-        // Usamos LEFT JOIN para que traiga al doctor AUNQUE NO TENGA usuario asignado.
-        $doctores = \Illuminate\Support\Facades\DB::table('doctores')
-            ->leftJoin('usuarios', 'doctores.id_usuario', '=', 'usuarios.id_usuario')
-            ->select(
-                'doctores.id_doctor',
-                'doctores.cedula_profesional',
-                'doctores.foto_perfil',
-                'usuarios.nombre',
-                'usuarios.apellido_paterno',
-                'usuarios.apellido_materno',
-                'usuarios.telefono',
-                'usuarios.sobre_mi'
-            )
+        $doctores = Doctor::with('usuarioSistema')
+            ->whereHas('usuarioSistema', function ($q) {
+                $q->where('is_active', true);
+            })
             ->get();
 
         $listaDoctores = $doctores->map(function ($doctor) {
-            // Unimos el nombre real de la BD (si vienen nulos, quedará vacío)
-            $nombreCompleto = trim(($doctor->nombre ?? '') . ' ' . ($doctor->apellido_paterno ?? '') . ' ' . ($doctor->apellido_materno ?? ''));
+            $usuario = $doctor->usuarioSistema;
 
             return [
-                // --- DATOS REALES QUE SÍ ESTÁN EN LA SAAS ---
                 'id_doctor' => $doctor->id_doctor,
-                'nombre_completo' => 'Dr. ' . ($nombreCompleto ?: 'Doctor sin nombre'),
+                'nombre_completo' => $usuario?->nombre_completo ? 'Dr. ' . $usuario->nombre_completo : 'Dr. Doctor sin nombre',
                 'cedula' => $doctor->cedula_profesional ?: 'Sin registro',
-                'foto_perfil' => $doctor->foto_perfil,
-                'telefono' => $doctor->telefono ?: '0000000000',
-                'sobre_mi' => $doctor->sobre_mi ?: 'Hola, me apasiona cuidar de tu sonrisa. ¡Estoy aquí para brindarte la mejor atención y hacer de tu visita una experiencia agradable!',
-                
-                // --- DATO 100% ESTÁTICO (Porque no existe la columna en la BD aún) ---
+                'foto_perfil' => $doctor->full_foto_url,
+                'telefono' => $usuario?->telefono ?: '0000000000',
+                'sobre_mi' => $usuario?->sobre_mi ?: 'Hola, me apasiona cuidar de tu sonrisa. ¡Estoy aquí para brindarte la mejor atención y hacer de tu visita una experiencia agradable!',
                 'especialidad' => 'Odontología General',
             ];
         });
