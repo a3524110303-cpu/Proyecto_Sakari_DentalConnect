@@ -316,8 +316,13 @@ class PacienteAppController extends Controller
                 return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
             }
 
-            // ✅ EXTRAEMOS LA CLÍNICA DEL PACIENTE (Esto evita el error)
-            $idClinica = $paciente->id_clinica ?? ($user->id_clinica ?? 1); 
+            $idClinica = $paciente->id_clinica ?? $user->id_clinica;
+            if (!$idClinica) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error: El paciente no tiene una clínica asociada válida.'
+                ], 400);
+            }
 
             // 3. Comprobar si ya tiene una cita ese mismo día
             $tieneCitaHoy = \App\Models\Cita::where('id_paciente', $paciente->id_paciente)
@@ -729,6 +734,7 @@ class PacienteAppController extends Controller
             }
 
             Notificacion::create([
+                'id_clinica' => $cita->id_clinica,
                 'id_usuario' => $idUsuarioDoctor,
                 'id_cita'    => $cita->id_cita,
                 'tipo'       => 'reagenda',

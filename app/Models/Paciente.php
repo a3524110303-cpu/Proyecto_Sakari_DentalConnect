@@ -51,6 +51,7 @@ class Paciente extends Model
 
     // 2. Campos que se pueden llenar masivamente (Mass Assignment)
     protected $fillable = [
+        'id_clinica',
         'id_usuario',            // Relación con el login (App Móvil)
         'nombre',
         'apellido_paterno',
