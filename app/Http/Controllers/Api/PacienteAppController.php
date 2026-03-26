@@ -947,26 +947,18 @@ class PacienteAppController extends Controller
     }
 
     // --- 6. OBTENER DOCTORES DE LA CLÍNICA DEL PACIENTE ---
+    // --- 6. OBTENER DOCTORES (MODIFICADO TEMPORALMENTE PARA PRUEBAS) ---
     public function getDoctores()
     {
-        $user = auth()->user();
-        
-        $paciente = \App\Models\Paciente::withoutGlobalScopes()
-            ->where('id_usuario', $user->id_usuario)
-            ->first();
-
-        if (!$paciente) {
-            return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
-        }
-
-        // Buscamos los doctores de la clínica del paciente y traemos su información de usuario
+        // TRUCO: Quitamos el filtro de ->where('id_clinica', $paciente->id_clinica)
+        // para que traiga a todos los doctores del sistema sin importar la clínica.
         $doctores = \App\Models\Doctor::withoutGlobalScopes()
-            ->where('id_clinica', $paciente->id_clinica)
             ->with('usuario') 
             ->get();
 
         $listaDoctores = $doctores->map(function ($doctor) {
             $usuario = $doctor->usuario;
+            // Evitamos que truene si el doctor no tiene usuario asignado
             $nombreCompleto = $usuario ? trim($usuario->nombre . ' ' . $usuario->apellido_paterno . ' ' . $usuario->apellido_materno) : 'Dentista';
 
             return [
@@ -975,11 +967,9 @@ class PacienteAppController extends Controller
                 'cedula' => $doctor->cedula_profesional ?? 'Sin registro',
                 'foto_perfil' => $doctor->foto_perfil, 
                 
-                // --- CAMPOS LISTOS PARA EL FUTURO ---
-                // Tu app móvil leerá esto. Cuando tus compañeros tengan los datos reales, 
-                // solo deberán cambiar la parte derecha de estas flechas =>
+                // Campos Simulados
                 'especialidad' => $doctor->especialidad ?? 'Odontología General',
-                'telefono' => $usuario->telefono ?? '2381234567', // Número para probar WhatsApp
+                'telefono' => $usuario->telefono ?? '2381234567',
                 'sobre_mi' => $usuario->sobre_mi ?? 'Hola, me apasiona cuidar de tu sonrisa. ¡Estoy aquí para brindarte la mejor atención y hacer de tu visita una experiencia agradable!',
             ];
         });
