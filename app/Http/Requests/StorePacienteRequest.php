@@ -23,6 +23,20 @@ class StorePacienteRequest extends FormRequest
      */
     protected function prepareForValidation()
     {
+        $calle = trim((string) $this->input('calle', ''));
+        $numExterior = trim((string) $this->input('num_exterior', ''));
+        $numInterior = trim((string) $this->input('num_interior', ''));
+        $colonia = trim((string) $this->input('colonia', ''));
+        $municipio = trim((string) $this->input('municipio', ''));
+
+        $partesDireccion = array_filter([
+            $calle,
+            $numExterior ? 'Ext. ' . $numExterior : null,
+            $numInterior ? 'Int. ' . $numInterior : null,
+            $colonia,
+            $municipio,
+        ]);
+
         $this->merge([
             'nombre' => StringHelper::capitalizeName($this->nombre),
             'apellido_paterno' => StringHelper::capitalizeName($this->apellido_paterno),
@@ -30,6 +44,10 @@ class StorePacienteRequest extends FormRequest
             'emergencia_nombre' => StringHelper::capitalizeName($this->emergencia_nombre),
             'emergencia_apellido_paterno' => StringHelper::capitalizeName($this->emergencia_apellido_paterno),
             'emergencia_apellido_materno' => StringHelper::capitalizeName($this->emergencia_apellido_materno),
+            'calle' => StringHelper::capitalizeName($calle),
+            'colonia' => StringHelper::capitalizeName($colonia),
+            'municipio' => StringHelper::capitalizeName($municipio),
+            'direccion' => implode(', ', $partesDireccion),
         ]);
     }
 
@@ -63,7 +81,12 @@ class StorePacienteRequest extends FormRequest
             // Datos médicos sensibles — (tipo_sangre y peso opcionales)
             'tipo_sangre' => ['nullable', 'string', 'max:5'],
             'peso' => ['nullable', 'integer', 'min:1', 'max:500'],
-            'direccion' => ['required', 'string', 'max:100'],
+            'calle' => ['required', 'string', 'max:100'],
+            'num_exterior' => ['required', 'string', 'max:20'],
+            'num_interior' => ['nullable', 'string', 'max:20'],
+            'colonia' => ['required', 'string', 'max:100'],
+            'municipio' => ['required', 'string', 'max:100'],
+            'direccion' => ['nullable', 'string', 'max:255'],
             'ocupacion' => ['required', 'string', 'max:100'],
             'enfermedades_cronicas' => ['required', 'string', 'max:1000'],
             'alergias' => ['required', 'string', 'max:1000'],
@@ -98,7 +121,10 @@ class StorePacienteRequest extends FormRequest
             'peso.max' => 'El peso no puede exceder los 500 kg.',
             'enfermedades_cronicas.required' => 'Las enfermedades crónicas son obligatorias. Si no tiene, escriba "Ninguna".',
             'alergias.required' => 'Las alergias son obligatorias. Si no tiene, escriba "Ninguna".',
-            'direccion.required' => 'La dirección es obligatoria para el expediente clínico.',
+            'calle.required' => 'La calle es obligatoria para el expediente clínico.',
+            'num_exterior.required' => 'El número exterior es obligatorio para el expediente clínico.',
+            'colonia.required' => 'La colonia es obligatoria para el expediente clínico.',
+            'municipio.required' => 'El municipio es obligatorio para el expediente clínico.',
             'emergencia_nombre.regex' => 'El nombre del contacto de emergencia solo puede contener letras y espacios.',
             'emergencia_apellido_paterno.regex' => 'El apellido paterno del contacto solo puede contener letras y espacios.',
             'emergencia_apellido_materno.regex' => 'El apellido materno del contacto solo puede contener letras y espacios.',

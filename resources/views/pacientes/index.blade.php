@@ -499,8 +499,20 @@
                         value="{{ old('peso') }}" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
 
 
-                    <input type="text" name="direccion" class="modern-input" placeholder="Dirección Completa*" required
-                        value="{{ old('direccion') }}" style="grid-column: span 1;">
+                    <input type="text" name="calle" class="modern-input" placeholder="Calle*" required
+                        value="{{ old('calle') }}">
+
+                    <input type="text" name="num_exterior" class="modern-input" placeholder="Número Exterior*" required
+                        value="{{ old('num_exterior') }}">
+
+                    <input type="text" name="num_interior" class="modern-input" placeholder="Número Interior"
+                        value="{{ old('num_interior') }}">
+
+                    <input type="text" name="colonia" class="modern-input" placeholder="Colonia*" required
+                        value="{{ old('colonia') }}">
+
+                    <input type="text" name="municipio" class="modern-input" placeholder="Municipio*" required
+                        value="{{ old('municipio') }}">
 
                     <input type="text" name="ocupacion" class="modern-input" placeholder="Ocupación"
                         value="{{ old('ocupacion') }}">
@@ -1086,8 +1098,15 @@
                         required maxlength="15" oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
                     <input type="number" name="peso" id="edit-peso" class="modern-input" placeholder="Peso" step="1" min="0"
                         max="500" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                    <input type="text" name="direccion" id="edit-direccion" class="modern-input"
-                        placeholder="Dirección Completa" style="grid-column: span 1;">
+                    <input type="text" name="calle" id="edit-calle" class="modern-input" placeholder="Calle*" required>
+                    <input type="text" name="num_exterior" id="edit-num-exterior" class="modern-input"
+                        placeholder="Número Exterior*" required>
+                    <input type="text" name="num_interior" id="edit-num-interior" class="modern-input"
+                        placeholder="Número Interior">
+                    <input type="text" name="colonia" id="edit-colonia" class="modern-input" placeholder="Colonia*"
+                        required>
+                    <input type="text" name="municipio" id="edit-municipio" class="modern-input"
+                        placeholder="Municipio*" required>
                     <input type="text" name="ocupacion" id="edit-ocupacion" class="modern-input" placeholder="Ocupación">
 
                     <div class="full-width"
@@ -1249,7 +1268,7 @@
             document.getElementById('view-sexo').innerText = paciente.sexo === 'M' ? 'Masculino' : (paciente.sexo === 'F' ? 'Femenino' : 'Otro');
             document.getElementById('view-sangre').innerText = paciente.tipo_sangre || 'S/D';
             document.getElementById('view-peso').innerText = (paciente.peso ? parseInt(paciente.peso) : '0') + ' kg';
-            document.getElementById('view-direccion').innerText = paciente.direccion || 'S/D';
+            document.getElementById('view-direccion').innerText = construirDireccionPaciente(paciente);
             document.getElementById('view-ocupacion').innerText = paciente.ocupacion || 'S/D';
             document.getElementById('view-enfermedades').innerText = paciente.enfermedades_cronicas || 'Ninguna registrada';
 
@@ -1294,6 +1313,22 @@
             const month = now.getMonth() - birth.getMonth();
             if (month < 0 || (month === 0 && now.getDate() < birth.getDate())) age--;
             return age + ' años';
+        }
+
+        function construirDireccionPaciente(paciente) {
+            const partes = [
+                paciente.calle || '',
+                paciente.num_exterior ? `Ext. ${paciente.num_exterior}` : '',
+                paciente.num_interior ? `Int. ${paciente.num_interior}` : '',
+                paciente.colonia || '',
+                paciente.municipio || '',
+            ].filter(Boolean);
+
+            if (partes.length) {
+                return partes.join(', ');
+            }
+
+            return paciente.direccion || 'S/D';
         }
 
         // ─── Tabs ─────────────────────────────────────────────────────────────
@@ -1505,7 +1540,11 @@
             document.getElementById('edit-email').value = currentPaciente.correo_electronico || '';
             document.getElementById('edit-telefono').value = currentPaciente.telefono || '';
             document.getElementById('edit-peso').value = currentPaciente.peso ? parseInt(currentPaciente.peso) : '';
-            document.getElementById('edit-direccion').value = currentPaciente.direccion || '';
+            document.getElementById('edit-calle').value = currentPaciente.calle || '';
+            document.getElementById('edit-num-exterior').value = currentPaciente.num_exterior || '';
+            document.getElementById('edit-num-interior').value = currentPaciente.num_interior || '';
+            document.getElementById('edit-colonia').value = currentPaciente.colonia || '';
+            document.getElementById('edit-municipio').value = currentPaciente.municipio || '';
             document.getElementById('edit-ocupacion').value = currentPaciente.ocupacion || '';
             document.getElementById('edit-enfermedades').value = currentPaciente.enfermedades_cronicas || '';
             document.getElementById('edit-alergias').value = currentPaciente.alergias || '';

@@ -66,6 +66,11 @@ class Paciente extends Model
 
         // Dirección
         'direccion',
+        'calle',
+        'num_exterior',
+        'num_interior',
+        'colonia',
+        'municipio',
 
         // Datos Médicos Rápidos (Texto libre)
         'alergias',              // Columna real en BD: texto libre de alergias

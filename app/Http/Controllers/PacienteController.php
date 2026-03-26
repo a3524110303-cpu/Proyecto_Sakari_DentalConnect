@@ -17,6 +17,19 @@ use Carbon\Carbon; // <--- SE MANTIENE PARA LA VALIDACIÓN DE EDAD
 
 class PacienteController extends Controller
 {
+    private function construirDireccionCompuesta(Request $request): string
+    {
+        $partes = array_filter([
+            trim((string) $request->input('calle')),
+            $request->filled('num_exterior') ? 'Ext. ' . trim((string) $request->input('num_exterior')) : null,
+            $request->filled('num_interior') ? 'Int. ' . trim((string) $request->input('num_interior')) : null,
+            trim((string) $request->input('colonia')),
+            trim((string) $request->input('municipio')),
+        ]);
+
+        return implode(', ', $partes);
+    }
+
     public function index()
     {
         $idClinica = Auth::user()->id_clinica;
@@ -80,6 +93,8 @@ class PacienteController extends Controller
             ]);
 
             // ── 3. Crear el perfil del paciente ──
+            $direccionCompuesta = $this->construirDireccionCompuesta($request);
+
             $paciente = Paciente::create([
                 'id_usuario' => $user->id_usuario,
                 'id_contacto_emergencia' => $idContactoEmergencia,
@@ -92,7 +107,12 @@ class PacienteController extends Controller
                 'correo_electronico' => $request->email,
                 'tipo_sangre' => $request->tipo_sangre,
                 'peso' => $request->peso,
-                'direccion' => $request->direccion,
+                'direccion' => $direccionCompuesta,
+                'calle' => $request->calle,
+                'num_exterior' => $request->num_exterior,
+                'num_interior' => $request->num_interior,
+                'colonia' => $request->colonia,
+                'municipio' => $request->municipio,
                 'ocupacion' => $request->ocupacion,
                 'enfermedades_cronicas' => $request->enfermedades_cronicas,
                 'alergias' => $request->alergias,
@@ -137,6 +157,11 @@ class PacienteController extends Controller
                 'email',
                 Rule::unique('usuarios_sistema', 'email')->ignore($paciente->id_usuario, 'id_usuario'),
             ],
+            'calle' => 'required|string|max:100',
+            'num_exterior' => 'required|string|max:20',
+            'num_interior' => 'nullable|string|max:20',
+            'colonia' => 'required|string|max:100',
+            'municipio' => 'required|string|max:100',
             'emergencia_nombre' => 'nullable|string|max:100',
             'emergencia_apellido_paterno' => 'nullable|string|max:100',
         ]);
@@ -144,12 +169,19 @@ class PacienteController extends Controller
         try {
             DB::beginTransaction();
 
+            $direccionCompuesta = $this->construirDireccionCompuesta($request);
+
             $paciente->update([
                 'correo_electronico' => $request->email,
                 'tipo_sangre' => $request->tipo_sangre,
                 'telefono' => $request->telefono,
                 'peso' => $request->peso,
-                'direccion' => $request->direccion,
+                'direccion' => $direccionCompuesta,
+                'calle' => $request->calle,
+                'num_exterior' => $request->num_exterior,
+                'num_interior' => $request->num_interior,
+                'colonia' => $request->colonia,
+                'municipio' => $request->municipio,
                 'ocupacion' => $request->ocupacion,
                 'enfermedades_cronicas' => $request->enfermedades_cronicas,
                 'alergias' => $request->alergias,
