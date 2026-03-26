@@ -771,17 +771,14 @@ class PacienteAppController extends Controller
         return response()->json([
             'success' => true,
             'paciente' => [
-                // Unimos los nombres solo para mostrarlo bonito
                 'nombre_completo' => trim($paciente->nombre . ' ' . $paciente->apellido_paterno . ' ' . $paciente->apellido_materno),
                 'email' => $user->email,
                 'telefono' => $paciente->telefono ?? '',
                 
-                // Mandamos la dirección separada tal cual está en la base de datos
-                'calle' => $paciente->calle ?? '',
-                'colonia' => $paciente->colonia ?? '',
-                'ciudad' => $paciente->ciudad ?? '',
+                // MANDA SOLO EL CAMPO DIRECCION
+                'direccion' => $paciente->direccion ?? '',
                 
-                'foto_perfil' => $paciente->foto_perfil, 
+                'foto_perfil' => $paciente->foto_perfil ?? null,
             ]
         ], 200);
     }
@@ -846,11 +843,9 @@ class PacienteAppController extends Controller
             return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
         }
 
-        // Guardamos los campos por separado
+        // GUARDA DIRECTAMENTE EN EL CAMPO DIRECCION
         $paciente->update([
-            'calle' => $request->calle,
-            'colonia' => $request->colonia,
-            'ciudad' => $request->ciudad,
+            'direccion' => $request->direccion,
         ]);
 
         return response()->json([
