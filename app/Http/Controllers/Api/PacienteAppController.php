@@ -686,6 +686,27 @@ class PacienteAppController extends Controller
             'hora'   => 'required|string',
         ]);
 
+        $horaNormalizada = trim((string) $request->hora);
+        $fechaHoraSolicitada = null;
+        $formatosHora = ['H:i', 'H:i:s', 'h:i A', 'h:iA'];
+        foreach ($formatosHora as $formatoHora) {
+            try {
+                $fechaHoraSolicitada = Carbon::createFromFormat('Y-m-d ' . $formatoHora, $request->fecha . ' ' . $horaNormalizada);
+                if ($fechaHoraSolicitada !== false) {
+                    break;
+                }
+            } catch (\Throwable $e) {
+                // Probamos con el siguiente formato
+            }
+        }
+
+        if (!$fechaHoraSolicitada) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Formato de hora invalido. Usa HH:mm o hh:mm AM/PM.',
+            ], 422);
+        }
+
         $user = Auth::user();
         $idUsuario = $user->id_usuario ?? $user->id ?? Auth::id();
         $pacienteAuth = Paciente::where('id_usuario', $idUsuario)->first();
@@ -710,7 +731,6 @@ class PacienteAppController extends Controller
             ], 422);
         }
 
-        $fechaHoraSolicitada = Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora);
         if ($fechaHoraSolicitada->isPast()) {
             return response()->json([
                 'success' => false,
@@ -729,13 +749,23 @@ class PacienteAppController extends Controller
 
         $fechaCitaOriginal = Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
 
-        $cita->reagenda_solicitada_at = now();
-        $cita->reagenda_fecha_solicitada = $request->fecha;
-        $cita->reagenda_hora_solicitada = $request->hora;
-        $cita->reagenda_motivo = $request->motivo;
-        $cita->reagenda_estatus = 'pendiente';
+        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_solicitada_at')) {
+            $cita->reagenda_solicitada_at = now();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_fecha_solicitada')) {
+            $cita->reagenda_fecha_solicitada = $fechaHoraSolicitada->toDateString();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_hora_solicitada')) {
+            $cita->reagenda_hora_solicitada = $fechaHoraSolicitada->format('H:i:s');
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_motivo')) {
+            $cita->reagenda_motivo = $request->motivo;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_estatus')) {
+            $cita->reagenda_estatus = 'pendiente';
+        }
         $notaReagenda = "SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
-            . $request->fecha . " a las " . $request->hora
+            . $fechaHoraSolicitada->toDateString() . " a las " . $fechaHoraSolicitada->format('H:i')
             . ". Motivo: " . ($request->motivo ?? 'No especificado');
         $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
         $cita->save();
@@ -756,13 +786,13 @@ class PacienteAppController extends Controller
                 'id_usuario' => $idUsuarioDoctor,
                 'id_cita'    => $cita->id_cita,
                 'tipo'       => 'reagenda',
-                'mensaje'    => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$request->fecha} a las {$request->hora}.",
+                'mensaje'    => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$fechaHoraSolicitada->toDateString()} a las {$fechaHoraSolicitada->format('H:i')}.",
                 'datos'      => [
                     'paciente'         => $nombrePaciente,
                     'fecha_original'   => $fechaCitaOriginal,
-                    'nueva_fecha'      => $request->fecha,
-                    'nueva_hora'       => $request->hora,
-                    'nueva_fecha_hora' => $request->fecha . ' ' . $request->hora . ':00',
+                    'nueva_fecha'      => $fechaHoraSolicitada->toDateString(),
+                    'nueva_hora'       => $fechaHoraSolicitada->format('H:i:s'),
+                    'nueva_fecha_hora' => $fechaHoraSolicitada->format('Y-m-d H:i:s'),
                 ],
                 'estado'     => 'no_leida',
             ]);
