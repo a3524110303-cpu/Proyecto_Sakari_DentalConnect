@@ -27,6 +27,7 @@ Route::post('/activar', [AuthController::class, 'activarCuenta']);
 Route::get('/paciente/foto/{filename}', [\App\Http\Controllers\Api\PacienteAppController::class, 'getProfileImage']);
 Route::get('/publicidad/foto/{filename}', [\App\Http\Controllers\Api\PacienteAppController::class, 'getPublicidadImage']);
 
+Route::get('/doctor/foto/{filename}', [\App\Http\Controllers\Api\PacienteAppController::class, 'getDoctorImage']);
 // Ruta duplicada eliminada — ya existe en línea 17
 
 Route::middleware('auth:sanctum')->group(function () {

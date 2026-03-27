@@ -162,8 +162,8 @@ class PacienteAppController extends Controller
                 ->from('citas')
                 ->where('id_paciente', $paciente->id_paciente);
         })
-        ->orderBy('created_at', 'desc') 
-        ->get();
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         $abonos = $abonosHistorial->sum('monto');
         $saldo = $cargos - $abonos;
@@ -171,10 +171,10 @@ class PacienteAppController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'total_cargos' => (float)$cargos,
-                'total_abonado' => (float)$abonos,
-                'saldo_pendiente' => (float)max(0, $saldo),
-                'historial' => $abonosHistorial // 👈 NUEVO: Enviamos la lista real de pagos
+                'total_cargos' => (float) $cargos,
+                'total_abonado' => (float) $abonos,
+                'saldo_pendiente' => (float) max(0, $saldo),
+                'historial' => $abonosHistorial
             ]
         ]);
     }
@@ -1073,6 +1073,21 @@ class PacienteAppController extends Controller
 
         return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
     }
+
+    // --- NUEVA FUNCIÓN: SERVIR LA FOTO DEL DOCTOR ---
+    public function getDoctorImage($filename)
+    {
+        $path = 'fotos_doctores/' . $filename;
+
+        // Verificamos si el archivo realmente existe en el disco
+        if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return response()->json(['success' => false, 'message' => 'Foto del doctor no encontrada'], 404);
+        }
+
+        // Devolvemos el archivo directamente como si fuera una imagen real
+        return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
+    }
+
 
     // --- 6. OBTENER DOCTORES (CON DATOS REALES) ---
     public function getDoctores()
