@@ -1074,12 +1074,19 @@ class PacienteAppController extends Controller
         return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
     }
 
-    // --- 6. OBTENER DOCTORES (CON DATOS REALES Y ESTÁTICOS) ---
+    // --- 6. OBTENER DOCTORES (CON DATOS REALES) ---
     public function getDoctores()
     {
+        $user = auth()->user();
+        $idClinica = $this->resolveClinicaId($user);
+
+        // Obtenemos solo los doctores vinculados a la clínica del paciente actual
         $doctores = Doctor::with('usuarioSistema')
-            ->whereHas('usuarioSistema', function ($q) {
+            ->whereHas('usuarioSistema', function ($q) use ($idClinica) {
                 $q->where('is_active', true);
+                if ($idClinica) {
+                    $q->where('id_clinica', $idClinica);
+                }
             })
             ->get();
 
@@ -1091,9 +1098,10 @@ class PacienteAppController extends Controller
                 'nombre_completo' => $usuario?->nombre_completo ? 'Dr. ' . $usuario->nombre_completo : 'Dr. Doctor sin nombre',
                 'cedula' => $doctor->cedula_profesional ?: 'Sin registro',
                 'foto_perfil' => $doctor->full_foto_url,
-                'telefono' => $usuario?->telefono ?: '0000000000',
-                'sobre_mi' => $usuario?->sobre_mi ?: 'Hola, me apasiona cuidar de tu sonrisa. ¡Estoy aquí para brindarte la mejor atención y hacer de tu visita una experiencia agradable!',
-                'especialidad' => 'Odontología General',
+                // Insertamos la información real que viene de la base de datos
+                'telefono' => $usuario?->telefono ?: 'No disponible',
+                'sobre_mi' => $usuario?->sobre_mi ?: 'El doctor aún no ha agregado una descripción.',
+                'especialidad' => $doctor->especialidad ?? 'Odontología General',
             ];
         });
 

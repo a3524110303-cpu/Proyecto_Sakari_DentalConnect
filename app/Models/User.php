@@ -41,6 +41,7 @@ class User extends Authenticatable
         'rol',
         'is_active', // Agregado para permitir desactivar usuarios
         'sobre_mi',  // <--- ESTA ES LA LÍNEA QUE SOLUCIONA TU PROBLEMA
+        'telefono',
     ];
 
     protected $hidden = [
