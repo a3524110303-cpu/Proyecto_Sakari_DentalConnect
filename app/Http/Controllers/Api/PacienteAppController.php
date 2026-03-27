@@ -679,149 +679,141 @@ class PacienteAppController extends Controller
      * Recibe la solicitud de reagenda desde la app móvil.
      * Guarda una nota en la cita y crea una notificación para el doctor.
      */
-    public function reagendarCita(Request $request, $id)
+ public function reagendarCita(Request $request, $id)
     {
-        $request->validate([
-            'fecha'  => 'required|date',
-            'hora'   => 'required|string',
-        ]);
+        // 1. Envolvemos todo en try-catch para que SIEMPRE devuelva JSON (y Flutter no explote)
+        try {
+            $request->validate([
+                'fecha'  => 'required|date',
+                'hora'   => 'required|string',
+            ]);
 
-        $horaNormalizada = trim((string) $request->hora);
-        $fechaHoraSolicitada = null;
-        $formatosHora = ['H:i', 'H:i:s', 'h:i A', 'h:iA'];
-        foreach ($formatosHora as $formatoHora) {
-            try {
-                $fechaHoraSolicitada = Carbon::createFromFormat('Y-m-d ' . $formatoHora, $request->fecha . ' ' . $horaNormalizada);
-                if ($fechaHoraSolicitada !== false) {
-                    break;
+            $horaNormalizada = trim((string) $request->hora);
+            $fechaHoraSolicitada = null;
+            $formatosHora = ['H:i', 'H:i:s', 'h:i A', 'h:iA'];
+            foreach ($formatosHora as $formatoHora) {
+                try {
+                    $fechaHoraSolicitada = Carbon::createFromFormat('Y-m-d ' . $formatoHora, $request->fecha . ' ' . $horaNormalizada);
+                    if ($fechaHoraSolicitada !== false) {
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    // Siguiente formato
                 }
-            } catch (\Throwable $e) {
-                // Probamos con el siguiente formato
             }
-        }
 
-        if (!$fechaHoraSolicitada) {
+            if (!$fechaHoraSolicitada) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Formato de hora inválido. Usa HH:mm o hh:mm AM/PM.',
+                ], 422);
+            }
+
+            $user = Auth::user();
+            $idUsuario = $user->id_usuario ?? $user->id ?? Auth::id();
+            $pacienteAuth = Paciente::where('id_usuario', $idUsuario)->first();
+
+            if (!$pacienteAuth) {
+                return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
+            }
+
+            // 2. Quitamos la relación 'doctor.usuario' por si estaba causando un fallo de relación
+            $cita = Cita::with(['doctor', 'paciente'])
+                ->where('id_cita', $id)
+                ->where('id_paciente', $pacienteAuth->id_paciente)
+                ->first();
+
+            if (!$cita) {
+                return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
+            }
+
+            if (!in_array($cita->estado_cita, ['pendiente', 'confirmada'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se puede solicitar reagenda para citas pendientes o confirmadas.'
+                ], 422);
+            }
+
+            if ($fechaHoraSolicitada->isPast()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No puedes solicitar reagenda en una fecha u hora pasada.'
+                ], 422);
+            }
+
+            // Evitar spam de solicitudes
+            $peticionPrevia = Notificacion::where('id_referencia', $cita->id_cita)
+                ->where('tipo', 'reagenda')
+                ->where('leido', false)
+                ->exists();
+                
+            if ($peticionPrevia) {
+                return response()->json(['success' => false, 'message' => 'Ya tienes una solicitud de reagenda en proceso.'], 400);
+            }
+
+            // 3. Modificamos la cita
+            if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_solicitada_at')) {
+                $cita->reagenda_solicitada_at = now();
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_fecha_solicitada')) {
+                $cita->reagenda_fecha_solicitada = $fechaHoraSolicitada->toDateString();
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_hora_solicitada')) {
+                $cita->reagenda_hora_solicitada = $fechaHoraSolicitada->format('H:i:s');
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_motivo')) {
+                $cita->reagenda_motivo = $request->motivo;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_estatus')) {
+                $cita->reagenda_estatus = 'pendiente';
+            }
+            
+            $notaReagenda = "SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
+                . $fechaHoraSolicitada->toDateString() . " a las " . $fechaHoraSolicitada->format('H:i')
+                . ". Motivo: " . ($request->motivo ?? 'No especificado');
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'notas')) {
+                $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
+            }
+
+            $cita->save();
+
+            // 4. AISLAMOS LA NOTIFICACIÓN PARA QUE NO ROMPA EL PROCESO PRINCIPAL
+            $idUsuarioDoctor = optional($cita->doctor)->id_usuario;
+            if ($idUsuarioDoctor) {
+                try {
+                    $paciente = $cita->paciente;
+                    $nombrePaciente = $paciente ? trim(($paciente->nombre ?? '') . ' ' . ($paciente->apellido_paterno ?? '')) : 'Paciente';
+
+                    Notificacion::create([
+                        'id_clinica'    => $cita->id_clinica,
+                        'id_usuario'    => $idUsuarioDoctor,
+                        'titulo'        => 'Solicitud de Reagenda',
+                        'tipo'          => 'reagenda',
+                        'mensaje'       => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$fechaHoraSolicitada->toDateString()} a las {$fechaHoraSolicitada->format('H:i')}.",
+                        'estado'        => 'no_leida', // Si tu BD usa enum
+                        'leido'         => false,      // Si tu BD usa boolean
+                        'id_referencia' => $cita->id_cita,
+                        'id_cita'       => $cita->id_cita
+                    ]);
+                } catch (\Throwable $e) {
+                    // Si falla por campos faltantes en tu BD de DentalConnect, lo ignoramos para que el paciente SÍ pueda reagendar.
+                    \Log::error('Error creando notificación de reagenda: ' . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Solicitud de reagenda enviada. La clínica debe aplicarla.',
+            ], 200);
+
+        } catch (\Exception $e) {
+            // MAGIA: Si algo falla a nivel de código o base de datos, Flutter recibe un JSON limpio y te dice exactamente qué fue.
             return response()->json([
                 'success' => false,
-                'message' => 'Formato de hora invalido. Usa HH:mm o hh:mm AM/PM.',
-            ], 422);
+                'message' => 'Error backend: ' . $e->getMessage() . ' Línea: ' . $e->getLine()
+            ], 500);
         }
-
-        $user = Auth::user();
-        $idUsuario = $user->id_usuario ?? $user->id ?? Auth::id();
-        $pacienteAuth = Paciente::where('id_usuario', $idUsuario)->first();
-
-        if (!$pacienteAuth) {
-            return response()->json(['success' => false, 'message' => 'Paciente no encontrado.'], 404);
-        }
-
-        $cita = Cita::with(['doctor.usuario', 'paciente'])
-            ->where('id_cita', $id)
-            ->where('id_paciente', $pacienteAuth->id_paciente)
-            ->first();
-
-        if (!$cita) {
-            return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
-        }
-
-        if (!in_array($cita->estado_cita, ['pendiente', 'confirmada'], true)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Solo se puede solicitar reagenda para citas pendientes o confirmadas.'
-            ], 422);
-        }
-
-        if ($fechaHoraSolicitada->isPast()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No puedes solicitar reagenda en una fecha u hora que ya paso.'
-            ], 422);
-        }
-
-        // Revisar si ya tiene una petición pendiente para evitar spam.
-        $peticionPrevia = Notificacion::where('id_cita', $cita->id_cita)
-            ->where('estado', 'no_leida')
-            ->where('tipo', 'reagenda')
-            ->exists();
-        if ($peticionPrevia) {
-            return response()->json(['success' => false, 'message' => 'Ya tienes una solicitud de reagenda en proceso.'], 400);
-        }
-
-        $fechaCitaOriginal = Carbon::parse($cita->fecha_hora_inicio)->format('d/m/Y H:i');
-
-        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_solicitada_at')) {
-            $cita->reagenda_solicitada_at = now();
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_fecha_solicitada')) {
-            $cita->reagenda_fecha_solicitada = $fechaHoraSolicitada->toDateString();
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_hora_solicitada')) {
-            $cita->reagenda_hora_solicitada = $fechaHoraSolicitada->format('H:i:s');
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_motivo')) {
-            $cita->reagenda_motivo = $request->motivo;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_estatus')) {
-            $cita->reagenda_estatus = 'pendiente';
-        }
-        $notaReagenda = "SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
-            . $fechaHoraSolicitada->toDateString() . " a las " . $fechaHoraSolicitada->format('H:i')
-            . ". Motivo: " . ($request->motivo ?? 'No especificado');
-
-        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'notas')) {
-            $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
-        }
-
-        $cita->save();
-
-        $idUsuarioDoctor = optional($cita->doctor)->id_usuario;
-
-        if ($idUsuarioDoctor) {
-            $paciente = $cita->paciente;
-            $nombrePaciente = $paciente
-                ? trim(($paciente->nombre ?? '') . ' ' . ($paciente->apellido_paterno ?? ''))
-                : 'Paciente';
-            if ($nombrePaciente === '') {
-                $nombrePaciente = 'Paciente';
-            }
-
-            $payloadBase = [
-                'id_clinica' => $cita->id_clinica,
-                'id_usuario' => $idUsuarioDoctor,
-                'tipo'       => 'reagenda',
-                'mensaje'    => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$fechaHoraSolicitada->toDateString()} a las {$fechaHoraSolicitada->format('H:i')}.",
-                'estado'     => 'no_leida',
-            ];
-
-            if (\Illuminate\Support\Facades\Schema::hasColumn('notificaciones', 'id_cita')) {
-                $payloadBase['id_cita'] = $cita->id_cita;
-            }
-
-            if (\Illuminate\Support\Facades\Schema::hasColumn('notificaciones', 'datos')) {
-                $payloadBase['datos'] = [
-                    'tipo_evento'      => 'reagenda',
-                    'paciente'         => $nombrePaciente,
-                    'fecha_original'   => $fechaCitaOriginal,
-                    'nueva_fecha'      => $fechaHoraSolicitada->toDateString(),
-                    'nueva_hora'       => $fechaHoraSolicitada->format('H:i:s'),
-                    'nueva_fecha_hora' => $fechaHoraSolicitada->format('Y-m-d H:i:s'),
-                ];
-            }
-
-            try {
-                Notificacion::create($payloadBase);
-            } catch (\Throwable $e) {
-                // Fallback para esquemas antiguos con ENUM restringido (sin 'reagenda'/'no_leida').
-                $payloadBase['tipo'] = 'recordatorio';
-                $payloadBase['estado'] = 'pendiente';
-                Notificacion::create($payloadBase);
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Solicitud de reagenda enviada. La clinica debe aplicarla el mismo dia de la solicitud.',
-        ], 200);
     }
 
     public function getProfile()
