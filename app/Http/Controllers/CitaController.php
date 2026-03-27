@@ -205,17 +205,31 @@ class CitaController extends Controller
         }
     }
 
-    // 👨‍⚕️ Buscar doctor disponible
+    // 👨‍⚕️ Buscar doctor disponible (MODIFICADO PARA BLOQUEO ESTRICTO POR CLÍNICA)
     public function buscarDoctorDisponible(int $idClinica, Carbon $inicio, Carbon $fin): ?int
     {
+        // 🔥 REGLA DE ORO: Si ya hay UNA cita (pendiente o confirmada) en toda la clínica 
+        // en este horario, bloqueamos la hora por completo, sin importar cuántos doctores haya.
+        $citaEnClinica = Cita::where('id_clinica', $idClinica)
+            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+            ->where('fecha_hora_inicio', '<', $fin)
+            ->where('fecha_hora_fin', '>', $inicio)
+            ->exists();
+
+        if ($citaEnClinica) {
+            // El horario ya está ocupado físicamente en la clínica, negamos el espacio.
+            return null; 
+        }
+
+        // Si la clínica está totalmente libre, buscamos un doctor que no tenga 
+        // un "bloqueo manual" (como horario de comida o vacaciones)
         $doctores = DB::table('doctores')
             ->join('usuarios_sistema', 'doctores.id_usuario', '=', 'usuarios_sistema.id_usuario')
             ->where('usuarios_sistema.id_clinica', $idClinica)
             ->pluck('doctores.id_doctor');
 
         foreach ($doctores as $idDoctor) {
-
-            // 🚫 Bloqueos manuales
+            // 🚫 Validar bloqueos manuales del doctor
             $tieneBloqueo = DB::table('horarios_bloqueados')
                 ->where('id_doctor', $idDoctor)
                 ->where('estatus_horario', 'activo')
@@ -223,18 +237,9 @@ class CitaController extends Controller
                 ->where('fecha_fin', '>', $inicio)
                 ->exists();
 
-            if ($tieneBloqueo) continue;
-
-            // 🚫 Empalmes con citas
-            $empalme = Cita::where('id_clinica', $idClinica)
-                ->where('id_doctor', $idDoctor)
-                ->whereIn('estado_cita', ['pendiente', 'confirmada'])
-                ->where('fecha_hora_inicio', '<', $fin)
-                ->where('fecha_hora_fin', '>', $inicio)
-                ->exists();
-
-            if (!$empalme) {
-                return (int) $idDoctor;
+            if (!$tieneBloqueo) {
+                // Asignamos al primer doctor que esté disponible
+                return (int) $idDoctor; 
             }
         }
 
