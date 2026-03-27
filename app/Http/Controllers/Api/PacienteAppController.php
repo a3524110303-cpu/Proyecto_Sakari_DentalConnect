@@ -752,6 +752,7 @@ class PacienteAppController extends Controller
             }
 
             // 3. Modificamos la cita
+            /*
             if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_solicitada_at')) {
                 $cita->reagenda_solicitada_at = now();
             }
@@ -767,7 +768,7 @@ class PacienteAppController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'reagenda_estatus')) {
                 $cita->reagenda_estatus = 'pendiente';
             }
-            
+            */
             $notaReagenda = "SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
                 . $fechaHoraSolicitada->toDateString() . " a las " . $fechaHoraSolicitada->format('H:i')
                 . ". Motivo: " . ($request->motivo ?? 'No especificado');
