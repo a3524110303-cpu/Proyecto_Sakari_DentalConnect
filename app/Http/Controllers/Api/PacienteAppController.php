@@ -787,7 +787,7 @@ class PacienteAppController extends Controller
                     $nombrePaciente = $paciente ? trim(($paciente->nombre ?? '') . ' ' . ($paciente->apellido_paterno ?? '')) : 'Paciente';
 
                     Notificacion::create([
-                        'id_clinica'    => $cita->id_clinica,
+                        //'id_clinica'    => $cita->id_clinica,
                         'id_usuario'    => $idUsuarioDoctor,
                         'tipo'          => 'reagenda',
                         'estado'        => 'no_leida',
