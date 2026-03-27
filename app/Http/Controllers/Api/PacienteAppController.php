@@ -143,7 +143,7 @@ class PacienteAppController extends Controller
     }
 
     /**
-     * Muestra estado de cuenta genérico.
+     * Muestra estado de cuenta detallado con historial de abonos.
      */
     public function estadoCuenta(Request $request)
     {
@@ -154,26 +154,27 @@ class PacienteAppController extends Controller
         if (!$paciente)
             return response()->json(['success' => false], 404);
 
-        // Sumatoria directa SQL para evitar mapeos N+1 extensos
-        $cargos = Cita::where('id_paciente', $paciente->id_paciente)
-            ->sum('costo_estimado');
+        $cargos = Cita::where('id_paciente', $paciente->id_paciente)->sum('costo_estimado');
 
-        // Cruzar y sumar en ingresos 
-        // Ya que la tabla ingresos_caja tiene 'id_cita'.
-        $abonos = \App\Models\IngresoCaja::whereIn('id_cita', function ($query) use ($paciente) {
+        // Extraemos los pagos/abonos reales asociados a las citas de este paciente
+        $abonosHistorial = \App\Models\IngresoCaja::whereIn('id_cita', function ($query) use ($paciente) {
             $query->select('id_cita')
                 ->from('citas')
                 ->where('id_paciente', $paciente->id_paciente);
-        })->sum('monto');
+        })
+        ->orderBy('created_at', 'desc') 
+        ->get();
 
+        $abonos = $abonosHistorial->sum('monto');
         $saldo = $cargos - $abonos;
 
         return response()->json([
             'success' => true,
             'data' => [
-                'total_cargos' => $cargos,
-                'total_abonado' => $abonos,
-                'saldo_pendiente' => max(0, $saldo)
+                'total_cargos' => (float)$cargos,
+                'total_abonado' => (float)$abonos,
+                'saldo_pendiente' => (float)max(0, $saldo),
+                'historial' => $abonosHistorial // 👈 NUEVO: Enviamos la lista real de pagos
             ]
         ]);
     }
