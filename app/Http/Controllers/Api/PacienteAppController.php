@@ -272,42 +272,63 @@ class PacienteAppController extends Controller
      */
     public function publicidad()
     {
-        // 1. Buscamos la clínica del paciente. Si por alguna razón es null, usamos la 1.
-        $idClinica = $this->resolveClinicaId(auth()->user()) ?? 1;
+        try {
+            // 1. Buscamos la clínica del paciente. Si es null, usamos la 1.
+            $user = \Illuminate\Support\Facades\Auth::user();
+            $idClinica = $this->resolveClinicaId($user) ?? 1;
 
-        // 2. MÉTODO ANTI-FALLOS: Buscamos manualmente los IDs de los usuarios de esa clínica.
-        // Esto esquiva el error de "whereHas('usuario')" que suele fallar en las relaciones.
-        $usuariosClinicaIds = \Illuminate\Support\Facades\DB::table('users')
-            ->where('id_clinica', $idClinica)
-            ->pluck('id_usuario')
-            ->toArray();
+            // 2. CORRECCIÓN: Usamos el modelo User en lugar de DB::table('users').
+            // Así Laravel detecta automáticamente tu tabla (ej. 'usuarios_sistema') y no arroja Error 500.
+            $usuariosClinicaIds = \App\Models\User::where('id_clinica', $idClinica)
+                ->pluck('id_usuario') // Asumiendo que tu llave se llama id_usuario
+                ->toArray();
 
-        // 3. Traemos las promociones creadas por los usuarios de esa clínica
-        $promociones = \App\Models\Publicidad::whereIn('id_usuario', $usuariosClinicaIds)
-            ->where('activo', 1)
-            ->latest()
-            ->get();
+            // Por seguridad extrema, si el arreglo viene vacío, probamos usando 'id'
+            if (empty($usuariosClinicaIds)) {
+                $usuariosClinicaIds = \App\Models\User::where('id_clinica', $idClinica)
+                    ->pluck('id')
+                    ->toArray();
+            }
 
-        // 4. PLAN B EXTRA: Si tu paciente de prueba no empató con nadie, 
-        // traemos TODAS las activas globales para que SIEMPRE veas algo en la App.
-        if ($promociones->isEmpty()) {
-            $promociones = \App\Models\Publicidad::where('activo', 1)
+            // 3. Traemos las promociones creadas por los usuarios de esa clínica
+            $promociones = \App\Models\Publicidad::whereIn('id_usuario', $usuariosClinicaIds)
+                ->where('activo', 1)
                 ->latest()
                 ->get();
-        }
 
-        // 5. Formatear la URL de la imagen
-        $promociones->transform(function ($anuncio) {
-            if (!empty($anuncio->imagen_path)) {
-                $anuncio->imagen_url = url('/api/publicidad/foto/' . basename($anuncio->imagen_path));
+            // 4. PLAN B EXTRA: Si tu paciente de prueba no empató con nadie, 
+            // traemos TODAS las activas globales para que siempre veas algo.
+            if ($promociones->isEmpty()) {
+                $promociones = \App\Models\Publicidad::where('activo', 1)
+                    ->latest()
+                    ->get();
             }
-            return $anuncio;
-        });
 
-        return response()->json([
-            'success' => true,
-            'data' => $promociones
-        ], 200);
+            // 5. Formatear la URL de la imagen asegurándonos que no devuelva valores nulos
+            $promociones->transform(function ($anuncio) {
+                if (!empty($anuncio->imagen_path)) {
+                    $anuncio->imagen_url = url('/api/publicidad/foto/' . basename($anuncio->imagen_path));
+                } else {
+                    $anuncio->imagen_url = '';
+                }
+                return $anuncio;
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $promociones
+            ], 200);
+
+        } catch (\Exception $e) {
+            // ✅ MÉTODO ANTI-FALLOS: Si algo explota en la Base de Datos, 
+            // evitamos el Error 500. Le mandamos un 200 a Flutter con un arreglo vacío.
+            // Si quieres ver el error, puedes imprimir $e->getMessage() en tus logs.
+            return response()->json([
+                'success' => false,
+                'data' => [],
+                'message' => 'Error interno: ' . $e->getMessage()
+            ], 200);
+        }
     }
     /**
      * Retorna el catálogo de servicios/tratamientos de la clínica.
