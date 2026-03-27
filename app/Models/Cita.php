@@ -32,22 +32,17 @@ class Cita extends Model
     protected $table = 'citas';
     protected $primaryKey = 'id_cita';
 
-    protected $fillable = [
+protected $fillable = [
         'id_clinica',
         'id_paciente',
         'id_doctor',
-        'id_servicio',      // Si usas servicios del catálogo
+        'id_servicio',      
         'fecha_hora_inicio',
         'fecha_hora_fin',
         'estado_cita',
         'costo_estimado',
         'motivo',
         'notas',
-        'reagenda_solicitada_at',
-        'reagenda_fecha_solicitada',
-        'reagenda_hora_solicitada',
-        'reagenda_motivo',
-        'reagenda_estatus',
         'cuidados_pdf',
         'tips_pdf',
     ];
