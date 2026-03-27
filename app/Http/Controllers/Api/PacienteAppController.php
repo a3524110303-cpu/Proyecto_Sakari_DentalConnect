@@ -767,7 +767,11 @@ class PacienteAppController extends Controller
         $notaReagenda = "SOLICITUD DE REAGENDA: El paciente solicita cambiar la cita para el "
             . $fechaHoraSolicitada->toDateString() . " a las " . $fechaHoraSolicitada->format('H:i')
             . ". Motivo: " . ($request->motivo ?? 'No especificado');
-        $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('citas', 'notas')) {
+            $cita->notas = $notaReagenda . ($cita->notas ? "\n\n" . $cita->notas : '');
+        }
+
         $cita->save();
 
         $idUsuarioDoctor = optional($cita->doctor)->id_usuario;
@@ -781,21 +785,37 @@ class PacienteAppController extends Controller
                 $nombrePaciente = 'Paciente';
             }
 
-            Notificacion::create([
+            $payloadBase = [
                 'id_clinica' => $cita->id_clinica,
                 'id_usuario' => $idUsuarioDoctor,
-                'id_cita'    => $cita->id_cita,
                 'tipo'       => 'reagenda',
                 'mensaje'    => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$fechaHoraSolicitada->toDateString()} a las {$fechaHoraSolicitada->format('H:i')}.",
-                'datos'      => [
+                'estado'     => 'no_leida',
+            ];
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('notificaciones', 'id_cita')) {
+                $payloadBase['id_cita'] = $cita->id_cita;
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('notificaciones', 'datos')) {
+                $payloadBase['datos'] = [
+                    'tipo_evento'      => 'reagenda',
                     'paciente'         => $nombrePaciente,
                     'fecha_original'   => $fechaCitaOriginal,
                     'nueva_fecha'      => $fechaHoraSolicitada->toDateString(),
                     'nueva_hora'       => $fechaHoraSolicitada->format('H:i:s'),
                     'nueva_fecha_hora' => $fechaHoraSolicitada->format('Y-m-d H:i:s'),
-                ],
-                'estado'     => 'no_leida',
-            ]);
+                ];
+            }
+
+            try {
+                Notificacion::create($payloadBase);
+            } catch (\Throwable $e) {
+                // Fallback para esquemas antiguos con ENUM restringido (sin 'reagenda'/'no_leida').
+                $payloadBase['tipo'] = 'recordatorio';
+                $payloadBase['estado'] = 'pendiente';
+                Notificacion::create($payloadBase);
+            }
         }
 
         return response()->json([
