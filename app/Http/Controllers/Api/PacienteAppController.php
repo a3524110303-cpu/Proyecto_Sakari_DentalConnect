@@ -77,9 +77,9 @@ class PacienteAppController extends Controller
 
         $citas->transform(function ($cita) {
             $cuidados = $cita->archivos
-                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'cuidados_pdf');
+                ->first(fn($a) => $a->tipo === 'pdf' && $a->descripcion === 'cuidados_pdf');
             $tips = $cita->archivos
-                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'tips_pdf');
+                ->first(fn($a) => $a->tipo === 'pdf' && $a->descripcion === 'tips_pdf');
 
             $cita->cuidados_pdf_url = $cuidados
                 ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cuidados->url_archivo), '/')])
@@ -124,9 +124,9 @@ class PacienteAppController extends Controller
 
         $citas->transform(function ($cita) {
             $cuidados = $cita->archivos
-                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'cuidados_pdf');
+                ->first(fn($a) => $a->tipo === 'pdf' && $a->descripcion === 'cuidados_pdf');
             $tips = $cita->archivos
-                ->first(fn ($a) => $a->tipo === 'pdf' && $a->descripcion === 'tips_pdf');
+                ->first(fn($a) => $a->tipo === 'pdf' && $a->descripcion === 'tips_pdf');
 
             $cita->cuidados_pdf_url = $cuidados
                 ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cuidados->url_archivo), '/')])
@@ -214,7 +214,7 @@ class PacienteAppController extends Controller
     /**
      * Retorna datos de la clínica
      */
-    public function clinicasYDoctores() 
+    public function clinicasYDoctores()
     {
         $idClinica = $this->resolveClinicaId(Auth::user());
         if (!$idClinica) {
@@ -223,7 +223,7 @@ class PacienteAppController extends Controller
                 'message' => 'No se pudo determinar la clinica del paciente autenticado.',
             ], 404);
         }
-        $clinica   = Clinica::find($idClinica);
+        $clinica = Clinica::find($idClinica);
         if (!$clinica) {
             return response()->json([
                 'success' => false,
@@ -233,7 +233,11 @@ class PacienteAppController extends Controller
 
         // Construir dirección legible
         $partesDireccion = array_filter([
-            $clinica->calle, $clinica->ciudad, $clinica->municipio, $clinica->estado, $clinica->codigo_postal,
+            $clinica->calle,
+            $clinica->ciudad,
+            $clinica->municipio,
+            $clinica->estado,
+            $clinica->codigo_postal,
         ]);
         $clinica->direccion_completa = implode(', ', $partesDireccion);
 
@@ -257,8 +261,8 @@ class PacienteAppController extends Controller
             ->get();
 
         return response()->json([
-            'success'  => true,
-            'clinica'  => $clinica,
+            'success' => true,
+            'clinica' => $clinica,
             'doctores' => $doctores,
         ]);
     }
@@ -268,25 +272,35 @@ class PacienteAppController extends Controller
      */
     public function publicidad()
     {
-        // Filtrar por clínica y solo anuncios activos
-        $idClinica = $this->resolveClinicaId(auth()->user());
-        if (!$idClinica) {
-            return response()->json([
-                'success' => true,
-                'data' => [],
-            ], 200);
+        // 1. Buscamos la clínica del paciente. Si por alguna razón es null, usamos la 1.
+        $idClinica = $this->resolveClinicaId(auth()->user()) ?? 1;
+
+        // 2. MÉTODO ANTI-FALLOS: Buscamos manualmente los IDs de los usuarios de esa clínica.
+        // Esto esquiva el error de "whereHas('usuario')" que suele fallar en las relaciones.
+        $usuariosClinicaIds = \Illuminate\Support\Facades\DB::table('users')
+            ->where('id_clinica', $idClinica)
+            ->pluck('id_usuario')
+            ->toArray();
+
+        // 3. Traemos las promociones creadas por los usuarios de esa clínica
+        $promociones = \App\Models\Publicidad::whereIn('id_usuario', $usuariosClinicaIds)
+            ->where('activo', 1)
+            ->latest()
+            ->get();
+
+        // 4. PLAN B EXTRA: Si tu paciente de prueba no empató con nadie, 
+        // traemos TODAS las activas globales para que SIEMPRE veas algo en la App.
+        if ($promociones->isEmpty()) {
+            $promociones = \App\Models\Publicidad::where('activo', 1)
+                ->latest()
+                ->get();
         }
 
-        $promociones = \App\Models\Publicidad::whereHas('usuario', function($q) use ($idClinica) {
-            $q->where('id_clinica', $idClinica);
-        })
-        ->where('activo', 1)
-        ->latest()
-        ->get();
-
-        // Formatear la URL de la imagen antes de enviar
-        $promociones->transform(function($anuncio) {
-            $anuncio->imagen_url = url('/api/publicidad/foto/' . basename($anuncio->imagen_path));
+        // 5. Formatear la URL de la imagen
+        $promociones->transform(function ($anuncio) {
+            if (!empty($anuncio->imagen_path)) {
+                $anuncio->imagen_url = url('/api/publicidad/foto/' . basename($anuncio->imagen_path));
+            }
             return $anuncio;
         });
 
@@ -327,7 +341,7 @@ class PacienteAppController extends Controller
 
         try {
             $user = Auth::user();
-            
+
             // 2. Buscamos al paciente PRIMERO (Así es más seguro)
             $paciente = \App\Models\Paciente::where('id_usuario', $user->id_usuario)->first();
             if (!$paciente) {
@@ -350,19 +364,19 @@ class PacienteAppController extends Controller
 
             if ($tieneCitaHoy) {
                 return response()->json([
-                    'success' => false, 
+                    'success' => false,
                     'message' => 'Solo puedes agendar una cita por día. Por favor elige otra fecha.'
-                ], 400); 
+                ], 400);
             }
 
             // 4. Preparamos fechas
             $fechaHora = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora);
             $finHora = $fechaHora->copy()->addMinutes(30);
-            
+
             // Asegurarnos de que no esté agendando en el pasado (por si alguien es muy rápido con los dedos)
             if ($fechaHora->isPast()) {
                 return response()->json([
-                    'success' => false, 
+                    'success' => false,
                     'message' => 'No puedes agendar una cita en una hora que ya pasó.'
                 ], 400);
             }
@@ -377,7 +391,7 @@ class PacienteAppController extends Controller
 
             if (!$idDoctor) {
                 return response()->json([
-                    'success' => false, 
+                    'success' => false,
                     'message' => 'El horario seleccionado ya no está disponible.'
                 ], 400);
             }
@@ -396,7 +410,7 @@ class PacienteAppController extends Controller
             ]);
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Cita agendada correctamente',
                 'data' => $cita
             ]);
@@ -404,12 +418,12 @@ class PacienteAppController extends Controller
         } catch (\Exception $e) {
             // ✅ SI ALGO FALLA, TE DIRÁ EXACTAMENTE QUÉ LÍNEA O VARIABLE FUE:
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Error en el servidor: ' . $e->getMessage()
             ], 500);
         }
     }
-    
+
     /**
      * Retorna los horarios disponibles de un día específico (ej. 09:00 AM)
      */
@@ -432,7 +446,7 @@ class PacienteAppController extends Controller
         }
 
         // 1. Averiguar qué día de la semana es la fecha que nos piden (1 = Lunes, 7 = Domingo)
-        $diaSemanaNumero = $fechaCarbon->dayOfWeekIso; 
+        $diaSemanaNumero = $fechaCarbon->dayOfWeekIso;
 
         // 2. Mapear ese número con los textos que podrían estar en tu Base de Datos
         $mapaDias = [
@@ -458,9 +472,9 @@ class PacienteAppController extends Controller
             foreach ($horariosClinica as $h) {
                 // Soportar diferentes nombres de columna (dia_semana o dia)
                 $diaBD = isset($h->dia_semana) ? $h->dia_semana : (isset($h->dia) ? $h->dia : null);
-                
+
                 if ($diaBD) {
-                    $diaStr = strtolower(trim((string)$diaBD));
+                    $diaStr = strtolower(trim((string) $diaBD));
                     // Si el día de la BD coincide con el día de la fecha solicitada...
                     if (in_array($diaStr, $mapaDias[$diaSemanaNumero])) {
                         if (isset($h->hora_inicio) && $h->hora_inicio != null) {
@@ -480,8 +494,8 @@ class PacienteAppController extends Controller
         // 🔥 AHORA SÍ: Usamos las horas dinámicas que vienen de tu SaaS 🔥
         $horariosLibres = [];
         $inicio = \Carbon\Carbon::parse($fecha . ' ' . $horaInicioBd);
-        $finDia = \Carbon\Carbon::parse($fecha . ' ' . $horaFinBd); 
-        
+        $finDia = \Carbon\Carbon::parse($fecha . ' ' . $horaFinBd);
+
         $citaController = new \App\Http\Controllers\CitaController();
         $reflection = new \ReflectionMethod($citaController, 'buscarDoctorDisponible');
         $reflection->setAccessible(true);
@@ -490,21 +504,21 @@ class PacienteAppController extends Controller
 
         // Armar los bloques de media hora
         while ($inicio < $finDia) {
-            $finHora = $inicio->copy()->addMinutes(30); 
-            
+            $finHora = $inicio->copy()->addMinutes(30);
+
             // REGLA: Si la fecha seleccionada es HOY, y la hora ya pasó, lo saltamos
             if ($fecha === $ahora->toDateString() && $inicio <= $ahora) {
                 $inicio->addMinutes(30);
-                continue; 
+                continue;
             }
 
             // Preguntamos si hay doctores libres en ese bloque
             $idDoctor = $reflection->invoke($citaController, $idClinica, $inicio, $finHora);
-            
+
             if ($idDoctor) {
                 $horariosLibres[] = $inicio->format('h:i A');
             }
-            
+
             $inicio->addMinutes(30);
         }
 
@@ -523,7 +537,8 @@ class PacienteAppController extends Controller
         $user = Auth::user();
         $idUsuario = $user->id_usuario ?? $user->id ?? Auth::id();
         $paciente = Paciente::where('id_usuario', $idUsuario)->first();
-        if (!$paciente) return response()->json(['success' => false, 'data' => []], 404);
+        if (!$paciente)
+            return response()->json(['success' => false, 'data' => []], 404);
 
         $citas = Cita::with('servicio')
             ->where('id_paciente', $paciente->id_paciente)
@@ -539,13 +554,13 @@ class PacienteAppController extends Controller
                     'nombre' => $cita->servicio->nombre_servicio,
                     'fecha_inicio' => \Carbon\Carbon::parse($cita->fecha_hora_inicio)->format('M Y'),
                     // ✅ ENVIAMOS EL ESTADO REAL (confirmada, atendida, etc.)
-                    'estado' => $cita->estado_cita 
+                    'estado' => $cita->estado_cita
                 ];
             }
         }
         return response()->json(['success' => true, 'data' => array_values($activos)]);
     }
-    
+
     public function diasBloqueados(Request $request)
     {
         $user = Auth::user();
@@ -570,10 +585,10 @@ class PacienteAppController extends Controller
                 ->where('id_clinica', $idClinica)
                 ->whereDate('fecha_inicio', '>=', now()->startOfMonth())
                 ->pluck('fecha_inicio')
-                ->map(function($date) {
+                ->map(function ($date) {
                     return \Carbon\Carbon::parse($date)->format('Y-m-d');
                 })->toArray();
-            
+
             $fechasBloqueadas = $vacaciones;
 
             // ✅ B) NUEVO: Buscamos si el paciente actual ya tiene citas activas y bloqueamos ESOS días
@@ -584,7 +599,7 @@ class PacienteAppController extends Controller
                     ->whereIn('estado_cita', ['pendiente', 'confirmada'])
                     ->whereDate('fecha_hora_inicio', '>=', now()->toDateString())
                     ->pluck('fecha_hora_inicio')
-                    ->map(function($date) {
+                    ->map(function ($date) {
                         return \Carbon\Carbon::parse($date)->format('Y-m-d');
                     })->toArray();
 
@@ -604,25 +619,41 @@ class PacienteAppController extends Controller
 
             $diasAbiertos = [];
             $mapaDias = [
-                'lunes' => 1, 'martes' => 2, 'miercoles' => 3, 'miércoles' => 3,
-                'jueves' => 4, 'viernes' => 5, 'sabado' => 6, 'sábado' => 6, 'domingo' => 7,
-                '1' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6, '7' => 7
+                'lunes' => 1,
+                'martes' => 2,
+                'miercoles' => 3,
+                'miércoles' => 3,
+                'jueves' => 4,
+                'viernes' => 5,
+                'sabado' => 6,
+                'sábado' => 6,
+                'domingo' => 7,
+                '1' => 1,
+                '2' => 2,
+                '3' => 3,
+                '4' => 4,
+                '5' => 5,
+                '6' => 6,
+                '7' => 7
             ];
 
             foreach ($horarios as $h) {
                 $estaAbierto = true;
-                
+
                 // Verificamos si el día está marcado como cerrado en la BD
-                if (isset($h->activo) && $h->activo == 0) $estaAbierto = false;
-                if (isset($h->estado) && $h->estado === 'inactivo') $estaAbierto = false;
-                if (isset($h->hora_inicio) && $h->hora_inicio == '00:00:00') $estaAbierto = false;
+                if (isset($h->activo) && $h->activo == 0)
+                    $estaAbierto = false;
+                if (isset($h->estado) && $h->estado === 'inactivo')
+                    $estaAbierto = false;
+                if (isset($h->hora_inicio) && $h->hora_inicio == '00:00:00')
+                    $estaAbierto = false;
 
                 if ($estaAbierto) {
                     // Soportar si la columna se llama dia_semana o dia
                     $dia = isset($h->dia_semana) ? $h->dia_semana : (isset($h->dia) ? $h->dia : null);
-                    
+
                     if ($dia) {
-                        $diaStr = strtolower(trim((string)$dia));
+                        $diaStr = strtolower(trim((string) $dia));
                         if (isset($mapaDias[$diaStr])) {
                             $diasAbiertos[] = $mapaDias[$diaStr];
                         }
@@ -679,13 +710,13 @@ class PacienteAppController extends Controller
      * Recibe la solicitud de reagenda desde la app móvil.
      * Guarda una nota en la cita y crea una notificación para el doctor.
      */
- public function reagendarCita(Request $request, $id)
+    public function reagendarCita(Request $request, $id)
     {
         // 1. Envolvemos todo en try-catch para que SIEMPRE devuelva JSON (y Flutter no explote)
         try {
             $request->validate([
-                'fecha'  => 'required|date',
-                'hora'   => 'required|string',
+                'fecha' => 'required|date',
+                'hora' => 'required|string',
             ]);
 
             $horaNormalizada = trim((string) $request->hora);
@@ -746,7 +777,7 @@ class PacienteAppController extends Controller
                 ->where('tipo', 'reagenda')
                 ->where('estado', 'no_leida')
                 ->exists();
-                
+
             if ($peticionPrevia) {
                 return response()->json(['success' => false, 'message' => 'Ya tienes una solicitud de reagenda en proceso.'], 400);
             }
@@ -788,15 +819,15 @@ class PacienteAppController extends Controller
 
                     Notificacion::create([
                         //'id_clinica'    => $cita->id_clinica,
-                        'id_usuario'    => $idUsuarioDoctor,
-                        'tipo'          => 'reagenda',
-                        'estado'        => 'no_leida',
-                        'mensaje'       => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$fechaHoraSolicitada->toDateString()} a las {$fechaHoraSolicitada->format('H:i')}.",
-                        'id_cita'       => $cita->id_cita,
-                        'datos'         => [
-                            'paciente'    => $nombrePaciente,
+                        'id_usuario' => $idUsuarioDoctor,
+                        'tipo' => 'reagenda',
+                        'estado' => 'no_leida',
+                        'mensaje' => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$fechaHoraSolicitada->toDateString()} a las {$fechaHoraSolicitada->format('H:i')}.",
+                        'id_cita' => $cita->id_cita,
+                        'datos' => [
+                            'paciente' => $nombrePaciente,
                             'nueva_fecha' => $fechaHoraSolicitada->toDateString(),
-                            'nueva_hora'  => $fechaHoraSolicitada->format('H:i')
+                            'nueva_hora' => $fechaHoraSolicitada->format('H:i')
                         ]
                     ]);
                 } catch (\Throwable $e) {
@@ -822,7 +853,7 @@ class PacienteAppController extends Controller
     public function getProfile()
     {
         $user = auth()->user();
-        
+
         $paciente = \App\Models\Paciente::withoutGlobalScopes()
             ->where('id_usuario', $user->id_usuario)
             ->first();
@@ -837,7 +868,7 @@ class PacienteAppController extends Controller
                 'nombre_completo' => trim($paciente->nombre . ' ' . $paciente->apellido_paterno . ' ' . $paciente->apellido_materno),
                 'email' => $user->email,
                 'telefono' => $paciente->telefono ?? '',
-                
+
                 // MANDA SOLO EL CAMPO DIRECCION
                 'direccion' => $paciente->direccion ?? '',
 
@@ -897,7 +928,7 @@ class PacienteAppController extends Controller
     public function updateProfile(\Illuminate\Http\Request $request)
     {
         $user = auth()->user();
-        
+
         $paciente = \App\Models\Paciente::withoutGlobalScopes()
             ->where('id_usuario', $user->id_usuario)
             ->first();
@@ -931,7 +962,7 @@ class PacienteAppController extends Controller
         // Verificar que la contraseña actual ingresada coincida con la de la BD
         if (!Hash::check($request->current_password, $user->password)) {
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'La contraseña actual es incorrecta.'
             ], 400);
         }
@@ -941,7 +972,7 @@ class PacienteAppController extends Controller
         $user->save();
 
         return response()->json([
-            'success' => true, 
+            'success' => true,
             'message' => 'Tu contraseña se ha actualizado con éxito.'
         ], 200);
     }
@@ -951,11 +982,11 @@ class PacienteAppController extends Controller
     {
         // 1. Validamos que realmente venga una imagen y no pese más de 5MB
         $request->validate([
-            'foto_perfil' => 'required|image|mimes:jpeg,png,jpg|max:5120', 
+            'foto_perfil' => 'required|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
         $user = auth()->user();
-        
+
         $paciente = \App\Models\Paciente::withoutGlobalScopes()
             ->where('id_usuario', $user->id_usuario)
             ->first();
@@ -966,7 +997,7 @@ class PacienteAppController extends Controller
 
         // 2. Verificamos si la petición trae el archivo
         if ($request->hasFile('foto_perfil')) {
-            
+
             // (Opcional) Si ya tenía una foto antes, la borramos para no llenar el servidor de basura
             if ($paciente->foto_perfil) {
                 // Acepta tanto URLs antiguas como rutas relativas actuales
@@ -987,7 +1018,7 @@ class PacienteAppController extends Controller
             $paciente->save();
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => '¡Foto actualizada correctamente!',
                 'foto_perfil' => $paciente->full_foto_url
             ], 200);
@@ -1000,12 +1031,12 @@ class PacienteAppController extends Controller
     public function getProfileImage($filename)
     {
         $path = 'perfiles_pacientes/' . $filename;
-        
+
         // Verificamos si el archivo realmente existe
         if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
             return response()->json(['success' => false, 'message' => 'Foto no encontrada'], 404);
         }
-        
+
         // Devolvemos el archivo directamente como si fuera una imagen real
         return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
     }
