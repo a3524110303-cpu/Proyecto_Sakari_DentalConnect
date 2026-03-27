@@ -5,18 +5,16 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        public function up()
-{
-    DB::statement("ALTER TABLE notificaciones MODIFY COLUMN tipo ENUM('recordatorio', 'confirmacion', 'cancelacion', 'push', 'reagenda') NULL");
-    DB::statement("ALTER TABLE notificaciones MODIFY COLUMN estado ENUM('pendiente', 'enviado', 'leido', 'no_leida') NULL");
-}
+        Schema::alterTable('notificaciones', function (Blueprint $table) {
+            $table->enum('tipo', ['recordatorio', 'confirmacion', 'cancelacion', 'push', 'reagenda'])->nullable()->change();
+            $table->enum('estado', ['pendiente', 'enviado', 'leido', 'no_leida'])->nullable()->change();
+        });
     }
 
     /**

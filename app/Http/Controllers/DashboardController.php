@@ -36,7 +36,7 @@ class DashboardController extends Controller
         $citasFuturas = Cita::with(['paciente','servicio'])
             ->where('id_clinica',$idClinica)
             ->where('fecha_hora_inicio','>=',$ahora)
-            ->where('estado_cita','pendiente')
+            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
             ->orderBy('fecha_hora_inicio','asc')
             ->get();
 
@@ -44,7 +44,7 @@ class DashboardController extends Controller
         $citasVencidas = Cita::with(['paciente','servicio'])
             ->where('id_clinica',$idClinica)
             ->where('fecha_hora_inicio','<',$ahora)
-            ->where('estado_cita','pendiente')
+            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
             ->orderBy('fecha_hora_inicio','desc')
             ->get();
 
@@ -53,7 +53,7 @@ class DashboardController extends Controller
         // Citas de hoy
         $citasHoyCount = Cita::where('id_clinica',$idClinica)
             ->whereDate('fecha_hora_inicio',$hoy)
-            ->where('estado_cita','pendiente')
+            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
             ->count();
 
         // Pacientes activos

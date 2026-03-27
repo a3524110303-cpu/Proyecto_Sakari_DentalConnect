@@ -83,11 +83,11 @@ class PacienteAppController extends Controller
 
             $cita->cuidados_pdf_url = $cuidados
                 ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cuidados->url_archivo), '/')])
-                : ($cita->cuidados_pdf_url ?? null);
+                : ($cita->cuidados_pdf ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cita->cuidados_pdf), '/')]) : null);
 
             $cita->tips_pdf_url = $tips
                 ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $tips->url_archivo), '/')])
-                : ($cita->tips_pdf_url ?? null);
+                : ($cita->tips_pdf ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cita->tips_pdf), '/')]) : null);
 
             return $cita;
         });
@@ -130,11 +130,11 @@ class PacienteAppController extends Controller
 
             $cita->cuidados_pdf_url = $cuidados
                 ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cuidados->url_archivo), '/')])
-                : ($cita->cuidados_pdf_url ?? null);
+                : ($cita->cuidados_pdf ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cita->cuidados_pdf), '/')]) : null);
 
             $cita->tips_pdf_url = $tips
                 ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $tips->url_archivo), '/')])
-                : ($cita->tips_pdf_url ?? null);
+                : ($cita->tips_pdf ? route('storage.file', ['path' => ltrim(str_replace('public/', '', $cita->tips_pdf), '/')]) : null);
 
             return $cita;
         });
