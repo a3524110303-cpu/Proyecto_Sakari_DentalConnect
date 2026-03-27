@@ -157,9 +157,9 @@
                     {{-- CAMPO AGREGADO --}}
                     <div style="margin-top: 15px;">
                         <label>Sobre mí</label>
-                        <textarea name="sobre_mi" class="modern-input" rows="4" 
+                        <textarea name="sobre_mi" id="sobre_mi" class="modern-input" rows="4" 
                             placeholder="Cuéntale a tus pacientes sobre tu experiencia..."
-                            style="resize: none; font-family: inherit;">{{ $doctorPerfil->sobre_mi ?? '' }}</textarea>
+                            style="resize: none; font-family: inherit;">{{ old('sobre_mi', $doctorUser->sobre_mi) }}</textarea>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
