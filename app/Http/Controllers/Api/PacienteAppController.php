@@ -274,36 +274,32 @@ class PacienteAppController extends Controller
     public function publicidad()
     {
         try {
-            // 1. Buscamos la clínica del paciente. Si es null, usamos la 1.
+            // 1. Buscamos la clínica del paciente.
             $user = \Illuminate\Support\Facades\Auth::user();
-            $idClinica = $this->resolveClinicaId($user) ?? 1;
+            $idClinica = $this->resolveClinicaId($user);
 
-            // 2. CORRECCIÓN: Usamos el modelo User en lugar de DB::table('users').
-            // Así Laravel detecta automáticamente tu tabla (ej. 'usuarios_sistema') y no arroja Error 500.
+            // 2. CANDADO: Si el paciente no tiene clínica vinculada, devolvemos vacío (evita fugas)
+            if (!$idClinica) {
+                return response()->json(['success' => true, 'data' => []], 200);
+            }
+
+            // 3. Obtenemos los IDs de los usuarios de esa clínica
             $usuariosClinicaIds = \App\Models\User::where('id_clinica', $idClinica)
-                ->pluck('id_usuario') // Asumiendo que tu llave se llama id_usuario
+                ->pluck('id_usuario')
                 ->toArray();
 
-            // Por seguridad extrema, si el arreglo viene vacío, probamos usando 'id'
+            // Por seguridad extrema, probamos usando 'id' si falla el anterior
             if (empty($usuariosClinicaIds)) {
                 $usuariosClinicaIds = \App\Models\User::where('id_clinica', $idClinica)
                     ->pluck('id')
                     ->toArray();
             }
 
-            // 3. Traemos las promociones creadas por los usuarios de esa clínica
+            // 4. Traemos SOLO las promociones creadas por los usuarios de SU clínica
             $promociones = \App\Models\Publicidad::whereIn('id_usuario', $usuariosClinicaIds)
                 ->where('activo', 1)
                 ->latest()
                 ->get();
-
-            // 4. PLAN B EXTRA: Si tu paciente de prueba no empató con nadie, 
-            // traemos TODAS las activas globales para que siempre veas algo.
-            if ($promociones->isEmpty()) {
-                $promociones = \App\Models\Publicidad::where('activo', 1)
-                    ->latest()
-                    ->get();
-            }
 
             // 5. Formatear la URL de la imagen asegurándonos que no devuelva valores nulos
             $promociones->transform(function ($anuncio) {
@@ -323,7 +319,6 @@ class PacienteAppController extends Controller
         } catch (\Exception $e) {
             // ✅ MÉTODO ANTI-FALLOS: Si algo explota en la Base de Datos, 
             // evitamos el Error 500. Le mandamos un 200 a Flutter con un arreglo vacío.
-            // Si quieres ver el error, puedes imprimir $e->getMessage() en tus logs.
             return response()->json([
                 'success' => false,
                 'data' => [],
