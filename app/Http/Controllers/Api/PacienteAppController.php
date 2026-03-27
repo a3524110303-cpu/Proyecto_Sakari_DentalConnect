@@ -743,8 +743,8 @@ class PacienteAppController extends Controller
 
             // Evitar spam de solicitudes
             $peticionPrevia = Notificacion::where('id_cita', $cita->id_cita)
-                ->where('tipo', 'recordatorio')
-                ->where('estado', 'pendiente') // Si tu BD usa enum
+                ->where('tipo', 'reagenda')
+                ->where('estado', 'no_leida')
                 ->exists();
                 
             if ($peticionPrevia) {
@@ -789,10 +789,15 @@ class PacienteAppController extends Controller
                     Notificacion::create([
                         'id_clinica'    => $cita->id_clinica,
                         'id_usuario'    => $idUsuarioDoctor,
-                        'tipo'          => 'recordatorio', // <-- La BD y la web SÍ reconocen esto
-                        'mensaje'       => "⚠️ SOLICITUD DE REAGENDA: El paciente {$nombrePaciente} solicita cambiar su cita para el {$fechaHoraSolicitada->toDateString()} a las {$fechaHoraSolicitada->format('H:i')}.",
-                        'estado'        => 'pendiente',    // <-- Estado válido y seguro
-                        'id_cita'       => $cita->id_cita
+                        'tipo'          => 'reagenda',
+                        'estado'        => 'no_leida',
+                        'mensaje'       => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$fechaHoraSolicitada->toDateString()} a las {$fechaHoraSolicitada->format('H:i')}.",
+                        'id_cita'       => $cita->id_cita,
+                        'datos'         => [
+                            'paciente'    => $nombrePaciente,
+                            'nueva_fecha' => $fechaHoraSolicitada->toDateString(),
+                            'nueva_hora'  => $fechaHoraSolicitada->format('H:i')
+                        ]
                     ]);
                 } catch (\Throwable $e) {
                     // Si falla por campos faltantes en tu BD de DentalConnect, lo ignoramos para que el paciente SÍ pueda reagendar.
