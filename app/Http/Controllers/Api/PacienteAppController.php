@@ -743,8 +743,8 @@ class PacienteAppController extends Controller
 
             // Evitar spam de solicitudes
             $peticionPrevia = Notificacion::where('id_cita', $cita->id_cita)
-                ->where('tipo', 'reagenda')
-                ->where('estado', 'no_leida') // Si tu BD usa enum
+                ->where('tipo', 'recordatorio')
+                ->where('estado', 'pendiente') // Si tu BD usa enum
                 ->exists();
                 
             if ($peticionPrevia) {
@@ -789,10 +789,9 @@ class PacienteAppController extends Controller
                     Notificacion::create([
                         'id_clinica'    => $cita->id_clinica,
                         'id_usuario'    => $idUsuarioDoctor,
-                        'titulo'        => 'Solicitud de Reagenda',
-                        'tipo'          => 'reagenda',
-                        'mensaje'       => "El paciente {$nombrePaciente} solicita reagendar su cita para el {$fechaHoraSolicitada->toDateString()} a las {$fechaHoraSolicitada->format('H:i')}.",
-                        'estado'        => 'no_leida', // Si tu BD usa enum
+                        'tipo'          => 'recordatorio', // <-- La BD y la web SÍ reconocen esto
+                        'mensaje'       => "⚠️ SOLICITUD DE REAGENDA: El paciente {$nombrePaciente} solicita cambiar su cita para el {$fechaHoraSolicitada->toDateString()} a las {$fechaHoraSolicitada->format('H:i')}.",
+                        'estado'        => 'pendiente',    // <-- Estado válido y seguro
                         'id_cita'       => $cita->id_cita
                     ]);
                 } catch (\Throwable $e) {
