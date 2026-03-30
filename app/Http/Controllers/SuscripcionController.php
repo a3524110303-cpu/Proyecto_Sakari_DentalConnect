@@ -58,8 +58,13 @@ class SuscripcionController extends Controller
                 'customer_email' => Auth::user()->email,
                 'success_url' => route('suscripciones.success') . '?session_id={CHECKOUT_SESSION_ID}',
                 'cancel_url' => route('suscripciones.cancel'),
+                // Metadata para la sesión del checkout (Ya lo tienes)
                 'metadata[id_clinica]' => (string) $clinica->id_clinica,
                 'metadata[id_plan]' => (string) $plan->id_plan,
+                
+                // 🔥 NUEVO: Metadata inyectada directamente en la Suscripción
+                'subscription_data[metadata][id_clinica]' => (string) $clinica->id_clinica,
+                'subscription_data[metadata][id_plan]' => (string) $plan->id_plan,
             ]);
 
         if (!$response->successful()) {
@@ -214,13 +219,25 @@ class SuscripcionController extends Controller
             return;
         }
 
+        // 🔥 NUEVO: Extraemos el ID de la clínica de la metadata que enviamos
+        $metadata = (array) ($subscription->metadata ?? []);
+        $idClinica = (int) ($metadata['id_clinica'] ?? 0);
+
         $stripePriceId = (string) data_get($subscription, 'items.data.0.price.id', '');
         $plan = $stripePriceId ? PlanSaas::where('stripe_price_id', $stripePriceId)->first() : null;
 
         $record = SuscripcionClinica::where('stripe_subscription_id', $stripeSubscriptionId)->first();
 
+        // Si no lo encuentra por ID de suscripción, busca por el ID de cliente
         if (!$record) {
             $record = SuscripcionClinica::where('stripe_customer_id', (string) ($subscription->customer ?? ''))
+                ->orderByDesc('created_at')
+                ->first();
+        }
+
+        // 🔥 NUEVO: Si aún no hay registro (condición de carrera), usamos el id_clinica
+        if (!$record && $idClinica > 0) {
+            $record = SuscripcionClinica::where('id_clinica', $idClinica)
                 ->orderByDesc('created_at')
                 ->first();
         }
