@@ -17,7 +17,16 @@ class LandingController extends Controller
     public function index()
     {
         $planes = PlanSaas::where('activo', true)->orderBy('nivel')->get();
-        $publicidad = Publicidad::where('activo', true)->latest()->take(6)->get();
+        $publicidad = Publicidad::where('activo', true)
+            ->whereHas('usuario.clinica.suscripciones', function ($query) {
+                $query->where('estado', 'active')
+                      ->whereHas('plan', function ($q) {
+                          $q->where('nivel', '>=', 2);
+                      });
+            })
+            ->latest()
+            ->take(6)
+            ->get();
 
         $suscripcionActiva = null;
 
