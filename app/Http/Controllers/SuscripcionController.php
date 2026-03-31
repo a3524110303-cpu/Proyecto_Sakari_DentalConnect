@@ -28,6 +28,18 @@ class SuscripcionController extends Controller
 
     public function checkout(Request $request, string $planSlug): RedirectResponse
     {
+        $clinica = Auth::user()->clinica;
+
+        if (!$clinica) {
+            return redirect()->route('landing')
+                ->with('error', 'No se encontro una clinica asociada al usuario.');
+        }
+
+        if ($clinica->suscripcionActiva()->exists()) {
+            return redirect()->route('suscripciones.show')
+                ->with('error', 'Tu clínica ya tiene un plan activo. Para cambiar de plan, debes gestionar tu suscripción actual.');
+        }
+
         $plan = PlanSaas::where('slug', $planSlug)
             ->where('activo', true)
             ->firstOrFail();
@@ -40,13 +52,6 @@ class SuscripcionController extends Controller
         if (!config('services.stripe.secret')) {
             return redirect()->route('landing')
                 ->with('error', 'Stripe no esta configurado en este entorno.');
-        }
-
-        $clinica = Auth::user()->clinica;
-
-        if (!$clinica) {
-            return redirect()->route('landing')
-                ->with('error', 'No se encontro una clinica asociada al usuario.');
         }
 
         $response = Http::asForm()
