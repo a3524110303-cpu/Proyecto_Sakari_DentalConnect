@@ -27,8 +27,8 @@ class EnsurePlanLevel
                 return response()->json(['message' => 'Plan insuficiente para acceder a este recurso.'], 403);
             }
 
-            return redirect()->route('landing')
-                ->with('error', 'Tu plan actual no incluye este modulo. Actualiza tu suscripcion.');
+            return redirect()->route('suscripciones.show')
+                ->with('error', 'Tu plan no está activo. Por favor selecciona un plan para usar DentalConnect.');
         }
 
         return $next($request);

@@ -50,74 +50,84 @@ Route::post('/stripe/webhook', [SuscripcionController::class, 'webhook'])->name(
 // 🔐 Rutas Privadas
 Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->group(function () {
 
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-    // Suscripciones
+    // ==========================================
+    // 🟢 ZONA LIBRE (Solo requiere iniciar sesión)
+    // ==========================================
+    // Aquí dejamos las rutas de cobro para que puedan pagar
     Route::get('/suscripciones', [SuscripcionController::class, 'show'])->name('suscripciones.show');
     Route::post('/suscripciones/checkout/{planSlug}', [SuscripcionController::class, 'checkout'])->name('suscripciones.checkout');
     Route::get('/suscripciones/success', [SuscripcionController::class, 'success'])->name('suscripciones.success');
     Route::get('/suscripciones/cancel', [SuscripcionController::class, 'cancel'])->name('suscripciones.cancel');
 
-    // Pacientes
-    Route::resource('pacientes', PacienteController::class);
 
-    // Tratamientos
-    Route::resource('tratamientos', TratamientoController::class)
-        ->parameters(['tratamientos' => 'id'])
-        ->except(['create', 'edit', 'show']);
+    // ==========================================
+    // 🔴 ZONA VIP (Requiere iniciar sesión + PLAN ACTIVO)
+    // ==========================================
+    Route::middleware([\App\Http\Middleware\EnsurePlanLevel::class])->group(function () {
 
-    Route::post('/citas/{id}/actualizar', [DashboardController::class, 'actualizarCita'])->name('citas.actualizar');
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Publicidad
-    Route::resource('publicidad', PublicidadController::class)
-        ->only(['index', 'store', 'destroy']);
+        // Pacientes
+        Route::resource('pacientes', PacienteController::class);
 
-    // Configuración
-    Route::get('/configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
-    Route::post('/configuracion/clinica', [ConfiguracionController::class, 'updateClinica'])->name('configuracion.updateClinica');
-    Route::post('/configuracion/usuario', [ConfiguracionController::class, 'updateUsuario'])->name('configuracion.updateUsuario');
-    Route::post('/configuracion/recepcionista', [ConfiguracionController::class, 'storeRecepcionista'])->name('configuracion.storeRecepcionista');
-    Route::post('/configuracion/horarios', [ConfiguracionController::class, 'updateHorarios'])->name('configuracion.updateHorarios');
-    Route::delete('/configuracion/recepcionista/{id}', [ConfiguracionController::class, 'destroyRecepcionista'])->name('configuracion.destroyRecepcionista');
-    Route::post('/configuracion/foto-doctor', [ConfiguracionController::class, 'subirFotoDoctor'])->name('configuracion.fotoDoctor');
+        // Tratamientos
+        Route::resource('tratamientos', TratamientoController::class)
+            ->parameters(['tratamientos' => 'id'])
+            ->except(['create', 'edit', 'show']);
 
-    // ============================
-    // 🔥 API INTERNA (AJAX)
-    // ============================
+        Route::post('/citas/{id}/actualizar', [DashboardController::class, 'actualizarCita'])->name('citas.actualizar');
 
-    Route::get('/api/citas/{id}/modal-detalles', [DashboardController::class, 'obtenerDatosModal'])->name('api.cita.detalles');
-    Route::post('/api/citas/{id}/completar', [DashboardController::class, 'completarCita'])->name('api.cita.completar');
+        // Publicidad
+        Route::resource('publicidad', PublicidadController::class)
+            ->only(['index', 'store', 'destroy']);
 
-    Route::get('/api/calendario/disponibilidad', [DashboardController::class, 'obtenerDisponibilidadMes'])->name('api.calendario');
+        // Configuración
+        Route::get('/configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
+        Route::post('/configuracion/clinica', [ConfiguracionController::class, 'updateClinica'])->name('configuracion.updateClinica');
+        Route::post('/configuracion/usuario', [ConfiguracionController::class, 'updateUsuario'])->name('configuracion.updateUsuario');
+        Route::post('/configuracion/recepcionista', [ConfiguracionController::class, 'storeRecepcionista'])->name('configuracion.storeRecepcionista');
+        Route::post('/configuracion/horarios', [ConfiguracionController::class, 'updateHorarios'])->name('configuracion.updateHorarios');
+        Route::delete('/configuracion/recepcionista/{id}', [ConfiguracionController::class, 'destroyRecepcionista'])->name('configuracion.destroyRecepcionista');
+        Route::post('/configuracion/foto-doctor', [ConfiguracionController::class, 'subirFotoDoctor'])->name('configuracion.fotoDoctor');
 
-    // ✅ NUEVA RUTA CORRECTA PARA TU CALENDARIO
-    Route::get('/api/citas/ocupadas', [CitaController::class, 'horasOcupadas'])->name('api.citas.ocupadas');
+        // ============================
+        // 🔥 API INTERNA (AJAX)
+        // ============================
 
-    // ❌ ELIMINADA (ya no se usa)
-    Route::get('/api/calendario/horas-ocupadas', [CitaController::class, 'horasOcupadas']);
-    Route::post('/api/pacientes/{id}/foto', [PacienteHistorialController::class, 'subirFotoProgreso'])->name('api.pacientes.foto');
-    Route::get('/api/pacientes/{id}/citas', [PacienteHistorialController::class, 'historialCitas'])->name('api.pacientes.citas');
-    Route::get('/api/pacientes/{id}/evoluciones', [PacienteHistorialController::class, 'evoluciones'])->name('api.pacientes.evoluciones');
-    Route::post('/api/pacientes/{id}/evoluciones', [PacienteHistorialController::class, 'storeEvolucion'])->name('api.pacientes.evoluciones.store');
+        Route::get('/api/citas/{id}/modal-detalles', [DashboardController::class, 'obtenerDatosModal'])->name('api.cita.detalles');
+        Route::post('/api/citas/{id}/completar', [DashboardController::class, 'completarCita'])->name('api.cita.completar');
 
-    Route::get('/api/pacientes/{id}/odontograma', [OdontogramaController::class, 'index'])->name('api.odontograma.paciente');
-    Route::post('/api/pacientes/{id}/odontograma', [OdontogramaController::class, 'store'])->name('api.odontograma.update');
-    Route::delete('/api/odontograma/{id_odontograma}', [OdontogramaController::class, 'destroy'])->name('api.odontograma.delete');
+        Route::get('/api/calendario/disponibilidad', [DashboardController::class, 'obtenerDisponibilidadMes'])->name('api.calendario');
 
-    Route::get('/api/notificaciones/reagenda', [DashboardController::class, 'notificacionesReagenda'])->name('api.notificaciones.reagenda');
-    Route::post('/api/notificaciones/{id}/leer', [DashboardController::class, 'marcarNotificacionLeida'])->name('api.notificaciones.leer');
-    Route::post('/api/notificaciones/{id}/procesar', [DashboardController::class, 'procesarReagenda'])->name('api.notificaciones.procesar');
+        // ✅ NUEVA RUTA CORRECTA PARA TU CALENDARIO
+        Route::get('/api/citas/ocupadas', [CitaController::class, 'horasOcupadas'])->name('api.citas.ocupadas');
 
-    // ============================
-    // 📅 CITAS
-    // ============================
-    Route::post('/citas', [CitaController::class, 'store'])->name('citas.store');
+        // ❌ ELIMINADA (ya no se usa)
+        Route::get('/api/calendario/horas-ocupadas', [CitaController::class, 'horasOcupadas']);
+        Route::post('/api/pacientes/{id}/foto', [PacienteHistorialController::class, 'subirFotoProgreso'])->name('api.pacientes.foto');
+        Route::get('/api/pacientes/{id}/citas', [PacienteHistorialController::class, 'historialCitas'])->name('api.pacientes.citas');
+        Route::get('/api/pacientes/{id}/evoluciones', [PacienteHistorialController::class, 'evoluciones'])->name('api.pacientes.evoluciones');
+        Route::post('/api/pacientes/{id}/evoluciones', [PacienteHistorialController::class, 'storeEvolucion'])->name('api.pacientes.evoluciones.store');
 
-    // ============================
-    // 🛠️ ADMIN PANEL
-    // ============================
-    Route::middleware('role:administrador')->group(function () {
-        Route::get('/admin/panel', [AdminPanelController::class, 'index'])->name('admin.panel');
+        Route::get('/api/pacientes/{id}/odontograma', [OdontogramaController::class, 'index'])->name('api.odontograma.paciente');
+        Route::post('/api/pacientes/{id}/odontograma', [OdontogramaController::class, 'store'])->name('api.odontograma.update');
+        Route::delete('/api/odontograma/{id_odontograma}', [OdontogramaController::class, 'destroy'])->name('api.odontograma.delete');
+
+        Route::get('/api/notificaciones/reagenda', [DashboardController::class, 'notificacionesReagenda'])->name('api.notificaciones.reagenda');
+        Route::post('/api/notificaciones/{id}/leer', [DashboardController::class, 'marcarNotificacionLeida'])->name('api.notificaciones.leer');
+        Route::post('/api/notificaciones/{id}/procesar', [DashboardController::class, 'procesarReagenda'])->name('api.notificaciones.procesar');
+
+        // ============================
+        // 📅 CITAS
+        // ============================
+        Route::post('/citas', [CitaController::class, 'store'])->name('citas.store');
+
+        // ============================
+        // 🛠️ ADMIN PANEL
+        // ============================
+        Route::middleware('role:administrador')->group(function () {
+            Route::get('/admin/panel', [AdminPanelController::class, 'index'])->name('admin.panel');
+        });
     });
 });
 
