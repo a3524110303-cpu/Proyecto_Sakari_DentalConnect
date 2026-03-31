@@ -47,6 +47,22 @@ class PacienteController extends Controller
 
     public function store(StorePacienteRequest $request)
     {
+        $clinica = Auth::user()->clinica;
+        $suscripcion = $clinica->suscripciones()->where('estado', 'active')->first();
+        
+        if (!$suscripcion || !$suscripcion->plan) {
+            return redirect()->back()
+                ->with('error', "No tienes una suscripción activa para registrar pacientes.");
+        }
+
+        $plan = $suscripcion->plan;
+        $totalPacientes = $clinica->pacientes()->count();
+
+        if ($totalPacientes >= $plan->max_pacientes) {
+            return redirect()->back()
+                ->with('error', "Límite alcanzado: Tu plan {$plan->nombre} solo permite {$plan->max_pacientes} pacientes. Mejora tu suscripción.");
+        }
+
         // ── VALIDACIÓN DE EDAD (Mínimo 2 años) ──
         // Calculamos la fecha de hace 2 años exactos
         $fechaLimite = Carbon::now()->subYears(2)->format('Y-m-d');

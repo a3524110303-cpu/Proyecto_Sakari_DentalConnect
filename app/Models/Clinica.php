@@ -71,13 +71,19 @@ class Clinica extends Model
 
     public function hasPlanAtLeast(string $requiredSlug): bool
     {
-        $requiredPlan = PlanSaas::where('slug', $requiredSlug)->first();
-        $currentSubscription = $this->suscripcionActiva()->with('plan')->first();
-
-        if (!$requiredPlan || !$currentSubscription || !$currentSubscription->plan) {
+        // 1. Obtener la suscripción activa
+        $suscripcionActiva = $this->suscripciones()->where('estado', 'active')->first();
+        if (!$suscripcionActiva || !$suscripcionActiva->plan) {
             return false;
         }
 
-        return (int) $currentSubscription->plan->nivel >= (int) $requiredPlan->nivel;
+        // 2. Obtener el nivel del plan requerido
+        $planRequerido = \App\Models\PlanSaas::where('slug', $requiredSlug)->first();
+        if (!$planRequerido) {
+            return false;
+        }
+
+        // 3. Comparar niveles (Ej. Si tiene Premium (2), y se requiere Básico (1), devuelve true)
+        return $suscripcionActiva->plan->nivel >= $planRequerido->nivel;
     }
 }

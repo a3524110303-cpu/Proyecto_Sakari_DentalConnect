@@ -783,12 +783,21 @@ Incluye:
                     </a>
                 </li>
 
-                <li class="nav-item {{ request()->routeIs('publicidad.index') ? 'active' : '' }}">
-                    <a href="{{ route('publicidad.index') }}" class="nav-content">
-                        <span class="icon"><i class="fa-solid fa-bullhorn"></i></span>
-                        <span class="text">Publicidad</span>
-                    </a>
-                </li>
+                @if(auth()->user()->clinica->hasPlanAtLeast('premium'))
+                    <li class="nav-item {{ request()->routeIs('publicidad.index') ? 'active' : '' }}">
+                        <a href="{{ route('publicidad.index') }}" class="nav-content">
+                            <span class="icon"><i class="fa-solid fa-bullhorn"></i></span>
+                            <span class="text">Publicidad</span>
+                        </a>
+                    </li>
+                @else
+                    <li class="nav-item">
+                        <a href="{{ route('suscripciones.show') }}" class="nav-content" style="color: #94a3b8;">
+                            <span class="icon"><i class="fa-solid fa-lock"></i></span>
+                            <span class="text">Publicidad <span style="font-size: 0.7rem; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; margin-left: 5px;">Premium 🔒</span></span>
+                        </a>
+                    </li>
+                @endif
 
                 <li class="nav-item {{ request()->routeIs('configuracion.index') ? 'active' : '' }}">
                     <a href="{{ route('configuracion.index') }}" class="nav-content">

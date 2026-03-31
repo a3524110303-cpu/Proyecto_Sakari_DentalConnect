@@ -111,6 +111,24 @@ class ConfiguracionController extends Controller
      */
     public function storeRecepcionista(Request $request)
     {
+        $clinica = Auth::user()->clinica;
+        $suscripcion = $clinica->suscripciones()->where('estado', 'active')->first();
+
+        if (!$suscripcion || !$suscripcion->plan) {
+            return redirect()->back()
+                ->with('error', "No tienes una suscripción activa para agregar usuarios.");
+        }
+
+        $plan = $suscripcion->plan;
+
+        // Contamos cuántos usuarios (doctores + recepcionistas) tiene la clínica
+        $totalUsuarios = \App\Models\User::where('id_clinica', $clinica->id_clinica)->count();
+
+        if ($totalUsuarios >= $plan->max_doctores) {
+            return redirect()->back()
+                ->with('error', "Límite alcanzado: Tu plan {$plan->nombre} solo permite {$plan->max_doctores} usuarios en total. Mejora tu suscripción.");
+        }
+
         $request->validate([
             'nombre_completo' => 'required|string|max:100',
             'email' => 'required|email|unique:usuarios_sistema,email',

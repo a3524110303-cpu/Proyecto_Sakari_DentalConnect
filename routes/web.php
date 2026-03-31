@@ -61,10 +61,9 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
 
 
     // ==========================================
-    // 🔴 ZONA VIP (Requiere iniciar sesión + PLAN ACTIVO)
+    // 🔵 ZONA BÁSICA (Nivel 1 o superior)
     // ==========================================
-    Route::middleware([\App\Http\Middleware\EnsurePlanLevel::class])->group(function () {
-
+    Route::middleware([\App\Http\Middleware\EnsurePlanLevel::class.':basic'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         // Pacientes
@@ -76,10 +75,6 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
             ->except(['create', 'edit', 'show']);
 
         Route::post('/citas/{id}/actualizar', [DashboardController::class, 'actualizarCita'])->name('citas.actualizar');
-
-        // Publicidad
-        Route::resource('publicidad', PublicidadController::class)
-            ->only(['index', 'store', 'destroy']);
 
         // Configuración
         Route::get('/configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
@@ -128,6 +123,22 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
         Route::middleware('role:administrador')->group(function () {
             Route::get('/admin/panel', [AdminPanelController::class, 'index'])->name('admin.panel');
         });
+    });
+
+    // ==========================================
+    // 🟡 ZONA PREMIUM (Nivel 2 o superior)
+    // ==========================================
+    Route::middleware([\App\Http\Middleware\EnsurePlanLevel::class.':premium'])->group(function () {
+        // Solo Premium y Ultra pueden acceder a las campañas de publicidad
+        Route::resource('publicidad', PublicidadController::class)
+            ->only(['index', 'store', 'destroy']);
+    });
+
+    // ==========================================
+    // 🟣 ZONA ULTRA (Nivel 3)
+    // ==========================================
+    Route::middleware([\App\Http\Middleware\EnsurePlanLevel::class.':ultra'])->group(function () {
+        // Cuando crees el controlador para manejar múltiples sucursales, pon sus rutas aquí.
     });
 });
 
