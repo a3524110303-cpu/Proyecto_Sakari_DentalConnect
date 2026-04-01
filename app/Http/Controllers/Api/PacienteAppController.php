@@ -1107,36 +1107,77 @@ class PacienteAppController extends Controller
     }
 
 
-    // --- 6. OBTENER DOCTORES (CON DATOS REALES) ---
+    // --- 6. OBTENER DOCTORES (A PRUEBA DE FALLOS) ---
     public function getDoctores()
     {
         $user = auth()->user();
         $idClinica = $this->resolveClinicaId($user);
 
-        // Obtenemos solo los doctores vinculados a la clínica del paciente actual
-        $doctores = Doctor::with('usuarioSistema')
-            ->whereHas('usuarioSistema', function ($q) use ($idClinica) {
-                $q->where('is_active', true);
-                if ($idClinica) {
-                    $q->where('id_clinica', $idClinica);
+        // 1. Buscamos al paciente para saber quién es exactamente SU doctor
+        $paciente = \App\Models\Paciente::where('id_usuario', $user->id_usuario)->first();
+        $idDoctorAsignado = null;
+
+        if ($paciente) {
+            // A) Verificamos qué doctor lo dio de alta en el sistema
+            $idDoctorAsignado = $paciente->created_by_doctor_id;
+
+            // B) Si no tiene, buscamos el doctor con el que tuvo su última cita
+            if (!$idDoctorAsignado) {
+                $ultimaCita = \Illuminate\Support\Facades\DB::table('citas')
+                    ->where('id_paciente', $paciente->id_paciente)
+                    ->orderBy('fecha_hora_inicio', 'desc')
+                    ->first();
+                if ($ultimaCita) {
+                    $idDoctorAsignado = $ultimaCita->id_doctor;
                 }
-            })
-            ->get();
+            }
+        }
 
-        $listaDoctores = $doctores->map(function ($doctor) {
-            $usuario = $doctor->usuarioSistema;
+        // 2. Usamos JOIN directo de SQL para EVITAR que Laravel mezcle las identidades
+        // Esto garantiza que el Nombre, Teléfono y Foto pertenezcan exactamente a la misma persona.
+        $query = \Illuminate\Support\Facades\DB::table('doctores')
+            ->join('usuarios_sistema', 'doctores.id_usuario', '=', 'usuarios_sistema.id_usuario')
+            ->where('usuarios_sistema.id_clinica', $idClinica)
+            ->where('usuarios_sistema.rol', 'doctor')
+            ->where('usuarios_sistema.is_active', true);
 
-            return [
-                'id_doctor' => $doctor->id_doctor,
-                'nombre_completo' => $usuario?->nombre_completo ? 'Dr. ' . $usuario->nombre_completo : 'Dr. Doctor sin nombre',
-                'cedula' => $doctor->cedula_profesional ?: 'Sin registro',
-                'foto_perfil' => $doctor->full_foto_url,
-                // Insertamos la información real que viene de la base de datos
-                'telefono' => $usuario?->telefono ?: 'No disponible',
-                'sobre_mi' => $usuario?->sobre_mi ?: 'El doctor aún no ha agregado una descripción.',
-                'especialidad' => $doctor->especialidad ?? 'Odontología General',
-            ];
-        });
+        // Si el paciente tiene un doctor asignado, filtramos para enviarle SOLO a ese doctor
+        if ($idDoctorAsignado) {
+            $query->where('doctores.id_doctor', $idDoctorAsignado);
+        }
+
+        // Tomamos el registro correcto
+        $doctorData = $query->first();
+
+        if (!$doctorData) {
+            return response()->json([
+                'success' => true,
+                'doctores' => []
+            ], 200);
+        }
+
+        // 3. Formateamos la URL de la foto de perfil sin usar accesores externos
+        $fotoUrl = null;
+        if (!empty($doctorData->foto_perfil)) {
+            if (filter_var($doctorData->foto_perfil, FILTER_VALIDATE_URL)) {
+                $fotoUrl = $doctorData->foto_perfil;
+            } else {
+                $fotoUrl = url('/api/doctor/foto/' . basename($doctorData->foto_perfil));
+            }
+        }
+
+        // 4. Armamos la respuesta exactamente como la espera Flutter
+        $listaDoctores = [
+            [
+                'id_doctor'       => $doctorData->id_doctor,
+                'nombre_completo' => 'Dr. ' . $doctorData->nombre_completo,
+                'cedula'          => $doctorData->cedula_profesional ?: 'Sin registro',
+                'foto_perfil'     => $fotoUrl,
+                'telefono'        => $doctorData->telefono ?: 'No disponible',
+                'sobre_mi'        => $doctorData->sobre_mi ?: 'El doctor aún no ha agregado una descripción.',
+                'especialidad'    => $doctorData->especialidad ?? 'Odontología General',
+            ]
+        ];
 
         return response()->json([
             'success' => true,
