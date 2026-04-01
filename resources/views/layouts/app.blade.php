@@ -650,6 +650,20 @@ Incluye:
             color: #2563eb;
         }
 
+        .notif-bell-btn.bell-shake {
+            animation: bellShake 0.6s ease-in-out;
+        }
+
+        @keyframes bellShake {
+            0%   { transform: rotate(0); }
+            15%  { transform: rotate(14deg); }
+            30%  { transform: rotate(-14deg); }
+            45%  { transform: rotate(10deg); }
+            60%  { transform: rotate(-10deg); }
+            75%  { transform: rotate(4deg); }
+            100% { transform: rotate(0); }
+        }
+
         .notif-bell-count {
             position: absolute;
             top: -6px;
@@ -864,14 +878,30 @@ Incluye:
             count: null,
         };
 
+        // Guardamos la cantidad previa para detectar notificaciones nuevas
+        window._prevNotifCount = window._prevNotifCount || 0;
+
         function renderNotificaciones(items) {
             if (!notifUi.list) return;
 
             if (!items || items.length === 0) {
                 notifUi.list.innerHTML = '<div class="notif-empty">Todo al día.</div>';
                 notifUi.count.style.display = 'none';
+                window._prevNotifCount = 0;
                 return;
             }
+
+            // Si hay más notificaciones que antes, hacer vibrar la campana
+            if (items.length > window._prevNotifCount) {
+                var bellBtn = document.getElementById('notif-bell-btn');
+                if (bellBtn) {
+                    bellBtn.classList.remove('bell-shake');
+                    // Force reflow para re-trigger la animación
+                    void bellBtn.offsetWidth;
+                    bellBtn.classList.add('bell-shake');
+                }
+            }
+            window._prevNotifCount = items.length;
 
             notifUi.count.textContent = String(items.length);
             notifUi.count.style.display = 'inline-flex';
@@ -981,6 +1011,24 @@ Incluye:
             });
 
             cargarNotificacionesReagenda();
+
+            // ── Polling en vivo: revisa notificaciones cada 15 segundos ──
+            window._reagendaPollInterval = setInterval(function () {
+                cargarNotificacionesReagenda();
+            }, 15000);
+
+            // Pausar polling cuando la pestaña no es visible (ahorra red)
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) {
+                    clearInterval(window._reagendaPollInterval);
+                } else {
+                    // Recarga inmediata al volver + reanuda polling
+                    cargarNotificacionesReagenda();
+                    window._reagendaPollInterval = setInterval(function () {
+                        cargarNotificacionesReagenda();
+                    }, 15000);
+                }
+            });
         });
 
         // --- Modal System ---

@@ -30,11 +30,12 @@ Resumen de secciones:
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Si existe el panel global del layout, evitamos duplicar UX de notificaciones.
-            if (document.getElementById('notif-bell')) {
-                return;
-            }
+        // ── Función reutilizable para refrescar el panel de notificaciones del dashboard ──
+        function refrescarPanelReagendaDashboard() {
+            const panel = document.getElementById('panel-notificaciones-reagenda');
+            const lista = document.getElementById('lista-notificaciones-reagenda');
+            const badge = document.getElementById('badge-reagenda-count');
+            if (!panel || !lista || !badge) return;
 
             fetch('/api/notificaciones/reagenda')
                 .then(r => r.json())
@@ -43,15 +44,17 @@ Resumen de secciones:
                         ? { success: true, data }
                         : data;
 
-                    if (!payload.success || !Array.isArray(payload.data) || payload.data.length === 0) return;
-
-                    const panel = document.getElementById('panel-notificaciones-reagenda');
-                    const lista = document.getElementById('lista-notificaciones-reagenda');
-                    const badge = document.getElementById('badge-reagenda-count');
+                    if (!payload.success || !Array.isArray(payload.data) || payload.data.length === 0) {
+                        panel.style.display = 'none';
+                        lista.innerHTML = '';
+                        badge.textContent = '0';
+                        return;
+                    }
 
                     panel.style.display = 'block';
                     badge.textContent = payload.data.length;
 
+                    lista.innerHTML = '';
                     payload.data.forEach(n => {
                         const div = document.createElement('div');
                         div.id = 'notif-' + n.id_notificacion;
@@ -70,6 +73,29 @@ Resumen de secciones:
                     });
                 })
                 .catch(() => {});
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Si existe el panel global del layout, evitamos duplicar UX de notificaciones.
+            if (document.getElementById('notif-bell')) {
+                return;
+            }
+
+            // Carga inicial
+            refrescarPanelReagendaDashboard();
+
+            // ── Polling en vivo: revisa cada 15 segundos ──
+            window._dashReagendaPoll = setInterval(refrescarPanelReagendaDashboard, 15000);
+
+            // Pausar polling cuando la pestaña está oculta
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) {
+                    clearInterval(window._dashReagendaPoll);
+                } else {
+                    refrescarPanelReagendaDashboard();
+                    window._dashReagendaPoll = setInterval(refrescarPanelReagendaDashboard, 15000);
+                }
+            });
         });
 
         function marcarLeida(id) {
