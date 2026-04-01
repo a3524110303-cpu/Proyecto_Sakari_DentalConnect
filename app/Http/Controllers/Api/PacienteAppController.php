@@ -775,10 +775,17 @@ class PacienteAppController extends Controller
                 return response()->json(['success' => false, 'message' => 'Cita no encontrada.'], 404);
             }
 
-            if (!in_array($cita->estado_cita, ['pendiente', 'confirmada'], true)) {
+            if ($cita->estado_cita === 'confirmada') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Solo se puede solicitar reagenda para citas pendientes o confirmadas.'
+                    'message' => 'No puedes reagendar una cita que ya ha sido confirmada.'
+                ], 422);
+            }
+
+            if (!in_array($cita->estado_cita, ['pendiente'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se puede solicitar reagenda para citas pendientes.'
                 ], 422);
             }
 
