@@ -82,18 +82,15 @@ class CitaController extends Controller
                     ->withInput();
             }
 
-            // 🕒 Crear fecha inicio y fin
-            $timezone = config('app.timezone', 'America/Mexico_City'); // Asegurar zona horaria local
-            $fechaHora = Carbon::createFromFormat(
-                'Y-m-d H:i',
-                $request->fecha . ' ' . $request->hora,
-                $timezone
-            );
+            // 🔥 FIX: Forzar formato crudo para evitar que Laravel cambie la hora a UTC
+            $fechaHoraStr = $request->fecha . ' ' . $request->hora . ':00';
+            $fechaHora = Carbon::parse($fechaHoraStr);
 
             $duracionMinutos = (int) $request->input('duracion_minutos', 30);
             $finHora = $fechaHora->copy()->addMinutes($duracionMinutos);
 
             // 🚫 VALIDACIÓN 1: Bloquear día actual y anteriores (1 día de anticipación mínimo)
+            $timezone = config('app.timezone', 'America/Mexico_City');
             $hoy = Carbon::now($timezone)->startOfDay();
 
             if ($fechaHora->copy()->startOfDay() <= $hoy) {
@@ -159,8 +156,8 @@ class CitaController extends Controller
                 'id_paciente' => $request->id_paciente,
                 'id_doctor' => $idDoctor,
                 'id_servicio' => $request->id_servicio,
-                'fecha_hora_inicio' => $fechaHora,
-                'fecha_hora_fin' => $finHora,
+                'fecha_hora_inicio' => $fechaHora->format('Y-m-d H:i:s'),
+                'fecha_hora_fin' => $finHora->format('Y-m-d H:i:s'),
                 'estado_cita' => 'pendiente',
                 'motivo' => $servicio->nombre_servicio,
                 'costo_estimado' => $servicio->precio_base,
