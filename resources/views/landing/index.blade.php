@@ -357,29 +357,7 @@
             </div>
         </section>
 
-        <section>
-            <h2 class="section-title">Publicidad destacada</h2>
-            <div class="ads">
-                @forelse($publicidad as $ad)
-                    <article class="ad-card">
-                        @if($ad->imagen_path)
-                            <img class="ad-cover" src="{{ route('storage.file', ['path' => $ad->imagen_path]) }}" alt="{{ $ad->titulo }}">
-                        @else
-                            <div class="ad-cover" style="display:grid;place-items:center;color:#64748b;">
-                                <i class="fa-regular fa-image" style="font-size:2rem;"></i>
-                            </div>
-                        @endif
-                        <h3 class="ad-title">{{ $ad->titulo }}</h3>
-                        <p class="ad-desc">{{ \Illuminate\Support\Str::limit($ad->descripcion, 100) }}</p>
-                    </article>
-                @empty
-                    <article class="ad-card">
-                        <p class="ad-title">No hay campañas activas</p>
-                        <p class="ad-desc">Cuando publiques anuncios desde el panel, apareceran aqui.</p>
-                    </article>
-                @endforelse
-            </div>
-        </section>
+
     </main>
 </body>
 
