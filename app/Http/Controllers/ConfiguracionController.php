@@ -25,14 +25,14 @@ class ConfiguracionController extends Controller
         $clinica = Clinica::find($user->id_clinica);
         abort_if(!$clinica, 403, 'No tienes una clínica asignada.');
 
-        // Datos del doctor principal de la clínica
-        $doctorUser = User::where('id_clinica', $user->id_clinica)
-            ->where('rol', 'doctor')
-            ->first();
+        // 1. Mostrar el perfil del doctor autenticado (No el primero de la clínica)
+        $doctorUser = null;
+        $doctorPerfil = null;
 
-        $doctorPerfil = $doctorUser
-            ? Doctor::where('id_usuario', $doctorUser->id_usuario)->first()
-            : null;
+        if ($user->rol === 'doctor') {
+            $doctorUser = $user;
+            $doctorPerfil = Doctor::where('id_usuario', $user->id_usuario)->first();
+        }
 
         // Lista de recepcionistas de la misma clínica
         $recepcionistas = User::where('id_clinica', $user->id_clinica)
