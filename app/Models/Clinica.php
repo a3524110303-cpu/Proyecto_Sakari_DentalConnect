@@ -57,6 +57,22 @@ class Clinica extends Model
         return $this->hasMany(Cita::class, 'id_clinica', 'id_clinica');
     }
 
+    /**
+     * Pacientes de la clínica (a través de usuarios_sistema).
+     * pacientes.id_usuario → usuarios_sistema.id_usuario → usuarios_sistema.id_clinica
+     */
+    public function pacientes()
+    {
+        return $this->hasManyThrough(
+            \App\Models\Paciente::class,
+            \App\Models\User::class,
+            'id_clinica',   // FK en usuarios_sistema
+            'id_usuario',   // FK en pacientes
+            'id_clinica',   // PK local en clinicas
+            'id_usuario'    // PK local en usuarios_sistema
+        );
+    }
+
     public function suscripciones()
     {
         return $this->hasMany(SuscripcionClinica::class, 'id_clinica', 'id_clinica');

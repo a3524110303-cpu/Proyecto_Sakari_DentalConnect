@@ -32,14 +32,26 @@ class PacienteController extends Controller
 
     public function index()
     {
-        $idClinica = Auth::user()->id_clinica;
+        $user = Auth::user();
+        $idClinica = $user->id_clinica;
 
-        $pacientes = Paciente::whereHas('usuario', function ($query) {
-            $query->where('id_clinica', Auth::user()->id_clinica);
-        })
-            ->where('is_active', true)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = Paciente::whereHas('usuario', function ($q) use ($idClinica) {
+            $q->where('id_clinica', $idClinica);
+        })->where('is_active', true);
+
+        // Aislamiento: el doctor solo ve pacientes con los que tiene citas
+        if ($user->rol === 'doctor') {
+            $doctor = \App\Models\Doctor::where('id_usuario', $user->id_usuario)->first();
+
+            if ($doctor) {
+                $query->whereHas('citas', function ($q) use ($doctor) {
+                    $q->where('id_doctor', $doctor->id_doctor);
+                });
+            }
+        }
+        // recepcionista y admin_clinica ven TODOS los pacientes de la clínica (sin filtro extra)
+
+        $pacientes = $query->orderBy('created_at', 'desc')->get();
 
         $servicios = Servicio::where('id_clinica', $idClinica)->orderBy('nombre_servicio')->get();
         return view('pacientes.index', compact('pacientes', 'servicios'));
