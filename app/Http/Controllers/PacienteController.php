@@ -225,11 +225,9 @@ class PacienteController extends Controller
 
             $direccionCompuesta = $this->construirDireccionCompuesta($request);
 
-            $paciente->update([
+            $datosActualizar = [
                 'correo_electronico' => $request->email,
-                'tipo_sangre' => $request->tipo_sangre,
                 'telefono' => $request->telefono,
-                'peso' => $request->peso,
                 'direccion' => $direccionCompuesta,
                 'calle' => $request->calle,
                 'num_exterior' => $request->num_exterior,
@@ -237,9 +235,16 @@ class PacienteController extends Controller
                 'colonia' => $request->colonia,
                 'municipio' => $request->municipio,
                 'ocupacion' => $request->ocupacion,
-                'enfermedades_cronicas' => $request->enfermedades_cronicas,
-                'alergias' => $request->alergias,
-            ]);
+            ];
+
+            if (Auth::user()->rol !== 'recepcionista') {
+                $datosActualizar['tipo_sangre'] = $request->tipo_sangre;
+                $datosActualizar['peso'] = $request->peso;
+                $datosActualizar['enfermedades_cronicas'] = $request->enfermedades_cronicas;
+                $datosActualizar['alergias'] = $request->alergias;
+            }
+
+            $paciente->update($datosActualizar);
 
             $paciente->usuario()->update([
                 'email' => $request->email,

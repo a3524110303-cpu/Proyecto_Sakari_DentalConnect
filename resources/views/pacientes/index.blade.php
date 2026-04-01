@@ -600,9 +600,11 @@
                 <button onclick="showTab('tab-general')" id="btn-tab-general" class="tab-btn tab-active">
                     <i class="fa-solid fa-user"></i> Resumen General
                 </button>
+                @if(Auth::user()->rol !== 'recepcionista')
                 <button onclick="showTab('tab-evolucion')" id="btn-tab-evolucion" class="tab-btn">
                     <i class="fa-solid fa-notes-medical"></i> Evolución Clínica
                 </button>
+                @endif
                 <button onclick="showTab('tab-historial')" id="btn-tab-historial" class="tab-btn">
                     <i class="fa-solid fa-clock-rotate-left"></i> Historial y Tratamientos
                 </button>
@@ -694,6 +696,7 @@
                         </div>
 
                         <div>
+                            @if(Auth::user()->rol !== 'recepcionista')
                             <div
                                 style="background: #fff5f5; border: 1px solid #fed7d7; border-radius: 18px; padding: 22px; margin-bottom: 15px;">
                                 <h4 style="color: #c53030; margin-bottom:15px;"><i
@@ -712,6 +715,7 @@
                                     style="margin: 0; color: #555; font-size: 0.95rem; line-height: 1.5;">
                                     Ninguna</p>
                             </div>
+                            @endif
 
                             <button class="btn-pill"
                                 style="width: 100%; justify-content: center; padding: 18px; margin-bottom: 12px;"
@@ -1126,6 +1130,7 @@
                         placeholder="Teléfono Emergencia" maxlength="15"
                         oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
 
+                    @if(Auth::user()->rol !== 'recepcionista')
                     <div class="full-width"
                         style="font-size: 0.78em; font-weight: 700; color: #f59e0b; text-transform: uppercase; border-bottom: 2px solid #fef3c7; padding-bottom: 6px; margin-top: 12px; margin-bottom: 5px;">
                         <i class="fa-solid fa-notes-medical" style="margin-right: 5px;"></i> Información de Salud
@@ -1138,6 +1143,7 @@
                         <textarea name="alergias" id="edit-alergias" class="modern-input" rows="2"
                             placeholder="Alergias a Medicamentos (Texto libre)"></textarea>
                     </div>
+                    @endif
                 </div>
 
                 <div style="text-align: center; margin-top: 25px;">
@@ -1270,7 +1276,8 @@
             document.getElementById('view-peso').innerText = (paciente.peso ? parseInt(paciente.peso) : '0') + ' kg';
             document.getElementById('view-direccion').innerText = construirDireccionPaciente(paciente);
             document.getElementById('view-ocupacion').innerText = paciente.ocupacion || 'S/D';
-            document.getElementById('view-enfermedades').innerText = paciente.enfermedades_cronicas || 'Ninguna registrada';
+            const viewEnfermedades = document.getElementById('view-enfermedades');
+            if (viewEnfermedades) viewEnfermedades.innerText = paciente.enfermedades_cronicas || 'Ninguna registrada';
 
             // Foto
             const fotoUrl = paciente.full_foto_url || null;
@@ -1295,11 +1302,13 @@
 
             // Alergias
             const badges = document.getElementById('view-alergias-badges');
-            if (paciente.alergias) {
-                badges.innerHTML = `<span style="background:#ef4444; color:white; border-radius:20px; padding:5px 15px; font-size:0.9em; font-weight:700;">
-                                                                                                                                    <i class="fa-solid fa-pills"></i> ${paciente.alergias}</span>`;
-            } else {
-                badges.innerHTML = '<span style="color: #6c757d; font-style: italic;">Sin alergias registradas</span>';
+            if (badges) {
+                if (paciente.alergias) {
+                    badges.innerHTML = `<span style="background:#ef4444; color:white; border-radius:20px; padding:5px 15px; font-size:0.9em; font-weight:700;">
+                                                                                                                                        <i class="fa-solid fa-pills"></i> ${paciente.alergias}</span>`;
+                } else {
+                    badges.innerHTML = '<span style="color: #6c757d; font-style: italic;">Sin alergias registradas</span>';
+                }
             }
 
             openModal('modal-patient-profile');
@@ -1583,8 +1592,10 @@
             document.getElementById('edit-colonia').value = currentPaciente.colonia || '';
             document.getElementById('edit-municipio').value = currentPaciente.municipio || '';
             document.getElementById('edit-ocupacion').value = currentPaciente.ocupacion || '';
-            document.getElementById('edit-enfermedades').value = currentPaciente.enfermedades_cronicas || '';
-            document.getElementById('edit-alergias').value = currentPaciente.alergias || '';
+            const editEnfermedades = document.getElementById('edit-enfermedades');
+            if (editEnfermedades) editEnfermedades.value = currentPaciente.enfermedades_cronicas || '';
+            const editAlergias = document.getElementById('edit-alergias');
+            if (editAlergias) editAlergias.value = currentPaciente.alergias || '';
 
             // Contacto Emergencia
             const ce = currentPaciente.contacto_emergencia;
