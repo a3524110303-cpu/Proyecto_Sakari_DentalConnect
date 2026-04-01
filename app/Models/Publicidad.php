@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Clinica;
 
 /**
  * Modelo para las promociones publicitarias.
@@ -27,12 +28,19 @@ class Publicidad extends Model
     protected $primaryKey = 'id_publicidad';
 
     protected $fillable = [
-        'id_usuario', // <--- IMPORTANTE: Agregamos esto para poder guardarlo
+        'id_clinica',
+        'id_usuario',
         'titulo',
         'descripcion',
         'imagen_path',
-        'activo'
+        'activo',
     ];
+
+    // Relación: Una publicidad pertenece a una Clínica
+    public function clinica()
+    {
+        return $this->belongsTo(Clinica::class, 'id_clinica', 'id_clinica');
+    }
 
     // Relación: Una publicidad pertenece a un Usuario
     public function usuario()

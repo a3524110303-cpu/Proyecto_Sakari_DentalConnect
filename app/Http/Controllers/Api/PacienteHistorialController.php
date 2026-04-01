@@ -9,15 +9,37 @@ use App\Models\EvolucionTratamiento;
 use App\Models\Archivo;
 use App\Models\Cita;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class PacienteHistorialController extends Controller
 {
     /**
+     * Verifica que el paciente pertenece a la clínica del usuario autenticado.
+     * Lanza 403 si el paciente no está en la clínica del usuario.
+     */
+    private function verificarPacienteClinica(int $idPaciente): Paciente
+    {
+        $idClinica = Auth::user()->id_clinica;
+
+        $paciente = Paciente::whereHas('usuario', function ($q) use ($idClinica) {
+            $q->where('id_clinica', $idClinica);
+        })->where('id_paciente', $idPaciente)->first();
+
+        if (! $paciente) {
+            abort(403, 'No tienes acceso a los datos de este paciente.');
+        }
+
+        return $paciente;
+    }
+
+    /**
      * Retorna los últimos signos vitales del paciente.
      */
     public function signosVitales($idPaciente)
     {
+        $this->verificarPacienteClinica((int) $idPaciente);
+
         $registros = SignoVital::where('paciente_id', $idPaciente)
             ->orderBy('fecha_registro', 'desc')
             ->take(10)
@@ -34,6 +56,8 @@ class PacienteHistorialController extends Controller
      */
     public function evoluciones($idPaciente)
     {
+        $this->verificarPacienteClinica((int) $idPaciente);
+
         $registros = EvolucionTratamiento::where('id_paciente', $idPaciente)
             ->orderBy('fecha_evolucion', 'desc')
             ->take(10)
@@ -69,6 +93,8 @@ class PacienteHistorialController extends Controller
     public function storeEvolucion(\Illuminate\Http\Request $request, $idPaciente)
     {
         try {
+            $this->verificarPacienteClinica((int) $idPaciente);
+
             $request->validate([
                 'descripcion_avance' => 'required|string|max:500',
                 'plan_tratamiento' => 'nullable|string',
@@ -76,8 +102,6 @@ class PacienteHistorialController extends Controller
             ]);
 
             $evolucion = new EvolucionTratamiento();
-            // Assigning a default service ID if it's required, although we don't know for sure.
-            // But let's see if it errors out first.
             $evolucion->id_paciente = $idPaciente;
             $evolucion->fecha_evolucion = now();
             $evolucion->descripcion_avance = $request->descripcion_avance;
@@ -120,6 +144,8 @@ class PacienteHistorialController extends Controller
      */
     public function subirFotoProgreso(Request $request, $idPaciente)
     {
+        $this->verificarPacienteClinica((int) $idPaciente);
+
         $request->validate([
             'foto' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
@@ -163,11 +189,16 @@ class PacienteHistorialController extends Controller
 
     /**
      * Retorna el historial de citas del paciente.
+     * Solo devuelve citas de la clínica del usuario autenticado.
      */
     public function historialCitas($idPaciente)
     {
+        $idClinica = Auth::user()->id_clinica;
+        $this->verificarPacienteClinica((int) $idPaciente);
+
         $citas = Cita::with(['servicio', 'doctor', 'ingresos'])
             ->where('id_paciente', $idPaciente)
+            ->where('id_clinica', $idClinica)
             ->orderBy('fecha_hora_inicio', 'desc')
             ->get();
 

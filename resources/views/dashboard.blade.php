@@ -534,12 +534,22 @@ Resumen de secciones:
                     <p style="color: #666; margin-bottom: 30px; font-size: 1.1rem;">Ingresa el monto abonado hoy por el
                         paciente.</p>
 
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
                         <label style="font-weight: 700; color: #444;">Monto a Abonar en esta Cita ($)</label>
                         <input type="number" name="monto_abono" id="input-monto-abono"
                             style="padding: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1.5rem; font-weight: bold;"
                             step="0.01" min="0" placeholder="0.00"
                             oninput="if(this.value < 0) { this.value = 0; } calcularVueltoReal();">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <label style="font-weight: 700; color: #444;">Método de Pago</label>
+                        <select name="metodo_pago" id="input-metodo-pago"
+                            style="padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; color: #333;">
+                            <option value="efectivo">Efectivo</option>
+                            <option value="tarjeta">Tarjeta</option>
+                            <option value="transferencia">Transferencia</option>
+                            <option value="otro">Otro</option>
+                        </select>
                     </div>
                     <button type="button"
                         style="background: #eee; color: #555; margin-top: 30px; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; text-align: center;"
@@ -1591,6 +1601,8 @@ function confirmarHorario(){
 
                         // Limpiar inputs
                         document.querySelector('input[name="monto_abono"]').value = '';
+                        const metodoPagoSelect = document.getElementById('input-metodo-pago');
+                        if (metodoPagoSelect) { metodoPagoSelect.value = 'efectivo'; }
                         document.querySelector('textarea[name="notas_seguimiento"]').value = '';
                         document.getElementById('input-nueva-fecha').value = '';
                         document.getElementById('input-nueva-hora').value = '';
