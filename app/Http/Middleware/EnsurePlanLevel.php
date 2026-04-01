@@ -20,6 +20,12 @@ class EnsurePlanLevel
         }
 
         $user = Auth::user();
+
+        // 🔥 EXCEPCIÓN CRUCIAL: Si es el Super Administrador, tiene acceso total y gratuito a todo
+        if ($user->rol === 'admin') {
+            return $next($request);
+        }
+
         $clinica = $user->clinica;
 
         if (!$clinica || !$clinica->hasPlanAtLeast($requiredSlug)) {
