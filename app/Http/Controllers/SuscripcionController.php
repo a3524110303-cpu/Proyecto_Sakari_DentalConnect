@@ -203,14 +203,40 @@ class SuscripcionController extends Controller
             return;
         }
 
+        $stripeSubscriptionId = $session->subscription ?? null;
+        $periodoInicio = null;
+        $periodoFin = null;
+
+        // Si tenemos suscripción, la recuperamos para obtener las fechas del periodo
+        if ($stripeSubscriptionId && config('services.stripe.secret')) {
+            try {
+                $response = Http::withBasicAuth((string) config('services.stripe.secret'), '')
+                    ->get('https://api.stripe.com/v1/subscriptions/' . $stripeSubscriptionId);
+
+                if ($response->successful()) {
+                    $subscription = (object) $response->json();
+                    $periodoInicio = !empty($subscription->current_period_start)
+                        ? Carbon::createFromTimestamp((int) $subscription->current_period_start)->toDateTimeString()
+                        : null;
+                    $periodoFin = !empty($subscription->current_period_end)
+                        ? Carbon::createFromTimestamp((int) $subscription->current_period_end)->toDateTimeString()
+                        : null;
+                }
+            } catch (\Throwable $e) {
+                Log::error('Error recuperando suscripcion en checkout completed', ['error' => $e->getMessage()]);
+            }
+        }
+
         SuscripcionClinica::updateOrCreate(
             ['stripe_checkout_session_id' => $session->id],
             [
                 'id_clinica' => $idClinica,
                 'id_plan' => $idPlan,
                 'stripe_customer_id' => $session->customer ?? null,
-                'stripe_subscription_id' => $session->subscription ?? null,
+                'stripe_subscription_id' => $stripeSubscriptionId,
                 'estado' => ($session->payment_status ?? 'pending') === 'paid' ? 'active' : 'incomplete',
+                'periodo_inicio' => $periodoInicio,
+                'periodo_fin' => $periodoFin,
             ]
         );
     }
@@ -261,10 +287,10 @@ class SuscripcionController extends Controller
         $record->stripe_subscription_id = $stripeSubscriptionId;
         $record->estado = $status;
         $record->periodo_inicio = !empty($subscription->current_period_start)
-            ? Carbon::createFromTimestamp((int) $subscription->current_period_start)
+            ? Carbon::createFromTimestamp((int) $subscription->current_period_start)->toDateTimeString()
             : null;
         $record->periodo_fin = !empty($subscription->current_period_end)
-            ? Carbon::createFromTimestamp((int) $subscription->current_period_end)
+            ? Carbon::createFromTimestamp((int) $subscription->current_period_end)->toDateTimeString()
             : null;
         $record->auto_renovar = (bool) !($subscription->cancel_at_period_end ?? false);
         $record->save();
