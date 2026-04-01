@@ -48,22 +48,14 @@ class PacienteController extends Controller
                 ->value('id_doctor');
 
             if ($idDoctor) {
-                // Verificamos cuántos doctores activos hay en la clínica
-                $totalDoctores = DB::table('usuarios_sistema')
-                    ->where('id_clinica', $idClinica)
-                    ->where('rol', 'doctor')
-                    ->where('is_active', true)
-                    ->count();
-
-                if ($totalDoctores > 1) {
-                    // Si hay más de un doctor: El Doctor B no ve los registrados por el Doctor A.
-                    // Solo verá los que él mismo registró y los que registró la Recepcionista/Admin (NULL)
-                    $query->where(function($q) use ($idDoctor) {
-                        $q->where('created_by_doctor_id', $idDoctor)
-                          ->orWhereNull('created_by_doctor_id');
-                    });
-                }
-                // Si es el único doctor en la clínica, ve absolutamente todo.
+                // Un doctor solo ve a los pacientes que él mismo registró
+                // O aquellos que tienen al menos una cita asignada a él.
+                $query->where(function($q) use ($idDoctor) {
+                    $q->where('created_by_doctor_id', $idDoctor)
+                      ->orWhereHas('citas', function($citaQ) use ($idDoctor) {
+                          $citaQ->where('id_doctor', $idDoctor);
+                      });
+                });
             }
         }
 

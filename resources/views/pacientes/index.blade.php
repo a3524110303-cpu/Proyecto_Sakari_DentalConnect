@@ -537,7 +537,8 @@
 
                     <input type="text" name="emergencia_telefono" class="modern-input" placeholder="Teléfono Emergencia*"
                         required maxlength="15" value="{{ old('emergencia_telefono') }}"
-                        oninput="this.value = this.value.replace(/\D/g,'')">{{-- Salud --}}
+                        oninput="this.value = this.value.replace(/\D/g,'')">                    {{-- Salud --}}
+                    @if(Auth::user()->rol !== 'recepcionista')
                     <div class="full-width"
                         style="font-size: 0.78em; font-weight: 700; color: #f59e0b; text-transform: uppercase; border-bottom: 2px solid #fef3c7; padding-bottom: 6px; margin-top: 12px; margin-bottom: 5px;">
                         <i class="fa-solid fa-notes-medical" style="margin-right: 5px;"></i> Información de Salud
@@ -550,6 +551,7 @@
                         <textarea name="alergias" class="modern-input" rows="2" required
                             placeholder="Alergias a Medicamentos* (Si no tiene, escriba 'Ninguna')">{{ old('alergias') }}</textarea>
                     </div>
+                    @endif
                 </div>
 
                 <div style="text-align: center; margin-top: 25px;">

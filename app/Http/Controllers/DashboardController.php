@@ -32,9 +32,21 @@ class DashboardController extends Controller
         $hoy = Carbon::today();
         $ahora = Carbon::now();
 
+        $idDoctor = null;
+        if ($user->rol === 'doctor') {
+            $idDoctor = DB::table('doctores')->where('id_usuario', $user->id_usuario)->value('id_doctor');
+        }
+
+        $citasBaseQuery = function ($query) use ($idClinica, $idDoctor) {
+            $query->where('id_clinica', $idClinica);
+            if ($idDoctor) {
+                $query->where('id_doctor', $idDoctor);
+            }
+        };
+
         // Citas futuras
         $citasFuturas = Cita::with(['paciente','servicio'])
-            ->where('id_clinica',$idClinica)
+            ->where($citasBaseQuery)
             ->where('fecha_hora_inicio','>=',$ahora)
             ->whereIn('estado_cita', ['pendiente', 'confirmada'])
             ->orderBy('fecha_hora_inicio','asc')
@@ -42,7 +54,7 @@ class DashboardController extends Controller
 
         // Citas vencidas
         $citasVencidas = Cita::with(['paciente','servicio'])
-            ->where('id_clinica',$idClinica)
+            ->where($citasBaseQuery)
             ->where('fecha_hora_inicio','<',$ahora)
             ->whereIn('estado_cita', ['pendiente', 'confirmada'])
             ->orderBy('fecha_hora_inicio','desc')
@@ -51,23 +63,39 @@ class DashboardController extends Controller
         $proximasCitas = $citasFuturas->concat($citasVencidas)->take(15);
 
         // Citas de hoy
-        $citasHoyCount = Cita::where('id_clinica',$idClinica)
+        $citasHoyCount = Cita::where($citasBaseQuery)
             ->whereDate('fecha_hora_inicio',$hoy)
             ->whereIn('estado_cita', ['pendiente', 'confirmada'])
             ->count();
 
         // Pacientes activos
-        $totalPacientes = Paciente::whereHas('usuario',function($q) use ($idClinica){
-            $q->where('id_clinica',$idClinica);
+        $pacientesQuery = Paciente::whereHas('usuario',function($q) use ($idClinica){
+            $q->where('id_clinica',$idClinica)
+              ->where('rol', 'paciente');
         })
-        ->where('is_active',true)
-        ->count();
+        ->where('is_active',true);
+
+        if ($idDoctor) {
+             $pacientesQuery->where(function($q) use ($idDoctor) {
+                 $q->where('created_by_doctor_id', $idDoctor)
+                   ->orWhereHas('citas', function($citaQ) use ($idDoctor) {
+                       $citaQ->where('id_doctor', $idDoctor);
+                   });
+             });
+        }
+        $totalPacientes = $pacientesQuery->count();
 
         // Ingresos del mes
-        $ingresosMes = IngresoCaja::where('id_clinica',$idClinica)
+        $ingresosQuery = IngresoCaja::where('id_clinica',$idClinica)
             ->whereMonth('fecha_ingreso',$hoy->month)
-            ->whereYear('fecha_ingreso',$hoy->year)
-            ->sum('monto');
+            ->whereYear('fecha_ingreso',$hoy->year);
+            
+        if ($idDoctor) {
+            $ingresosQuery->whereHas('cita', function($q) use ($idDoctor) {
+                $q->where('id_doctor', $idDoctor);
+            });
+        }
+        $ingresosMes = $ingresosQuery->sum('monto');
 
         // Inventario bajo
         $itemsBajoStock = Inventario::where('id_clinica',$idClinica)

@@ -93,10 +93,13 @@ class CitaController extends Controller
             $duracionMinutos = (int) $request->input('duracion_minutos', 30);
             $finHora = $fechaHora->copy()->addMinutes($duracionMinutos);
 
-            // 🚫 VALIDACIÓN 1: no permitir horas pasadas
-            if ($fechaHora < Carbon::now($timezone)) { // Validar con la zona horaria correcta
+            // 🚫 VALIDACIÓN 1: no permitir agendar en días anteriores
+            // (La hora exacta se delega a la validación en JS del navegador 
+            // para evitar falsos positivos por discrepancia de zonas horarias)
+            $hoy = Carbon::now($timezone)->startOfDay();
+            if ($fechaHora->startOfDay() < $hoy) {
                 return back()
-                    ->with('error', 'No puedes agendar en una hora pasada.')
+                    ->with('error', 'No puedes agendar citas en un día del pasado.')
                     ->withInput();
             }
 
