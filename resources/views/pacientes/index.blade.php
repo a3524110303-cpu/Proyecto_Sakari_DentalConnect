@@ -1390,19 +1390,56 @@
                     return;
                 }
 
-                list.innerHTML = json.data.map(cita => {
+                // IDENTIFICAR LA PRÓXIMA CITA
+                const ahora = new Date();
+                let proximaCita = null;
+                const citasPendientes = json.data.filter(c => new Date(c.fecha_hora_inicio) >= ahora && (c.estado_cita === 'pendiente' || c.estado_cita === 'confirmada'));
+                
+                if (citasPendientes.length > 0) {
+                    // Ordenar para obtener la más próxima
+                    proximaCita = citasPendientes.sort((a,b) => new Date(a.fecha_hora_inicio) - new Date(b.fecha_hora_inicio))[0];
+                }
+
+                let htmlContent = '';
+                
+                // RENDERIZAR PRÓXIMA CITA DESTACADA
+                if (proximaCita) {
+                    htmlContent += `
+                    <div style="background: #e0fbfc; border-left: 4px solid #00b4d8; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 5px 0; color: #0077b6;"><i class="fa-solid fa-calendar-check"></i> Próxima Consulta Programada</h5>
+                        <p style="margin: 0; font-size: 0.95rem; color: #023e8a;">
+                            <strong>${new Date(proximaCita.fecha_hora_inicio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</strong> 
+                            - ${proximaCita.servicio ? proximaCita.servicio.nombre_servicio : 'Consulta'}
+                        </p>
+                    </div>`;
+                }
+
+                // RENDERIZAR HISTORIAL CON SUS PAGOS
+                htmlContent += json.data.map(cita => {
                     const statusClass = cita.estado_cita === 'completada' ? 'color:#10b981;' : (cita.estado_cita === 'cancelada' ? 'color:#ef4444;' : 'color:#f59e0b;');
-                    return `<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display: flex; justify-content: space-between; align-items: center;">
-                                                                                                        <div>
-                                                                                                            <h5 style="margin:0 0 5px 0; font-size: 1rem; color: #2b2d42;">${cita.servicio ? cita.servicio.nombre_servicio : 'Consulta General'}</h5>
-                                                                                                            <span style="font-size: 0.85rem; color: #6c757d;"><i class="fa-solid fa-calendar-day"></i> ${new Date(cita.fecha_hora_inicio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</span>
-                                                                                                            ${cita.notas ? `<p style="margin:5px 0 0 0; font-size:0.85rem; color:#555;"><i>"${cita.notas}"</i></p>` : ''}
-                                                                                                        </div>
-                                                                                                        <div style="text-align: right;">
-                                                                                                            <span style="font-weight: 800; font-size: 0.85em; text-transform: uppercase; ${statusClass}">${cita.estado_cita}</span>
-                                                                                                        </div>
-                                                                                                    </div>`;
+                    
+                    let pagosHtml = '';
+                    if (cita.ingresos && cita.ingresos.length > 0) {
+                        const totalPagado = cita.ingresos.reduce((sum, ing) => sum + parseFloat(ing.monto), 0);
+                        pagosHtml = `<span style="font-weight: 700; color: #10b981; font-size: 0.9rem; margin-top: 5px; display: inline-block;">
+                                        <i class="fa-solid fa-money-bill-wave"></i> Pago registrado: $${totalPagado.toFixed(2)}
+                                     </span>`;
+                    }
+
+                    return `<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div>
+                                    <h5 style="margin:0 0 5px 0; font-size: 1rem; color: #2b2d42;">${cita.servicio ? cita.servicio.nombre_servicio : 'Consulta General'}</h5>
+                                    <span style="font-size: 0.85rem; color: #6c757d;"><i class="fa-solid fa-calendar-day"></i> ${new Date(cita.fecha_hora_inicio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</span>
+                                    ${cita.notas ? `<p style="margin:5px 0 0 0; font-size:0.85rem; color:#555;"><i>"${cita.notas}"</i></p>` : ''}
+                                    <br>${pagosHtml}
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-weight: 800; font-size: 0.85em; text-transform: uppercase; ${statusClass}">${cita.estado_cita}</span>
+                                </div>
+                            </div>`;
                 }).join('');
+
+                list.innerHTML = htmlContent;
             } catch (e) {
                 list.innerHTML = '<p style="text-align:center;color:#ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Error al cargar historial.</p>';
             }

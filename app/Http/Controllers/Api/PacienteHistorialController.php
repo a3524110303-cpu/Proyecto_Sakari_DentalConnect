@@ -166,7 +166,7 @@ class PacienteHistorialController extends Controller
      */
     public function historialCitas($idPaciente)
     {
-        $citas = Cita::with(['servicio', 'doctor'])
+        $citas = Cita::with(['servicio', 'doctor', 'ingresos'])
             ->where('id_paciente', $idPaciente)
             ->orderBy('fecha_hora_inicio', 'desc')
             ->get();

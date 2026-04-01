@@ -83,16 +83,18 @@ class CitaController extends Controller
             }
 
             // 🕒 Crear fecha inicio y fin
+            $timezone = config('app.timezone', 'America/Mexico_City'); // Asegurar zona horaria local
             $fechaHora = Carbon::createFromFormat(
                 'Y-m-d H:i',
-                $request->fecha . ' ' . $request->hora
+                $request->fecha . ' ' . $request->hora,
+                $timezone
             );
 
             $duracionMinutos = (int) $request->input('duracion_minutos', 30);
             $finHora = $fechaHora->copy()->addMinutes($duracionMinutos);
 
             // 🚫 VALIDACIÓN 1: no permitir horas pasadas
-            if ($fechaHora < Carbon::now()) {
+            if ($fechaHora < Carbon::now($timezone)) { // Validar con la zona horaria correcta
                 return back()
                     ->with('error', 'No puedes agendar en una hora pasada.')
                     ->withInput();

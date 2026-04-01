@@ -37,7 +37,8 @@ class PacienteController extends Controller
 
         // 1. Iniciamos la consulta para traer solo a los de esta clínica
         $query = Paciente::whereHas('usuario', function ($q) use ($idClinica) {
-            $q->where('id_clinica', $idClinica);
+            $q->where('id_clinica', $idClinica)
+              ->where('rol', 'paciente'); // <--- AÑADIR ESTE FILTRO PARA OCULTAR DOCTORES
         })->where('is_active', true);
 
         // 2. Si el usuario es doctor, individualizamos
