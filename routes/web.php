@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\DashboardController;
@@ -143,56 +144,12 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
 });
 
 
-// 📂 SERVIR ARCHIVOS (FIX RAILWAY)
-Route::get('/storage-file/{path}', function ($path) {
-    if (strpos($path, '..') !== false) {
-        abort(403);
-    }
+Route::get('/mostrar-imagen-publicidad', function (Request $request) {
+    $path = storage_path('app/public/' . $request->query('path'));
 
-    $rawPath = ltrim((string) $path, '/');
-    $decodedPath = ltrim(rawurldecode($rawPath), '/');
-
-    $candidatos = array_values(array_unique([
-        $decodedPath,
-        preg_replace('#^public/#', '', $decodedPath),
-    ]));
-
-    $disk = Storage::disk('public');
-    $roots = array_values(array_unique(array_filter([
-        config('filesystems.disks.public.root'),
-        env('PUBLIC_DISK_ROOT'),
-        env('RAILWAY_VOLUME_MOUNT_PATH') ? rtrim(env('RAILWAY_VOLUME_MOUNT_PATH'), '/\\') . '/public' : null,
-        storage_path('app/public'),
-    ])));
-
-    $fullPath = null;
-    foreach ($candidatos as $rel) {
-        if ($rel === null || $rel === '') {
-            continue;
-        }
-
-        if ($disk->exists($rel)) {
-            foreach ($roots as $root) {
-                $pathCandidate = rtrim((string) $root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $rel;
-                if (file_exists($pathCandidate)) {
-                    $fullPath = $pathCandidate;
-                    break 2;
-                }
-            }
-        } else {
-            foreach ($roots as $root) {
-                $pathCandidate = rtrim((string) $root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $rel;
-                if (file_exists($pathCandidate)) {
-                    $fullPath = $pathCandidate;
-                    break 2;
-                }
-            }
-        }
-    }
-
-    if (!$fullPath || !file_exists($fullPath)) {
+    if (!file_exists($path) || !$request->query('path')) {
         abort(404);
     }
 
-    return response()->file($fullPath);
-})->where('path', '.*')->name('storage.file');
+    return response()->file($path);
+})->name('storage.file');
