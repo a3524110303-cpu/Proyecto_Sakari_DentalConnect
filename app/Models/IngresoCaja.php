@@ -39,7 +39,7 @@ class IngresoCaja extends Model
 
     public function clinica()
     {
-        return $this->belongsTo(Clinica::class, 'clinica_id'); // Asegúrate de que tu llave foránea no sea 'id_clinica' en lugar de 'clinica_id'
+        return $this->belongsTo(Clinica::class, 'id_clinica', 'id_clinica');
     }
 
     // 👇 AGREGA ESTA RELACIÓN NUEVA 👇
