@@ -40,20 +40,29 @@ class PacienteController extends Controller
             $q->where('id_clinica', $idClinica);
         })->where('is_active', true);
 
-        // 2. Si el usuario es doctor, individualizamos para que NO vea los pacientes de otros doctores
+        // 2. Si el usuario es doctor, individualizamos
         if ($rol === 'doctor') {
-            // Obtenemos el id del doctor basado en el usuario logueado
-            $idDoctor = \Illuminate\Support\Facades\DB::table('doctores')
+            $idDoctor = DB::table('doctores')
                 ->where('id_usuario', Auth::user()->id_usuario)
                 ->value('id_doctor');
 
             if ($idDoctor) {
-                // Solo trae pacientes que tengan al menos una cita con este doctor O que él mismo haya registrado
-                $query->where(function($q) use ($idDoctor) {
-                    $q->whereHas('citas', function($subQ) use ($idDoctor) {
-                        $subQ->where('id_doctor', $idDoctor);
-                    })->orWhere('created_by_doctor_id', $idDoctor);
-                });
+                // Verificamos cuántos doctores activos hay en la clínica
+                $totalDoctores = DB::table('usuarios_sistema')
+                    ->where('id_clinica', $idClinica)
+                    ->where('rol', 'doctor')
+                    ->where('is_active', true)
+                    ->count();
+
+                if ($totalDoctores > 1) {
+                    // Si hay más de un doctor: El Doctor B no ve los registrados por el Doctor A.
+                    // Solo verá los que él mismo registró y los que registró la Recepcionista/Admin (NULL)
+                    $query->where(function($q) use ($idDoctor) {
+                        $q->where('created_by_doctor_id', $idDoctor)
+                          ->orWhereNull('created_by_doctor_id');
+                    });
+                }
+                // Si es el único doctor en la clínica, ve absolutamente todo.
             }
         }
 
