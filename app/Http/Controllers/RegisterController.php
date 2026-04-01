@@ -124,11 +124,9 @@ class RegisterController extends Controller
                 'rol' => 'doctor',
             ]);
 
-            // 3. Crear automáticamente el perfil de Doctor vinculado al usuario
-            DB::table('doctores')->insert([
+            // 3. Crear automáticamente el perfil de Doctor vinculado al usuario usando Eloquent
+            \App\Models\Doctor::create([
                 'id_usuario' => $usuario->id_usuario,
-                'created_at' => now(),
-                'updated_at' => now(),
             ]);
         });
 
