@@ -214,7 +214,7 @@ class CitaController extends Controller
     public function buscarDoctorDisponible(int $idClinica, Carbon $inicio, Carbon $fin): ?int
     {
         // 🔥 REGLA DE ORO: Si ya hay UNA cita (pendiente o confirmada) en toda la clínica 
-        // en este horario, bloqueamos la hora por completo, sin importar cuántos doctores haya.
+        // en este horario, bloqueamos la hora por completo.
         $citaEnClinica = Cita::where('id_clinica', $idClinica)
             ->whereIn('estado_cita', ['pendiente', 'confirmada'])
             ->where('fecha_hora_inicio', '<', $fin)
@@ -222,12 +222,10 @@ class CitaController extends Controller
             ->exists();
 
         if ($citaEnClinica) {
-            // El horario ya está ocupado físicamente en la clínica, negamos el espacio.
             return null; 
         }
 
-        // Si la clínica está totalmente libre, buscamos un doctor que no tenga 
-        // un "bloqueo manual" (como horario de comida o vacaciones)
+        // Si la clínica está totalmente libre, buscamos un doctor de ESTA CLÍNICA
         $doctores = DB::table('doctores')
             ->join('usuarios_sistema', 'doctores.id_usuario', '=', 'usuarios_sistema.id_usuario')
             ->where('usuarios_sistema.id_clinica', $idClinica)
@@ -235,15 +233,18 @@ class CitaController extends Controller
 
         foreach ($doctores as $idDoctor) {
             // 🚫 Validar bloqueos manuales del doctor
+            // Agregamos un join para asegurar que el bloqueo pertenezca a la clínica actual
             $tieneBloqueo = DB::table('horarios_bloqueados')
-                ->where('id_doctor', $idDoctor)
-                ->where('estatus_horario', 'activo')
-                ->where('fecha_inicio', '<', $fin)
-                ->where('fecha_fin', '>', $inicio)
+                ->join('doctores', 'horarios_bloqueados.id_doctor', '=', 'doctores.id_doctor')
+                ->join('usuarios_sistema', 'doctores.id_usuario', '=', 'usuarios_sistema.id_usuario')
+                ->where('usuarios_sistema.id_clinica', $idClinica)
+                ->where('horarios_bloqueados.id_doctor', $idDoctor)
+                ->where('horarios_bloqueados.estatus_horario', 'activo')
+                ->where('horarios_bloqueados.fecha_inicio', '<', $fin)
+                ->where('horarios_bloqueados.fecha_fin', '>', $inicio)
                 ->exists();
 
             if (!$tieneBloqueo) {
-                // Asignamos al primer doctor que esté disponible
                 return (int) $idDoctor; 
             }
         }

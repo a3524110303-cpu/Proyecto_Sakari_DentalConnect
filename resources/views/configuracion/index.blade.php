@@ -155,6 +155,12 @@
                     </div>
 
                     {{-- CAMPO AGREGADO --}}
+                    <div style="margin-bottom: 15px;">
+                        <label>Teléfono de Contacto</label>
+                        <input type="text" name="telefono" value="{{ $doctorUser->telefono }}" class="modern-input" 
+                            placeholder="Ej: +52 1 234 567 8900" maxlength="20">
+                    </div>
+
                     <div style="margin-top: 15px;">
                         <label>Sobre mí</label>
                         <textarea name="sobre_mi" id="sobre_mi" class="modern-input" rows="4" 

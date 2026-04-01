@@ -51,6 +51,9 @@ class UpdateUsuarioRequest extends FormRequest
             // --- CAMBIO AQUÍ: Agregamos sobre_mi ---
             'sobre_mi' => 'nullable|string|max:1000', 
             
+            // --- CAMBIO AQUÍ: Agregamos teléfono ---
+            'telefono' => 'nullable|string|max:20|regex:/^[0-9\-\+\s\(\)]+$/',
+            
             // Datos del doctor (opcionales, se ignoran para recepcionistas)
             'cedula_profesional' => 'nullable|string|max:20',
             'horario_default' => 'nullable|string|max:100',
@@ -67,6 +70,8 @@ class UpdateUsuarioRequest extends FormRequest
             'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
             'password.confirmed' => 'Las contraseñas no coinciden.',
             'sobre_mi.max' => 'La descripción no puede exceder los 1000 caracteres.',
+            'telefono.max' => 'El teléfono no puede exceder los 20 caracteres.',
+            'telefono.regex' => 'El formato del teléfono no es válido.',
         ];
     }
 }

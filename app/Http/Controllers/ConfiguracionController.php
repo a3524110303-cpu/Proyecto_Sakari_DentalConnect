@@ -80,12 +80,13 @@ class ConfiguracionController extends Controller
         $data = [
             'nombre_completo' => $validated['nombre_completo'],
             'email'           => $validated['email'],
-            'sobre_mi'        => $validated['sobre_mi'] ?? null, // <-- AQUÍ SE GUARDA TU TEXTO
+            'sobre_mi'        => $validated['sobre_mi'] ?? null, 
+            'telefono'        => $validated['telefono'] ?? null, // <-- AGREGADO
         ];
 
         // Actualizar contraseña solo si se proporcionó una nueva
         if (!empty($validated['password'])) {
-            $data['password'] = $validated['password']; 
+            $data['password'] = Hash::make($validated['password']); 
         }
 
         // Usamos una transacción para asegurar que si falla la parte del Doctor, no se rompa el User
