@@ -53,6 +53,7 @@ class Paciente extends Model
     protected $fillable = [
         'id_clinica',
         'id_usuario',            // Relación con el login (App Móvil)
+        'created_by_doctor_id',  // Relación con el doctor que lo creó
         'nombre',
         'apellido_paterno',
         'apellido_materno',

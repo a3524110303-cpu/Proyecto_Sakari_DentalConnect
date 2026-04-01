@@ -48,9 +48,11 @@ class PacienteController extends Controller
                 ->value('id_doctor');
 
             if ($idDoctor) {
-                // Solo trae pacientes que tengan al menos una cita con este doctor
-                $query->whereHas('citas', function($q) use ($idDoctor) {
-                    $q->where('id_doctor', $idDoctor);
+                // Solo trae pacientes que tengan al menos una cita con este doctor O que él mismo haya registrado
+                $query->where(function($q) use ($idDoctor) {
+                    $q->whereHas('citas', function($subQ) use ($idDoctor) {
+                        $subQ->where('id_doctor', $idDoctor);
+                    })->orWhere('created_by_doctor_id', $idDoctor);
                 });
             }
         }
@@ -128,8 +130,17 @@ class PacienteController extends Controller
             // ── 3. Crear el perfil del paciente ──
             $direccionCompuesta = $this->construirDireccionCompuesta($request);
 
+            // Obtener doctor si el registrador es doctor
+            $idDoctorCreador = null;
+            if (Auth::user()->rol === 'doctor') {
+                $idDoctorCreador = DB::table('doctores')
+                    ->where('id_usuario', Auth::user()->id_usuario)
+                    ->value('id_doctor');
+            }
+
             $paciente = Paciente::create([
                 'id_usuario' => $user->id_usuario,
+                'created_by_doctor_id' => $idDoctorCreador,
                 'id_contacto_emergencia' => $idContactoEmergencia,
                 'nombre' => $request->nombre,
                 'apellido_paterno' => $request->apellido_paterno,
