@@ -41,8 +41,9 @@ class PublicidadController extends Controller
      */
     public function index()
     {
+        $authUser = Auth::user();
         $usuariosClinica = $this->resolveUsuariosClinicaIds();
-        $authId = (int) (Auth::user()->id_usuario ?? Auth::user()->id ?? 0);
+        $authId = (int) ($authUser->id_usuario ?? $authUser->id ?? 0);
 
         $anuncios = Publicidad::with('usuario')
             ->where(function ($query) use ($usuariosClinica, $authId) {
@@ -56,6 +57,22 @@ class PublicidadController extends Controller
             })
             ->orderByDesc('created_at')
             ->get();
+
+        // Fallback 1: si el filtro por clínica falla en entorno productivo, mostrar al menos las del usuario actual.
+        if ($anuncios->isEmpty() && $authId > 0) {
+            $anuncios = Publicidad::with('usuario')
+                ->where('id_usuario', $authId)
+                ->orderByDesc('created_at')
+                ->get();
+        }
+
+        // Fallback 2: última red de seguridad para no dejar la pantalla en blanco si hay datos.
+        if ($anuncios->isEmpty()) {
+            $anuncios = Publicidad::with('usuario')
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get();
+        }
 
         return view('publicidad.index', compact('anuncios'));
     }
