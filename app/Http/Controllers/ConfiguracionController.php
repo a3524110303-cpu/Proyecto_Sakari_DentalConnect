@@ -234,6 +234,9 @@ class ConfiguracionController extends Controller
     /**
      * Sube o actualiza la foto de perfil del doctor.
      */
+    /**
+     * Sube o actualiza la foto de perfil del doctor.
+     */
     public function subirFotoDoctor(Request $request)
     {
         $request->validate([
@@ -241,19 +244,30 @@ class ConfiguracionController extends Controller
         ]);
 
         $user = Auth::user();
-        $doctorUser = User::where('id_clinica', $user->id_clinica)->where('rol', 'doctor')->first();
-        $doctor = $doctorUser ? Doctor::where('id_usuario', $doctorUser->id_usuario)->first() : null;
 
-        if (!$doctor) {
-            return back()->with('error', 'No se encontró el perfil del doctor.');
+        // 1. Validar que el usuario conectado sea realmente un doctor
+        if ($user->rol !== 'doctor') {
+            return back()->with('error', 'Solo los doctores pueden actualizar su foto de perfil.');
         }
 
+        // 2. Buscar el perfil EXCLUSIVO del doctor conectado
+        $doctor = Doctor::where('id_usuario', $user->id_usuario)->first();
+
+        if (!$doctor) {
+            return back()->with('error', 'No se encontró tu perfil de doctor.');
+        }
+
+        // 3. Borrar foto anterior si existe
         if ($doctor->foto_perfil && Storage::disk('public')->exists($doctor->foto_perfil)) {
             Storage::disk('public')->delete($doctor->foto_perfil);
         }
 
+        // 4. Guardar nueva foto
         $ruta = $request->file('foto_perfil')->store('fotos_doctores', 'public');
-        $doctor->update(['foto_perfil' => $ruta]);
+        
+        // 5. Usar asignación directa y save() (Esto evita errores si foto_perfil no está en el $fillable)
+        $doctor->foto_perfil = $ruta;
+        $doctor->save();
 
         return back()->with('success', 'Foto de perfil actualizada correctamente.');
     }
