@@ -93,7 +93,7 @@ class RegisterController extends Controller
                 // Si la clínica ya existe, usamos su ID para vincular al nuevo doctor
                 $clinicaId = $clinicaExistente->id_clinica;
             } else {
-                // Si no existe, crear la clínica
+                // Si no existe, crear la clínica (Solucionando el formato de timestamps)
                 $clinicaId = DB::table('clinicas')->insertGetId([
                     'nombre_comercial'   => $request->nombre_clinica,
                     'numero_telefono'    => $request->telefono_clinica,
@@ -104,8 +104,8 @@ class RegisterController extends Controller
                     'pais'               => $request->pais ?? 'México',
                     'codigo_postal'      => $request->codigo_postal,
                     'config_anticipo_pct'=> 0.00,
-                    'created_at'         => now(),
-                    'updated_at'         => now(),
+                    'created_at'         => now()->toDateTimeString(), // Formato exacto para MySQL
+                    'updated_at'         => now()->toDateTimeString(), // Formato exacto para MySQL
                 ]);
             }
 
@@ -116,6 +116,7 @@ class RegisterController extends Controller
                 ($request->apellido_materno ?? '')
             );
 
+            // Eloquent maneja los timestamps automáticamente aquí
             $usuario = User::create([
                 'id_clinica' => $clinicaId,
                 'nombre_completo' => $nombreCompleto,
