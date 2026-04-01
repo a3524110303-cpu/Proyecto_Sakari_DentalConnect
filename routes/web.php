@@ -59,6 +59,13 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
     Route::get('/suscripciones/success', [SuscripcionController::class, 'success'])->name('suscripciones.success');
     Route::get('/suscripciones/cancel', [SuscripcionController::class, 'cancel'])->name('suscripciones.cancel');
 
+    // ============================
+    // 🛠️ ADMIN PANEL (Sacado de la restricción de planes)
+    // ============================
+    Route::middleware('role:administrador')->group(function () {
+        Route::get('/admin/panel', [AdminPanelController::class, 'index'])->name('admin.panel');
+    });
+
 
     // ==========================================
     // 🔵 ZONA BÁSICA (Nivel 1 o superior)
@@ -116,13 +123,6 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
         // 📅 CITAS
         // ============================
         Route::post('/citas', [CitaController::class, 'store'])->name('citas.store');
-
-        // ============================
-        // 🛠️ ADMIN PANEL
-        // ============================
-        Route::middleware('role:administrador')->group(function () {
-            Route::get('/admin/panel', [AdminPanelController::class, 'index'])->name('admin.panel');
-        });
     });
 
     // ==========================================

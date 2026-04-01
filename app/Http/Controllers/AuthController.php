@@ -27,12 +27,12 @@ class AuthController extends Controller
             // CRÍTICO PARA SAAS MULTI-TENANT: Guardamos en sesión la clínica del usuario logueado
             $request->session()->put('id_clinica', Auth::user()->id_clinica);
 
-            // Redirigir al panel de administración si es un administrador
-            if (Auth::user()->rol === 'administrador') {
+            // REDIRECCIÓN INTELIGENTE:
+            if (Auth::user()->rol === 'admin' || Auth::user()->rol === 'administrador') {
                 return redirect()->route('admin.panel');
             }
 
-            return redirect()->intended('dashboard');
+            return redirect()->intended('/dashboard');
         }
 
         return back()->withErrors([
