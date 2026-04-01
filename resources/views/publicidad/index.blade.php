@@ -39,7 +39,7 @@
                     <h4 style="margin: 0 0 5px; color: #333;">{{ $ad->titulo }}</h4>
                     <div style="margin-bottom: 5px;">
                         <small style="color: #00b4d8; font-size: 0.75rem;">
-                            <i class="fa-solid fa-user-doctor"></i> {{ $ad->usuario->nombre_completo ?? 'Desconocido' }}
+                            <i class="fa-solid fa-user-doctor"></i> {{ optional($ad->usuario)->nombre_completo ?? 'Desconocido' }}
                         </small>
                     </div>
                     <p style="font-size: 0.85rem; color: #777; margin-bottom: 15px; height: 40px; overflow: hidden;">

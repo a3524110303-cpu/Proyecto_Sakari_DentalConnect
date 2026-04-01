@@ -11,19 +11,51 @@ use Illuminate\Support\Facades\Auth;
 class PublicidadController extends Controller
 {
     /**
+     * Obtiene IDs de usuarios de la clínica actual con fallback al usuario autenticado.
+     */
+    private function resolveUsuariosClinicaIds(): array
+    {
+        $authUser = Auth::user();
+        if (!$authUser) {
+            return [];
+        }
+
+        $ids = User::query()
+            ->where('id_clinica', $authUser->id_clinica)
+            ->pluck('id_usuario')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        $authId = (int) ($authUser->id_usuario ?? $authUser->id ?? 0);
+        if ($authId > 0 && !in_array($authId, $ids, true)) {
+            $ids[] = $authId;
+        }
+
+        return $ids;
+    }
+
+    /**
      * Muestra la lista de anuncios publicitarios ordenados por fecha.
      */
     public function index()
     {
-        $idClinica = Auth::user()->id_clinica;
-        
-        // 1. Obtenemos un arreglo solo con los IDs de los doctores/recepcionistas de esta clínica
-        $usuariosClinica = User::where('id_clinica', $idClinica)->pluck('id_usuario');
+        $usuariosClinica = $this->resolveUsuariosClinicaIds();
+        $authId = (int) (Auth::user()->id_usuario ?? Auth::user()->id ?? 0);
 
-        // 2. Buscamos directamente los anuncios que pertenezcan a esos usuarios (método infalible)
-        $anuncios = Publicidad::whereIn('id_usuario', $usuariosClinica)
-                              ->orderBy('created_at', 'desc')
-                              ->get();
+        $anuncios = Publicidad::with('usuario')
+            ->where(function ($query) use ($usuariosClinica, $authId) {
+                if (!empty($usuariosClinica)) {
+                    $query->whereIn('id_usuario', $usuariosClinica);
+                }
+
+                if ($authId > 0) {
+                    $query->orWhere('id_usuario', $authId);
+                }
+            })
+            ->orderByDesc('created_at')
+            ->get();
 
         return view('publicidad.index', compact('anuncios'));
     }
@@ -39,14 +71,19 @@ class PublicidadController extends Controller
         ]);
 
         try {
+            $authUser = Auth::user();
+            $authId = (int) ($authUser->id_usuario ?? $authUser->id ?? 0);
+            if ($authId <= 0) {
+                return redirect()->back()->with('error', 'No se pudo identificar el usuario para publicar.');
+            }
+
             $path = null;
             if ($request->hasFile('imagen')) {
                 $path = $request->file('imagen')->store('ads', 'public');
             }
 
             Publicidad::create([
-                // Usamos explícitamente Auth::user()->id_usuario para evitar errores de ID nulo
-                'id_usuario' => Auth::user()->id_usuario, 
+                'id_usuario' => $authId,
                 'titulo' => $request->titulo,
                 'descripcion' => $request->descripcion,
                 'imagen_path' => $path,
@@ -65,11 +102,20 @@ class PublicidadController extends Controller
      */
     public function destroy($id)
     {
-        $idClinica = Auth::user()->id_clinica;
-        $usuariosClinica = User::where('id_clinica', $idClinica)->pluck('id_usuario');
+        $usuariosClinica = $this->resolveUsuariosClinicaIds();
+        $authId = (int) (Auth::user()->id_usuario ?? Auth::user()->id ?? 0);
 
-        // Nos aseguramos de que solo pueda borrar anuncios de su propia clínica
-        $anuncio = Publicidad::whereIn('id_usuario', $usuariosClinica)->findOrFail($id);
+        $anuncio = Publicidad::where('id_publicidad', $id)
+            ->where(function ($query) use ($usuariosClinica, $authId) {
+                if (!empty($usuariosClinica)) {
+                    $query->whereIn('id_usuario', $usuariosClinica);
+                }
+
+                if ($authId > 0) {
+                    $query->orWhere('id_usuario', $authId);
+                }
+            })
+            ->firstOrFail();
 
         if ($anuncio->imagen_path) {
             Storage::disk('public')->delete($anuncio->imagen_path);
