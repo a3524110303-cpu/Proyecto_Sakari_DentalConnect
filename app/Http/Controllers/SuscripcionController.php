@@ -215,6 +215,13 @@ class SuscripcionController extends Controller
 
                 if ($response->successful()) {
                     $subscription = (object) $response->json();
+
+                    Log::info('--- DEBUG CHECKOUT COMPLETED ---', [
+                        'stripe_subscription_id' => $stripeSubscriptionId,
+                        'current_period_start' => $subscription->current_period_start ?? 'MISSING',
+                        'current_period_end' => $subscription->current_period_end ?? 'MISSING',
+                    ]);
+
                     $periodoInicio = !empty($subscription->current_period_start)
                         ? Carbon::createFromTimestamp((int) $subscription->current_period_start)->toDateTimeString()
                         : null;
@@ -286,6 +293,13 @@ class SuscripcionController extends Controller
         $record->stripe_customer_id = (string) ($subscription->customer ?? $record->stripe_customer_id);
         $record->stripe_subscription_id = $stripeSubscriptionId;
         $record->estado = $status;
+
+        Log::info('--- DEBUG SUBSCRIPTION EVENT ---', [
+            'event_subscription_id' => $stripeSubscriptionId,
+            'current_period_start' => $subscription->current_period_start ?? 'MISSING',
+            'current_period_end' => $subscription->current_period_end ?? 'MISSING',
+        ]);
+
         $record->periodo_inicio = !empty($subscription->current_period_start)
             ? Carbon::createFromTimestamp((int) $subscription->current_period_start)->toDateTimeString()
             : null;
