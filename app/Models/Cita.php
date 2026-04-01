@@ -103,7 +103,8 @@ protected $fillable = [
     // Relación: Doctor (Usuario)
     public function doctor()
     {
-        return $this->belongsTo(Doctor::class, 'id_doctor');
+        // Una cita pertenece a un doctor específico
+        return $this->belongsTo(Doctor::class, 'id_doctor', 'id_doctor');
     }
 
     // ESTA ES LA QUE FALTABA: Relación con el Servicio/Tratamiento principal

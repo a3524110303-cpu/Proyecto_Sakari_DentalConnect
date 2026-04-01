@@ -142,6 +142,22 @@ class PacienteAppController extends Controller
         return response()->json(['success' => true, 'data' => $citas]);
     }
 
+    public function misCitas()
+    {
+        $paciente = Auth::user()->paciente;
+
+        // Cargamos las citas con el doctor específico de cada una
+        $citas = Cita::with(['doctor.usuario', 'servicio', 'clinica'])
+            ->where('id_paciente', $paciente->id_paciente)
+            ->orderBy('fecha_hora_inicio', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $citas
+        ]);
+    }
+
     /**
      * Muestra estado de cuenta detallado con historial de abonos.
      */
