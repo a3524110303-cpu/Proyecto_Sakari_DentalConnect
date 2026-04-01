@@ -84,16 +84,14 @@ class RegisterController extends Controller
         }
 
         DB::transaction(function () use ($request) {
-            // 1. Buscar si ya existe una clínica con el mismo nombre comercial
+            // 1. Buscar o Crear la Clínica
             $clinicaExistente = DB::table('clinicas')
                 ->where('nombre_comercial', $request->nombre_clinica)
                 ->first();
 
             if ($clinicaExistente) {
-                // Si la clínica ya existe, usamos su ID para vincular al nuevo doctor
                 $clinicaId = $clinicaExistente->id_clinica;
             } else {
-                // Si no existe, crear la clínica (Solucionando el formato de timestamps)
                 $clinicaId = DB::table('clinicas')->insertGetId([
                     'nombre_comercial'   => $request->nombre_clinica,
                     'numero_telefono'    => $request->telefono_clinica,
@@ -109,25 +107,24 @@ class RegisterController extends Controller
                 ]);
             }
 
-            // 2. Crear el usuario en usuarios_sistema referenciando la clínica creada
-            $nombreCompleto = trim(
-                $request->nombre . ' ' .
-                $request->apellido_paterno . ' ' .
-                ($request->apellido_materno ?? '')
-            );
+            // 2. Crear el Usuario (Usando insertGetId para saltar eventos y correos)
+            $nombreCompleto = trim($request->nombre . ' ' . $request->apellido_paterno . ' ' . ($request->apellido_materno ?? ''));
 
-            // Eloquent maneja los timestamps automáticamente aquí
-            $usuario = User::create([
-                'id_clinica' => $clinicaId,
+            $userId = DB::table('usuarios_sistema')->insertGetId([
+                'id_clinica'      => $clinicaId,
                 'nombre_completo' => $nombreCompleto,
-                'email' => $request->email,
-                'password' => $request->password,
-                'rol' => 'doctor',
+                'email'           => $request->email,
+                'password'        => bcrypt($request->password), // Encriptamos la contraseña manualmente
+                'rol'             => 'doctor',
+                'created_at'      => now()->toDateTimeString(),
+                'updated_at'      => now()->toDateTimeString(),
             ]);
 
-            // 3. Crear automáticamente el perfil de Doctor vinculado al usuario usando Eloquent
-            \App\Models\Doctor::create([
-                'id_usuario' => $usuario->id_usuario,
+            // 3. Crear el perfil de Doctor vinculado
+            DB::table('doctores')->insert([
+                'id_usuario' => $userId,
+                'created_at' => now()->toDateTimeString(),
+                'updated_at' => now()->toDateTimeString(),
             ]);
         });
 
