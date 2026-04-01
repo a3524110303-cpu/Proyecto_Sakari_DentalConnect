@@ -93,13 +93,12 @@ class CitaController extends Controller
             $duracionMinutos = (int) $request->input('duracion_minutos', 30);
             $finHora = $fechaHora->copy()->addMinutes($duracionMinutos);
 
-            // 🚫 VALIDACIÓN 1: no permitir agendar en días anteriores
-            // (La hora exacta se delega a la validación en JS del navegador 
-            // para evitar falsos positivos por discrepancia de zonas horarias)
+            // 🚫 VALIDACIÓN 1: Bloquear día actual y anteriores (1 día de anticipación mínimo)
             $hoy = Carbon::now($timezone)->startOfDay();
-            if ($fechaHora->startOfDay() < $hoy) {
+
+            if ($fechaHora->copy()->startOfDay() <= $hoy) {
                 return back()
-                    ->with('error', 'No puedes agendar citas en un día del pasado.')
+                    ->with('error', 'Las citas deben programarse con al menos un día de anticipación. Por favor, selecciona una fecha a partir de mañana.')
                     ->withInput();
             }
 
@@ -253,23 +252,46 @@ class CitaController extends Controller
     }
 
     // 🔥 ENDPOINT PARA FRONTEND (horas ocupadas)
-  public function horasOcupadas(Request $request)
-{
-    $fecha = $request->input('fecha');
-    $user = Auth::user();
-    $idClinica = $this->resolveClinicaId($user);
+    public function horasOcupadas(Request $request)
+    {
+        $fecha = $request->input('fecha');
+        $user = Auth::user();
+        $idClinica = $this->resolveClinicaId($user);
+        $timezone = config('app.timezone', 'America/Mexico_City');
 
-    if (empty($fecha) || !$idClinica) {
-        return response()->json([
-            'ocupadas' => [],
-            'horas_ocupadas' => [],
-        ]);
-    }
+        if (empty($fecha) || !$idClinica) {
+            return response()->json([
+                'ocupadas' => [],
+                'horas_ocupadas' => [],
+            ]);
+        }
 
-    $citas = Cita::whereDate('fecha_hora_inicio', $fecha)
-        ->where('id_clinica', $idClinica)
-        ->whereIn('estado_cita', ['pendiente', 'confirmada'])
-        ->get();
+        $fechaSeleccionada = Carbon::parse($fecha, $timezone)->startOfDay();
+        $hoy = Carbon::now($timezone)->startOfDay();
+
+        // 🔥 SI EL USUARIO ELIGE HOY O UN DÍA PASADO:
+        // Retornamos un bloqueo total de horas para que no pueda seleccionar nada.
+        if ($fechaSeleccionada <= $hoy) {
+            $bloqueoTotal = [];
+            $inicioDia = Carbon::parse($fecha . ' 00:00');
+            $finDia = Carbon::parse($fecha . ' 23:45');
+            
+            while ($inicioDia <= $finDia) {
+                $bloqueoTotal[] = $inicioDia->format('H:i');
+                $inicioDia->addMinutes(15);
+            }
+
+            return response()->json([
+                'ocupadas' => $bloqueoTotal,
+                'horas_ocupadas' => $bloqueoTotal,
+                'mensaje' => 'No se permiten citas para el mismo día.'
+            ]);
+        }
+
+        $citas = Cita::whereDate('fecha_hora_inicio', $fecha)
+            ->where('id_clinica', $idClinica)
+            ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+            ->get();
 
     $horasOcupadas = [];
 
