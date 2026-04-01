@@ -158,6 +158,22 @@ class SuscripcionController extends Controller
             $this->handleSubscriptionEvent($eventObject);
         }
 
+        if ($eventType === 'invoice.payment_succeeded') {
+            $stripeSubscriptionId = (string) ($eventObject->subscription ?? '');
+            if ($stripeSubscriptionId && config('services.stripe.secret')) {
+                try {
+                    $response = Http::withBasicAuth((string) config('services.stripe.secret'), '')
+                        ->get('https://api.stripe.com/v1/subscriptions/' . $stripeSubscriptionId);
+
+                    if ($response->successful()) {
+                        $this->handleSubscriptionEvent((object) $response->json());
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('Error fetching subscription in invoice.payment_succeeded', ['error' => $e->getMessage()]);
+                }
+            }
+        }
+
         return response()->json(['received' => true]);
     }
 

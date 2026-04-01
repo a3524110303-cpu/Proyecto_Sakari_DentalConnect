@@ -32,28 +32,33 @@ class PacienteController extends Controller
 
     public function index()
     {
-        $user = Auth::user();
-        $idClinica = $user->id_clinica;
+        $idClinica = Auth::user()->id_clinica;
+        $rol = Auth::user()->rol;
 
+        // 1. Iniciamos la consulta para traer solo a los de esta clínica
         $query = Paciente::whereHas('usuario', function ($q) use ($idClinica) {
             $q->where('id_clinica', $idClinica);
         })->where('is_active', true);
 
-        // Aislamiento: el doctor solo ve pacientes con los que tiene citas
-        if ($user->rol === 'doctor') {
-            $doctor = \App\Models\Doctor::where('id_usuario', $user->id_usuario)->first();
+        // 2. Si el usuario es doctor, individualizamos para que NO vea los pacientes de otros doctores
+        if ($rol === 'doctor') {
+            // Obtenemos el id del doctor basado en el usuario logueado
+            $idDoctor = \Illuminate\Support\Facades\DB::table('doctores')
+                ->where('id_usuario', Auth::user()->id_usuario)
+                ->value('id_doctor');
 
-            if ($doctor) {
-                $query->whereHas('citas', function ($q) use ($doctor) {
-                    $q->where('id_doctor', $doctor->id_doctor);
+            if ($idDoctor) {
+                // Solo trae pacientes que tengan al menos una cita con este doctor
+                $query->whereHas('citas', function($q) use ($idDoctor) {
+                    $q->where('id_doctor', $idDoctor);
                 });
             }
         }
-        // recepcionista y admin_clinica ven TODOS los pacientes de la clínica (sin filtro extra)
 
+        // Los demás roles (recepcionista, admin) pasan directo y ven a todos
         $pacientes = $query->orderBy('created_at', 'desc')->get();
-
         $servicios = Servicio::where('id_clinica', $idClinica)->orderBy('nombre_servicio')->get();
+        
         return view('pacientes.index', compact('pacientes', 'servicios'));
     }
 
