@@ -29,7 +29,7 @@
                     <div
                         style="height: 180px; background: #f8f9fa; border-radius: 8px; margin-bottom: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                         @if($ad->imagen_path)
-                            <img src="{{ route('storage.file', ['path' => $ad->imagen_path]) }}" alt="{{ $ad->titulo }}"
+                            <img src="{{ asset('storage/' . $ad->imagen_path) }}" alt="{{ $ad->titulo }}"
                                 style="width: 100%; height: 100%; object-fit: cover;">
                         @else
                             <i class="fa-solid fa-image" style="font-size: 2rem; color: #ddd;"></i>
