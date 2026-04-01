@@ -5,42 +5,37 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Publicidad;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class PublicidadController extends Controller
 {
     /**
-     * Muestra SOLO los anuncios de la clínica del usuario autenticado.
-     * Filtrado estricto: obtenemos los id_usuario de los miembros de la clínica
-     * y luego filtramos la publicidad por esos usuarios.
+     * Muestra la lista de anuncios publicitarios ordenados por fecha.
      */
     public function index()
     {
         $idClinica = Auth::user()->id_clinica;
+        
+        // 1. Obtenemos un arreglo solo con los IDs de los doctores/recepcionistas de esta clínica
+        $usuariosClinica = User::where('id_clinica', $idClinica)->pluck('id_usuario');
 
-        // Obtenemos los IDs de todos los usuarios que pertenecen a ESTA clínica
-        $idsUsuariosClinica = User::where('id_clinica', $idClinica)
-            ->pluck('id_usuario')
-            ->toArray();
-
-        $anuncios = Publicidad::whereIn('id_usuario', $idsUsuariosClinica)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        // 2. Buscamos directamente los anuncios que pertenezcan a esos usuarios (método infalible)
+        $anuncios = Publicidad::whereIn('id_usuario', $usuariosClinica)
+                              ->orderBy('created_at', 'desc')
+                              ->get();
 
         return view('publicidad.index', compact('anuncios'));
     }
 
     /**
-     * Almacena una nueva promoción asociada al usuario autenticado.
-     * La seguridad de clínica está garantizada porque el id_usuario
-     * pertenece siempre al usuario autenticado.
+     * Almacena una nueva promoción publicitaria.
      */
     public function store(Request $request)
     {
         $request->validate([
-            'titulo'  => 'required|string|max:100',
-            'imagen'  => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'titulo' => 'required|string|max:100',
+            'imagen' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
         ]);
 
         try {
@@ -50,11 +45,12 @@ class PublicidadController extends Controller
             }
 
             Publicidad::create([
-                'id_usuario'  => Auth::id(),
-                'titulo'      => $request->titulo,
+                // Usamos explícitamente Auth::user()->id_usuario para evitar errores de ID nulo
+                'id_usuario' => Auth::user()->id_usuario, 
+                'titulo' => $request->titulo,
                 'descripcion' => $request->descripcion,
                 'imagen_path' => $path,
-                'activo'      => 1,
+                'activo' => 1
             ]);
 
             return redirect()->back()->with('success', '¡Promoción publicada correctamente!');
@@ -65,20 +61,15 @@ class PublicidadController extends Controller
     }
 
     /**
-     * Elimina una promoción verificando que pertenezca a la clínica del usuario.
+     * Elimina una promoción publicitaria.
      */
     public function destroy($id)
     {
         $idClinica = Auth::user()->id_clinica;
+        $usuariosClinica = User::where('id_clinica', $idClinica)->pluck('id_usuario');
 
-        // Obtenemos los IDs de usuarios de esta clínica para verificar pertenencia
-        $idsUsuariosClinica = User::where('id_clinica', $idClinica)
-            ->pluck('id_usuario')
-            ->toArray();
-
-        // Solo permite eliminar anuncios de SU clínica
-        $anuncio = Publicidad::whereIn('id_usuario', $idsUsuariosClinica)
-            ->findOrFail($id);
+        // Nos aseguramos de que solo pueda borrar anuncios de su propia clínica
+        $anuncio = Publicidad::whereIn('id_usuario', $usuariosClinica)->findOrFail($id);
 
         if ($anuncio->imagen_path) {
             Storage::disk('public')->delete($anuncio->imagen_path);
