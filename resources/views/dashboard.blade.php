@@ -845,7 +845,8 @@ Resumen de secciones:
                 if(f.estado.toLowerCase() === 'cancelada') colorEstado = '#ef4444'; // Rojo
                 // NUEVO: Color azul para diferenciar las filas que son "Historial/Actualización"
                 if(f.estado.toLowerCase() === 'actualización' || f.estado.toLowerCase() === 'actualizacion') colorEstado = '#00D1FF'; 
-
+                // Color naranja para filas de pago puro
+                if(f.estado.toLowerCase() === 'abono') colorEstado = '#f59e0b';
 
                 tr.innerHTML = `
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.dia}</td>

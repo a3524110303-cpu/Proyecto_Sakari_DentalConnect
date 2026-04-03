@@ -143,8 +143,15 @@ class DashboardController extends Controller
 
         $p = $cita->paciente;
 
-        $costoTotal  = floatval($cita->costo_estimado ?? 0);
-        $totalPagado = $cita->ingresos->sum('monto');
+        // ── FINANZAS GLOBALES DEL PACIENTE ──
+        // Sumamos costos y pagos de TODAS las citas del paciente en esta clínica,
+        // así los pagos no "desaparecen" al crear citas de seguimiento.
+        $todasCitasIds = Cita::where('id_paciente', $p->id_paciente)
+            ->where('id_clinica', $idClinica)
+            ->pluck('id_cita');
+
+        $costoTotal  = Cita::whereIn('id_cita', $todasCitasIds)->sum('costo_estimado');
+        $totalPagado = IngresoCaja::whereIn('id_cita', $todasCitasIds)->sum('monto');
         $saldo       = max(0, $costoTotal - $totalPagado);
 
         $pacienteData = null;
@@ -186,7 +193,6 @@ class DashboardController extends Controller
             ->get();
 
         $filasTabla = [];
-        $filasTabla = [];
         foreach ($citasPaciente as $c) {
             // Extraer el historial real. 
             $seguimientos = \App\Models\SeguimientoClinico::where('id_cita', $c->id_cita)->orderBy('id_seguimiento', 'asc')->get();
@@ -206,15 +212,21 @@ class DashboardController extends Controller
                     'hora' => $fechaBaseCita->format('h:i A') . ' – ' . $horaFinFormateada,
                     'seguimiento' => $c->motivo ?? ($c->servicio?->nombre_servicio ?? 'Consulta'),
                     'abono' => '0.00',
-                    'estado' => $c->estado_cita ?? 'Pendiente'
+                    'estado' => ucfirst($c->estado_cita ?? 'pendiente')
                 ];
             } else {
                 // La cita tiene movimientos
                 $eventos = collect();
 
                 foreach ($seguimientos as $seg) {
+                    // Usar la fecha real del seguimiento si tiene timestamps,
+                    // de lo contrario hereda la fecha de la cita base.
+                    $fechaSeg = $seg->created_at
+                        ? Carbon::parse($seg->created_at)
+                        : $fechaBaseCita;
+
                     $eventos->push([
-                        'fecha' => $fechaBaseCita, 
+                        'fecha' => $fechaSeg, 
                         'tipo' => 'seguimiento', 
                         'texto' => $seg->observaciones, 
                         'monto' => 0
@@ -255,6 +267,16 @@ class DashboardController extends Controller
                     }
 
                     $fechaObj = \Carbon\Carbon::parse($fechaStr);
+
+                    // Determinar estado de la fila: si solo tiene pagos sin seguimiento,
+                    // mostrar "Abono"; si tiene seguimiento, "Actualización".
+                    $tieneSeguimientos = $items->where('tipo', 'seguimiento')->count() > 0;
+                    $tienePagos = $montoTotal > 0;
+                    $estadoFila = 'Actualización';
+                    if ($tienePagos && !$tieneSeguimientos) {
+                        $estadoFila = 'Abono';
+                    }
+
                     $filasTabla[] = [
                         'timestamp' => $fechaObj->timestamp,
                         'id_cita' => $c->id_cita,
@@ -262,7 +284,7 @@ class DashboardController extends Controller
                         'hora' => $fechaObj->format('h:i A'), 
                         'seguimiento' => $textoFinal->implode(' | ') ?: ($c->servicio?->nombre_servicio ?? 'Consulta'),
                         'abono' => number_format($montoTotal, 2),
-                        'estado' => 'Actualización'
+                        'estado' => $estadoFila
                     ];
                 }
             }

@@ -24,7 +24,7 @@ class SeguimientoClinico extends Model
 
     protected $table = 'seguimiento_clinico';
     protected $primaryKey = 'id_seguimiento';
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'id_cita',
