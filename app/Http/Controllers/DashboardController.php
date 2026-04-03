@@ -188,16 +188,72 @@ class DashboardController extends Controller
 
         $filasTabla = [];
         foreach ($citasPaciente as $c) {
-            $pagadoCita = $c->ingresos->sum('monto');
-            $filasTabla[] = [
-                'id_cita' => $c->id_cita,
-                'dia' => Carbon::parse($c->fecha_hora_inicio)->format('d/m/Y'),
-                'hora' => Carbon::parse($c->fecha_hora_inicio)->format('h:i A') . ' – ' . Carbon::parse($c->fecha_hora_fin)->format('h:i A'),
-                'seguimiento' => $c->motivo ?? ($c->servicio?->nombre_servicio ?? 'Consulta'),
-                'abono' => number_format($pagadoCita, 2),
-                'estado' => $c->estado_cita ?? 'Pendiente'
-            ];
+            // Extraer el historial real (Seguimientos y Pagos) de esta cita
+            $seguimientos = \App\Models\SeguimientoClinico::where('id_cita', $c->id_cita)->orderBy('created_at', 'asc')->get();
+            $pagos = \App\Models\IngresoCaja::where('id_cita', $c->id_cita)->orderBy('created_at', 'asc')->get();
+
+            if ($seguimientos->isEmpty() && $pagos->isEmpty()) {
+                // Cita normal agendada que aún no tiene movimientos
+                $filasTabla[] = [
+                    'timestamp' => Carbon::parse($c->fecha_hora_inicio)->timestamp,
+                    'id_cita' => $c->id_cita,
+                    'dia' => Carbon::parse($c->fecha_hora_inicio)->format('d/m/Y'),
+                    'hora' => Carbon::parse($c->fecha_hora_inicio)->format('h:i A') . ' – ' . Carbon::parse($c->fecha_hora_fin)->format('h:i A'),
+                    'seguimiento' => $c->motivo ?? ($c->servicio?->nombre_servicio ?? 'Consulta'),
+                    'abono' => '0.00',
+                    'estado' => $c->estado_cita ?? 'Pendiente'
+                ];
+            } else {
+                // La cita tiene movimientos: Crear una fila por cada vez que se le dio a "Guardar Cambios"
+                $eventos = collect();
+
+                foreach ($seguimientos as $seg) {
+                    $eventos->push(['fecha' => $seg->created_at, 'tipo' => 'seguimiento', 'texto' => $seg->observaciones, 'monto' => 0]);
+                }
+
+                foreach ($pagos as $pago) {
+                    $eventos->push(['fecha' => $pago->created_at, 'tipo' => 'pago', 'texto' => $pago->descripcion ?? 'Abono registrado', 'monto' => $pago->monto]);
+                }
+
+                // Agrupar nota y pago si se hicieron en el mismo minuto
+                $agrupados = $eventos->groupBy(function($item) {
+                    return Carbon::parse($item['fecha'])->format('Y-m-d H:i');
+                });
+
+                foreach ($agrupados as $fechaStr => $items) {
+                    $textoFinal = collect();
+                    $montoTotal = 0;
+
+                    foreach ($items as $item) {
+                        if ($item['tipo'] === 'seguimiento') {
+                            $textoFinal->push($item['texto']);
+                        } else {
+                            $montoTotal += $item['monto'];
+                            if ($items->where('tipo', 'seguimiento')->count() === 0) {
+                                $textoFinal->push($item['texto']);
+                            }
+                        }
+                    }
+
+                    $fechaObj = Carbon::parse($fechaStr);
+                    $filasTabla[] = [
+                        'timestamp' => $fechaObj->timestamp,
+                        'id_cita' => $c->id_cita,
+                        'dia' => $fechaObj->format('d/m/Y'), 
+                        'hora' => $fechaObj->format('h:i A'), // Muestra la hora exacta en que se guardó el cambio
+                        'seguimiento' => $textoFinal->implode(' | ') ?: ($c->servicio?->nombre_servicio ?? 'Consulta'),
+                        'abono' => number_format($montoTotal, 2),
+                        'estado' => 'Actualización'
+                    ];
+                }
+            }
         }
+
+        // Ordenar absolutamente todo cronológicamente (lo más reciente arriba)
+        usort($filasTabla, function($a, $b) {
+            return $b['timestamp'] <=> $a['timestamp'];
+        });
+
 
         $finanzas = [
 

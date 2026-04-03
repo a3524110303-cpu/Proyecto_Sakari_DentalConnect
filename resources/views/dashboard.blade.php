@@ -816,8 +816,11 @@ Resumen de secciones:
                 
                 // Color según estado
                 let colorEstado = '#f59e0b'; // Pendiente/En Proceso
-                if(f.estado.toLowerCase() === 'completada') colorEstado = '#10b981';
-                if(f.estado.toLowerCase() === 'cancelada') colorEstado = '#ef4444';
+                if(f.estado.toLowerCase() === 'completada') colorEstado = '#10b981'; // Verde
+                if(f.estado.toLowerCase() === 'cancelada') colorEstado = '#ef4444'; // Rojo
+                // NUEVO: Color azul para diferenciar las filas que son "Historial/Actualización"
+                if(f.estado.toLowerCase() === 'actualización' || f.estado.toLowerCase() === 'actualizacion') colorEstado = '#00D1FF'; 
+
 
                 tr.innerHTML = `
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.dia}</td>
