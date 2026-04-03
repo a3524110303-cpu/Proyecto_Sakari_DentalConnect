@@ -26,7 +26,13 @@
                 </tr>
                 <tr>
                     <th>Estado</th>
-                    <td>{{ strtoupper($suscripcion->estado) }}</td>
+                    <td>
+                        @if($suscripcion->estado === 'active')
+                            <span style="color: #166534; font-weight: bold;">ACTIVA</span>
+                        @else
+                            <span style="color: #9f1239; font-weight: bold;">{{ strtoupper($suscripcion->estado) }}</span>
+                        @endif
+                    </td>
                 </tr>
                 <tr>
                     <th>Monto mensual</th>
@@ -45,6 +51,27 @@
                     <td>{{ $suscripcion->auto_renovar ? 'Si' : 'No' }}</td>
                 </tr>
             </table>
+
+            {{-- PANEL DE RENOVACIÓN PARA SUSCRIPCIONES INACTIVAS --}}
+            @if($suscripcion->estado !== 'active' && $suscripcion->estado !== 'trialing')
+                <div style="margin-top: 24px; padding: 20px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <h3 style="margin-top: 0; color: #1e293b; font-size: 1.125rem;">Tu suscripción ha expirado</h3>
+                    <p style="color: #475569; margin-bottom: 16px;">Para seguir disfrutando de los beneficios de DentalConnect, renueva tu plan actual o elige uno nuevo.</p>
+                    
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        @if(isset($suscripcion->plan) && $suscripcion->plan->slug)
+                        <form action="{{ route('suscripciones.checkout', $suscripcion->plan->slug) }}" method="POST" style="margin: 0;">
+                            @csrf
+                            <button type="submit" style="background-color: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                                Renovar {{ $suscripcion->plan->nombre }}
+                            </button>
+                        </form>
+                        @endif
+                        <a href="{{ route('landing') }}" style="color: #2563eb; text-decoration: none; font-weight: bold; padding: 10px 20px; border: 1px solid #2563eb; border-radius: 6px;">Ver otros planes</a>
+                    </div>
+                </div>
+            @endif
+
         @else
             <p style="margin:0 0 12px;color:#475569;">Aun no tienes una suscripcion activa.</p>
             <a href="{{ route('landing') }}" class="ghost-btn">Ir a planes</a>

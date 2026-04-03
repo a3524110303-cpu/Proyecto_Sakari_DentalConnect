@@ -54,23 +54,30 @@ class SuscripcionController extends Controller
                 ->with('error', 'Stripe no esta configurado en este entorno.');
         }
 
+        // Preparamos los datos base para Stripe
+        $sessionData = [
+            'mode' => 'subscription',
+            'line_items[0][price]' => $plan->stripe_price_id,
+            'line_items[0][quantity]' => 1,
+            'success_url' => route('suscripciones.success') . '?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url' => route('suscripciones.cancel'),
+            'metadata[id_clinica]' => (string) $clinica->id_clinica,
+            'metadata[id_plan]' => (string) $plan->id_plan,
+            'subscription_data[metadata][id_clinica]' => (string) $clinica->id_clinica,
+            'subscription_data[metadata][id_plan]' => (string) $plan->id_plan,
+        ];
+
+        // Verificar si la clínica ya tiene un cliente registrado en Stripe
+        $suscripcionPrevia = $clinica->suscripciones()->orderByDesc('created_at')->first();
+        if ($suscripcionPrevia && $suscripcionPrevia->stripe_customer_id) {
+            $sessionData['customer'] = $suscripcionPrevia->stripe_customer_id;
+        } else {
+            $sessionData['customer_email'] = Auth::user()->email;
+        }
+
         $response = Http::asForm()
             ->withBasicAuth((string) config('services.stripe.secret'), '')
-            ->post('https://api.stripe.com/v1/checkout/sessions', [
-                'mode' => 'subscription',
-                'line_items[0][price]' => $plan->stripe_price_id,
-                'line_items[0][quantity]' => 1,
-                'customer_email' => Auth::user()->email,
-                'success_url' => route('suscripciones.success') . '?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => route('suscripciones.cancel'),
-                // Metadata para la sesión del checkout (Ya lo tienes)
-                'metadata[id_clinica]' => (string) $clinica->id_clinica,
-                'metadata[id_plan]' => (string) $plan->id_plan,
-                
-                // 🔥 NUEVO: Metadata inyectada directamente en la Suscripción
-                'subscription_data[metadata][id_clinica]' => (string) $clinica->id_clinica,
-                'subscription_data[metadata][id_plan]' => (string) $plan->id_plan,
-            ]);
+            ->post('https://api.stripe.com/v1/checkout/sessions', $sessionData);
 
         if (!$response->successful()) {
             Log::error('Error creando checkout Stripe', ['body' => $response->body()]);
