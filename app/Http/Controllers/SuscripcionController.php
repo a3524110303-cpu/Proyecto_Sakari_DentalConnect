@@ -23,8 +23,43 @@ class SuscripcionController extends Controller
             ->orderByDesc('created_at')
             ->first();
 
+        // Si las fechas de periodo son nulas pero tenemos un ID de suscripción de Stripe,
+        // las recuperamos directamente desde la API de Stripe y las persistimos en BD.
+        if (
+            $suscripcion
+            && (is_null($suscripcion->periodo_inicio) || is_null($suscripcion->periodo_fin))
+            && !empty($suscripcion->stripe_subscription_id)
+            && config('services.stripe.secret')
+        ) {
+            try {
+                $response = Http::withBasicAuth((string) config('services.stripe.secret'), '')
+                    ->get('https://api.stripe.com/v1/subscriptions/' . $suscripcion->stripe_subscription_id);
+
+                if ($response->successful()) {
+                    $stripeSub = (object) $response->json();
+
+                    $periodoInicio = !empty($stripeSub->current_period_start)
+                        ? Carbon::createFromTimestamp((int) $stripeSub->current_period_start)->toDateTimeString()
+                        : null;
+
+                    $periodoFin = !empty($stripeSub->current_period_end)
+                        ? Carbon::createFromTimestamp((int) $stripeSub->current_period_end)->toDateTimeString()
+                        : null;
+
+                    if ($periodoInicio || $periodoFin) {
+                        $suscripcion->periodo_inicio = $periodoInicio;
+                        $suscripcion->periodo_fin    = $periodoFin;
+                        $suscripcion->save();
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo recuperar fechas de Stripe en show()', ['error' => $e->getMessage()]);
+            }
+        }
+
         return view('suscripciones.show', compact('suscripcion'));
     }
+
 
     public function checkout(Request $request, string $planSlug): RedirectResponse
     {
