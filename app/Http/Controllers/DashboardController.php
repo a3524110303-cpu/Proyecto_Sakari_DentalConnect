@@ -318,13 +318,41 @@ class DashboardController extends Controller
                 ], 422);
             }
 
-            $cita->id_doctor = $idDoctorDisponible;
-            $cita->fecha_hora_inicio=$nuevoInicio;
-            $cita->fecha_hora_fin=$nuevoFin;
+            // NUEVA LÓGICA: Separar reprogramación vs nueva cita de seguimiento
+            $hayNotasOPago = $request->filled('notas_seguimiento') || floatval($request->input('monto_abono', 0)) > 0;
+            $citaYaPasoOPasaHoy = \Carbon\Carbon::parse($cita->fecha_hora_inicio)->startOfDay() <= now()->startOfDay();
 
-            if ($esReagendaMovilPendiente) {
-                $cita->reagenda_estatus = 'aplicada';
+            if ($hayNotasOPago || $citaYaPasoOPasaHoy) {
+                // El paciente está siendo atendido. Crear NUEVA cita para su próxima visita.
+                \App\Models\Cita::create([
+                    'id_clinica' => $idClinica,
+                    'id_paciente' => $cita->id_paciente,
+                    'id_doctor' => $idDoctorDisponible,
+                    'id_servicio' => $cita->id_servicio,
+                    'fecha_hora_inicio' => $nuevoInicio,
+                    'fecha_hora_fin' => $nuevoFin,
+                    'estado_cita' => 'pendiente',
+                    'costo_estimado' => $cita->costo_estimado,
+                    'motivo' => 'Cita de seguimiento',
+                    'reagenda_estatus' => $esReagendaMovilPendiente ? 'aplicada' : 'ninguna'
+                ]);
+
+                // Marcar la cita de hoy como completada para que se quede en el historial
+                $cita->estado_cita = 'completada';
+                if ($esReagendaMovilPendiente) {
+                    $cita->reagenda_estatus = 'aplicada';
+                }
+            } else {
+                // Solo está reprogramando una cita futura (sin atenderla ni hacer pagos)
+                $cita->id_doctor = $idDoctorDisponible;
+                $cita->fecha_hora_inicio = $nuevoInicio;
+                $cita->fecha_hora_fin = $nuevoFin;
+
+                if ($esReagendaMovilPendiente) {
+                    $cita->reagenda_estatus = 'aplicada';
+                }
             }
+
 
         }
 
