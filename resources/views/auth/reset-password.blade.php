@@ -393,7 +393,9 @@
                     body: JSON.stringify({ email, token, password: newPassword, password_confirmation: confirmPassword })
                 });
 
-                const data = await response.json();
+                // Verificamos si la respuesta es JSON
+                const isJson = response.headers.get('content-type')?.includes('application/json');
+                const data = isJson ? await response.json() : null;
 
                 if (response.ok) {
                     alertBox.textContent = '¡Contraseña actualizada con éxito! Redirigiendo...';
@@ -404,12 +406,16 @@
                         window.location.href = '{{ route('login') }}';
                     }, 2500);
                 } else {
-                    alertBox.textContent = data.message || 'Error al actualizar la contraseña.';
+                    // Si el servidor manda un mensaje de error, lo mostramos (ej. token expirado)
+                    alertBox.textContent = data?.message || 'Error al actualizar la contraseña.';
                     alertBox.classList.add('alert-danger');
                     alertBox.style.display = 'block';
                 }
             } catch (error) {
-                alertBox.textContent = 'Problema de conexión con el servidor.';
+                // Imprimimos el error real en consola para depurar
+                console.error("Error en la petición de reset:", error);
+
+                alertBox.textContent = 'Problema de conexión con el servidor. Revisa la consola.';
                 alertBox.classList.add('alert-danger');
                 alertBox.style.display = 'block';
             } finally {
