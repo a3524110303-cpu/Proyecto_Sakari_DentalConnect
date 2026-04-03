@@ -38,13 +38,7 @@ class SuscripcionController extends Controller
                 if ($response->successful()) {
                     $stripeSub = (object) $response->json();
 
-                    $periodoInicio = !empty($stripeSub->current_period_start)
-                        ? Carbon::createFromTimestamp((int) $stripeSub->current_period_start)->toDateTimeString()
-                        : null;
-
-                    $periodoFin = !empty($stripeSub->current_period_end)
-                        ? Carbon::createFromTimestamp((int) $stripeSub->current_period_end)->toDateTimeString()
-                        : null;
+                    [$periodoInicio, $periodoFin] = $this->extractPeriodDates($stripeSub);
 
                     if ($periodoInicio || $periodoFin) {
                         $suscripcion->periodo_inicio = $periodoInicio;
@@ -274,18 +268,15 @@ class SuscripcionController extends Controller
                 if ($response->successful()) {
                     $subscription = (object) $response->json();
 
+                    [$periodoInicio, $periodoFin] = $this->extractPeriodDates($subscription);
+
                     Log::info('--- DEBUG CHECKOUT COMPLETED ---', [
                         'stripe_subscription_id' => $stripeSubscriptionId,
-                        'current_period_start' => $subscription->current_period_start ?? 'MISSING',
-                        'current_period_end' => $subscription->current_period_end ?? 'MISSING',
+                        'periodo_inicio_extraido' => $periodoInicio ?? 'NULL',
+                        'periodo_fin_extraido'    => $periodoFin    ?? 'NULL',
+                        'root_start'  => $subscription->current_period_start ?? 'MISSING_IN_ROOT',
+                        'items_start' => data_get((array)$subscription, 'items.data.0.current_period_start', 'MISSING_IN_ITEMS'),
                     ]);
-
-                    $periodoInicio = !empty($subscription->current_period_start)
-                        ? Carbon::createFromTimestamp((int) $subscription->current_period_start)->toDateTimeString()
-                        : null;
-                    $periodoFin = !empty($subscription->current_period_end)
-                        ? Carbon::createFromTimestamp((int) $subscription->current_period_end)->toDateTimeString()
-                        : null;
                 }
             } catch (\Throwable $e) {
                 Log::error('Error recuperando suscripcion en checkout completed', ['error' => $e->getMessage()]);
@@ -352,19 +343,58 @@ class SuscripcionController extends Controller
         $record->stripe_subscription_id = $stripeSubscriptionId;
         $record->estado = $status;
 
+        [$periodoInicioEvt, $periodoFinEvt] = $this->extractPeriodDates($subscription);
+
         Log::info('--- DEBUG SUBSCRIPTION EVENT ---', [
-            'event_subscription_id' => $stripeSubscriptionId,
-            'current_period_start' => $subscription->current_period_start ?? 'MISSING',
-            'current_period_end' => $subscription->current_period_end ?? 'MISSING',
+            'event_subscription_id'  => $stripeSubscriptionId,
+            'periodo_inicio_extraido' => $periodoInicioEvt ?? 'NULL',
+            'periodo_fin_extraido'   => $periodoFinEvt    ?? 'NULL',
+            'root_start'  => $subscription->current_period_start ?? 'MISSING_IN_ROOT',
+            'items_start' => data_get((array)$subscription, 'items.data.0.current_period_start', 'MISSING_IN_ITEMS'),
         ]);
 
-        $record->periodo_inicio = !empty($subscription->current_period_start)
-            ? Carbon::createFromTimestamp((int) $subscription->current_period_start)->toDateTimeString()
-            : null;
-        $record->periodo_fin = !empty($subscription->current_period_end)
-            ? Carbon::createFromTimestamp((int) $subscription->current_period_end)->toDateTimeString()
-            : null;
-        $record->auto_renovar = (bool) !($subscription->cancel_at_period_end ?? false);
+        $record->periodo_inicio = $periodoInicioEvt;
+        $record->periodo_fin    = $periodoFinEvt;
+        $record->auto_renovar   = (bool) !($subscription->cancel_at_period_end ?? false);
         $record->save();
+    }
+
+    /**
+     * Extrae current_period_start y current_period_end de un objeto suscripción de Stripe.
+     *
+     * Con billing_mode:flexible (API nueva), las fechas están en items.data[0].
+     * Con el formato legacy, están directamente en el nivel raíz.
+     * Este helper busca en ambos lugares para mantener compatibilidad.
+     *
+     * @return array{0: string|null, 1: string|null}
+     */
+    private function extractPeriodDates(object $subscription): array
+    {
+        // 1️⃣ Intentar nivel raíz (formato legacy de Stripe)
+        $rawStart = $subscription->current_period_start ?? null;
+        $rawEnd   = $subscription->current_period_end   ?? null;
+
+        // 2️⃣ Si no están en raíz, buscar en items.data[0] (billing_mode:flexible)
+        if (empty($rawStart) || empty($rawEnd)) {
+            $items = (array) ($subscription->items ?? []);
+            $itemsData = $items['data'] ?? [];
+
+            // data_get no funciona en stdClass directamente, usamos el cast
+            if (!empty($itemsData) && isset($itemsData[0])) {
+                $firstItem = (array) $itemsData[0];
+                $rawStart = $rawStart ?: ($firstItem['current_period_start'] ?? null);
+                $rawEnd   = $rawEnd   ?: ($firstItem['current_period_end']   ?? null);
+            }
+        }
+
+        $inicio = !empty($rawStart)
+            ? Carbon::createFromTimestamp((int) $rawStart)->toDateTimeString()
+            : null;
+
+        $fin = !empty($rawEnd)
+            ? Carbon::createFromTimestamp((int) $rawEnd)->toDateTimeString()
+            : null;
+
+        return [$inicio, $fin];
     }
 }
