@@ -274,16 +274,18 @@
             alertBox.className = 'alert';
 
             try {
-                // Actualizado para apuntar a tu API en producción en Railway
                 const response = await fetch('{{ url('/api/auth/forgot-password') }}', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json' // 🔥 OBLIGATORIO para que Laravel devuelva JSON
                     },
                     body: JSON.stringify({ email })
                 });
 
-                const data = await response.json();
+                // Primero verificamos si la respuesta es JSON antes de parsearla
+                const isJson = response.headers.get('content-type')?.includes('application/json');
+                const data = isJson ? await response.json() : null;
 
                 if (response.ok) {
                     alertBox.textContent = 'Si el correo existe, recibirás un enlace de recuperación pronto.';
@@ -291,17 +293,21 @@
                     alertBox.style.display = 'block';
                     document.getElementById('email').value = '';
                 } else {
-                    alertBox.textContent = data.message || 'Error al enviar la solicitud.';
+                    // Si el servidor manda un mensaje de error, lo mostramos
+                    alertBox.textContent = data?.message || 'Error al enviar la solicitud. Verifica el correo.';
                     alertBox.classList.add('alert-danger');
                     alertBox.style.display = 'block';
                 }
             } catch (error) {
-                alertBox.textContent = 'Problema de conexión con el servidor.';
+                // Imprimimos el error real en consola para depurar
+                console.error("Error en la petición:", error);
+                
+                alertBox.textContent = 'Problema de conexión con el servidor. Revisa la consola.';
                 alertBox.classList.add('alert-danger');
                 alertBox.style.display = 'block';
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Enviar Enlace';
+                submitBtn.textContent = 'Enviar Código'; // Regresamos al texto original
             }
         });
     </script>
