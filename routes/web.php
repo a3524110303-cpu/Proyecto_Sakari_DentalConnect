@@ -106,7 +106,7 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
         Route::get('/api/citas/ocupadas', [CitaController::class, 'horasOcupadas'])->name('api.citas.ocupadas');
 
         // ❌ ELIMINADA (ya no se usa)
-        Route::get('/api/calendario/horas-ocupadas', [CitaController::class, 'horasOcupadas']);
+        Route::get('/api/calendario/horas-ocupadas', [DashboardController::class, 'horasOcupadas']);
         Route::post('/api/pacientes/{id}/foto', [PacienteHistorialController::class, 'subirFotoProgreso'])->name('api.pacientes.foto');
         Route::get('/api/pacientes/{id}/citas', [PacienteHistorialController::class, 'historialCitas'])->name('api.pacientes.citas');
         Route::get('/api/pacientes/{id}/evoluciones', [PacienteHistorialController::class, 'evoluciones'])->name('api.pacientes.evoluciones');

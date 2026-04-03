@@ -1226,9 +1226,10 @@ function recalcularHorariosWidget() {
             const intervaloMinutos = parseInt(data.intervalo_minutos || 15, 10);
             
             // Validar si es el día de hoy para deshabilitar también las horas que ya pasaron
-            const esHoy = fechaString === new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const strHoy = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const esHoy = fechaString === strHoy;
             if (esHoy) {
-                const now = new Date();
                 // Si llamamos generarHorariosDisponibles, podemos mandarle las "horas ocupadas"
                 // Pero es más fácil inyectar las horas vencidas aquí
                 const [startH, startM] = (horaInicio || '08:00').split(':').map(Number);
