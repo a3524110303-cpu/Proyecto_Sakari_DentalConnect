@@ -189,8 +189,8 @@ class DashboardController extends Controller
         $filasTabla = [];
         foreach ($citasPaciente as $c) {
             // Extraer el historial real (Seguimientos y Pagos) de esta cita
-            $seguimientos = \App\Models\SeguimientoClinico::where('id_cita', $c->id_cita)->orderBy('created_at', 'asc')->get();
-            $pagos = \App\Models\IngresoCaja::where('id_cita', $c->id_cita)->orderBy('created_at', 'asc')->get();
+            $seguimientos = \App\Models\SeguimientoClinico::where('id_cita', $c->id_cita)->orderBy('id_seguimiento', 'asc')->get();
+            $pagos = \App\Models\IngresoCaja::where('id_cita', $c->id_cita)->orderBy('fecha_ingreso', 'asc')->get();
 
             if ($seguimientos->isEmpty() && $pagos->isEmpty()) {
                 // Cita normal agendada que aún no tiene movimientos
@@ -212,13 +212,14 @@ class DashboardController extends Controller
                 }
 
                 foreach ($pagos as $pago) {
-                    $eventos->push(['fecha' => $pago->created_at, 'tipo' => 'pago', 'texto' => $pago->descripcion ?? 'Abono registrado', 'monto' => $pago->monto]);
+                    $eventos->push(['fecha' => $pago->fecha_ingreso, 'tipo' => 'pago', 'texto' => $pago->descripcion ?? 'Abono registrado', 'monto' => $pago->monto]);
                 }
 
-                // Agrupar nota y pago si se hicieron en el mismo minuto
+                // Agrupar eventos que sucedieron en el mismo minuto para no hacer filas dobles
                 $agrupados = $eventos->groupBy(function($item) {
-                    return Carbon::parse($item['fecha'])->format('Y-m-d H:i');
+                    return $item['fecha']->format('Y-m-d H:i');
                 });
+
 
                 foreach ($agrupados as $fechaStr => $items) {
                     $textoFinal = collect();
