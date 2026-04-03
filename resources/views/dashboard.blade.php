@@ -494,7 +494,7 @@ Resumen de secciones:
                     </div>
 
                     <div style="display: flex; gap: 15px; margin-top: 30px;">
-                        <button type="button" onclick="closeWidgets()"
+                        <button type="button" onclick="cancelarHorario()"
                             style="flex: 1; background: rgba(0,0,0,0.05); color: #555; padding: 14px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer;">
                             Cancelar
                         </button>
@@ -774,6 +774,16 @@ Resumen de secciones:
 
     if(form){
         form.action = `/citas/${idCita}/actualizar`;
+        
+        // FIX: Limpiar valores previos para evitar fugas de estado a otras citas
+        document.getElementById('input-nueva-fecha').value = '';
+        document.getElementById('input-nueva-hora').value = '';
+        
+        const inputMonto = document.getElementById('input-monto-abono');
+        if(inputMonto) inputMonto.value = '';
+        
+        const textareaNotas = document.querySelector('textarea[name="notas_seguimiento"]');
+        if(textareaNotas) textareaNotas.value = '';
     }
 
     document.getElementById('lbl-nombre').innerText = 'Cargando...';
@@ -1658,6 +1668,12 @@ function confirmarHorario(){
         function closeWidgets() {
             document.getElementById('internal-widget-overlay').style.display = 'none';
             document.querySelectorAll('.inner-widget').forEach(w => w.style.display = 'none');
+        }
+
+        function cancelarHorario() {
+            document.getElementById('input-nueva-fecha').value = '';
+            document.getElementById('input-nueva-hora').value = '';
+            closeWidgets();
         }
 
         // Cierra los widgets si das clic afuera (en el overlay)
