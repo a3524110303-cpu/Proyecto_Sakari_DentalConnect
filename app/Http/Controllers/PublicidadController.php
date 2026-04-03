@@ -4,81 +4,33 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Publicidad;
-use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 
 class PublicidadController extends Controller
 {
     /**
-     * Obtiene IDs de usuarios de la clínica actual con fallback al usuario autenticado.
-     */
-    private function resolveUsuariosClinicaIds(): array
-    {
-        $authUser = Auth::user();
-        if (!$authUser) {
-            return [];
-        }
-
-        $ids = User::query()
-            ->where('id_clinica', $authUser->id_clinica)
-            ->pluck('id_usuario')
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->values()
-            ->all();
-
-        $authId = (int) ($authUser->id_usuario ?? $authUser->id ?? 0);
-        if ($authId > 0 && !in_array($authId, $ids, true)) {
-            $ids[] = $authId;
-        }
-
-        return $ids;
-    }
-
-    /**
-     * Muestra la lista de anuncios publicitarios ordenados por fecha.
+     * Muestra los anuncios publicitarios de la clínica autenticada.
+     * Solo se devuelven publicidades que pertenecen a la clínica del usuario actual.
      */
     public function index()
     {
-        $authUser = Auth::user();
-        $usuariosClinica = $this->resolveUsuariosClinicaIds();
-        $authId = (int) ($authUser->id_usuario ?? $authUser->id ?? 0);
+        $idClinica = Auth::user()->id_clinica;
+
+        if (! $idClinica) {
+            return view('publicidad.index', ['anuncios' => collect()]);
+        }
 
         $anuncios = Publicidad::with('usuario')
-            ->where(function ($query) use ($usuariosClinica, $authId) {
-                if (!empty($usuariosClinica)) {
-                    $query->whereIn('id_usuario', $usuariosClinica);
-                }
-
-                if ($authId > 0) {
-                    $query->orWhere('id_usuario', $authId);
-                }
-            })
+            ->where('id_clinica', $idClinica)
             ->orderByDesc('created_at')
             ->get();
-
-        // Fallback 1: si el filtro por clínica falla en entorno productivo, mostrar al menos las del usuario actual.
-        if ($anuncios->isEmpty() && $authId > 0) {
-            $anuncios = Publicidad::with('usuario')
-                ->where('id_usuario', $authId)
-                ->orderByDesc('created_at')
-                ->get();
-        }
-
-        // Fallback 2: última red de seguridad para no dejar la pantalla en blanco si hay datos.
-        if ($anuncios->isEmpty()) {
-            $anuncios = Publicidad::with('usuario')
-                ->orderByDesc('created_at')
-                ->limit(20)
-                ->get();
-        }
 
         return view('publicidad.index', compact('anuncios'));
     }
 
     /**
-     * Almacena una nueva promoción publicitaria.
+     * Almacena una nueva promoción publicitaria asociada a la clínica actual.
      */
     public function store(Request $request)
     {
@@ -87,51 +39,42 @@ class PublicidadController extends Controller
             'imagen' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
         ]);
 
-        try {
-            $authUser = Auth::user();
-            $authId = (int) ($authUser->id_usuario ?? $authUser->id ?? 0);
-            if ($authId <= 0) {
-                return redirect()->back()->with('error', 'No se pudo identificar el usuario para publicar.');
-            }
+        $authUser  = Auth::user();
+        $idClinica = $authUser->id_clinica;
+        $authId    = (int) ($authUser->id_usuario ?? $authUser->id ?? 0);
 
-            $path = null;
-            if ($request->hasFile('imagen')) {
-                $path = $request->file('imagen')->store('ads', 'public');
-            }
+        if (! $idClinica || $authId <= 0) {
+            return redirect()->back()->with('error', 'No se pudo identificar la clínica o el usuario para publicar.');
+        }
+
+        try {
+            $path = $request->file('imagen')->store('ads', 'public');
 
             Publicidad::create([
-                'id_usuario' => $authId,
-                'titulo' => $request->titulo,
+                'id_clinica'  => $idClinica,
+                'id_usuario'  => $authId,
+                'titulo'      => $request->titulo,
                 'descripcion' => $request->descripcion,
                 'imagen_path' => $path,
-                'activo' => 1
+                'activo'      => 1,
             ]);
 
             return redirect()->back()->with('success', '¡Promoción publicada correctamente!');
-
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error al publicar: ' . $e->getMessage());
         }
     }
 
     /**
      * Elimina una promoción publicitaria.
+     * Solo se puede eliminar si la publicidad pertenece a la clínica del usuario actual.
      */
     public function destroy($id)
     {
-        $usuariosClinica = $this->resolveUsuariosClinicaIds();
-        $authId = (int) (Auth::user()->id_usuario ?? Auth::user()->id ?? 0);
+        $idClinica = Auth::user()->id_clinica;
 
         $anuncio = Publicidad::where('id_publicidad', $id)
-            ->where(function ($query) use ($usuariosClinica, $authId) {
-                if (!empty($usuariosClinica)) {
-                    $query->whereIn('id_usuario', $usuariosClinica);
-                }
-
-                if ($authId > 0) {
-                    $query->orWhere('id_usuario', $authId);
-                }
-            })
+            ->where('id_clinica', $idClinica)
             ->firstOrFail();
 
         if ($anuncio->imagen_path) {

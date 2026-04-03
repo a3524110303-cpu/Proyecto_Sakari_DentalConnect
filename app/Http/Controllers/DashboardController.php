@@ -135,14 +135,18 @@ class DashboardController extends Controller
      */
     public function obtenerDatosModal($idCita)
     {
+        $idClinica = Auth::user()->id_clinica;
 
-        $cita = Cita::with(['paciente','servicio','ingresos'])->findOrFail($idCita);
+        // Verificar que la cita pertenece a la clínica del usuario autenticado
+        $cita = Cita::with(['paciente','servicio','ingresos'])
+            ->where('id_clinica', $idClinica)
+            ->findOrFail($idCita);
 
         $p = $cita->paciente;
 
-        $costoTotal = floatval($cita->costo_estimado ?? 0);
-        $totalPagado = $cita->ingresos ? $cita->ingresos->sum('monto') : 0;
-        $saldo = max(0,$costoTotal-$totalPagado);
+        $costoTotal  = floatval($cita->costo_estimado ?? 0);
+        $totalPagado = $cita->ingresos->sum('monto');
+        $saldo       = max(0, $costoTotal - $totalPagado);
 
         $pacienteData = null;
 
@@ -175,14 +179,16 @@ class DashboardController extends Controller
 
         }
 
+        // Solo mostrar citas de la misma clínica (evitar filtración entre tenants)
         $citasPaciente = Cita::with(['servicio', 'ingresos'])
             ->where('id_paciente', $p->id_paciente)
+            ->where('id_clinica', $idClinica)
             ->orderBy('fecha_hora_inicio', 'desc')
             ->get();
 
         $filasTabla = [];
         foreach ($citasPaciente as $c) {
-            $pagadoCita = $c->ingresos ? $c->ingresos->sum('monto') : 0;
+            $pagadoCita = $c->ingresos->sum('monto');
             $filasTabla[] = [
                 'id_cita' => $c->id_cita,
                 'dia' => Carbon::parse($c->fecha_hora_inicio)->format('d/m/Y'),
@@ -236,9 +242,11 @@ class DashboardController extends Controller
      */
     public function actualizarCita(Request $request,$idCita)
     {
-
-        $cita = Cita::findOrFail($idCita);
         $idClinica = Auth::user()->id_clinica;
+
+        // Verificar que la cita pertenece a la clínica del usuario autenticado
+        $cita = Cita::where('id_clinica', $idClinica)->findOrFail($idCita);
+
         $esReagendaMovilPendiente =
             $cita->reagenda_estatus === 'pendiente'
             && !empty($cita->reagenda_solicitada_at)
@@ -336,19 +344,29 @@ class DashboardController extends Controller
 
         }
 
-        if($request->filled('monto_abono') && $request->monto_abono>0){
+        $montoAbono = floatval($request->input('monto_abono', 0));
+        if ($montoAbono > 0) {
+            $metodoPago = $request->input('metodo_pago', 'efectivo');
+            $metodosValidos = ['efectivo', 'tarjeta', 'transferencia', 'otro'];
+            if (! in_array($metodoPago, $metodosValidos, true)) {
+                $metodoPago = 'efectivo';
+            }
 
-            IngresoCaja::create([
-
-                'id_clinica'=>Auth::user()->id_clinica ?? 1,
-                'id_cita'=>$cita->id_cita,
-                'monto'=>$request->monto_abono,
-                'fecha_ingreso'=>now(),
-                'metodo'=>'efectivo',
-                'descripcion'=>'Abono en cita: '.$cita->motivo
-
-            ]);
-
+            try {
+                IngresoCaja::create([
+                    'id_clinica'   => $idClinica,
+                    'id_cita'      => $cita->id_cita,
+                    'monto'        => $montoAbono,
+                    'fecha_ingreso' => now(),
+                    'metodo'       => $metodoPago,
+                    'descripcion'  => 'Abono en cita: ' . ($cita->motivo ?? ''),
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cita actualizada, pero no se pudo registrar el pago: ' . $e->getMessage(),
+                ], 422);
+            }
         }
 
         return response()->json([
@@ -370,8 +388,10 @@ class DashboardController extends Controller
      */
     public function completarCita($idCita)
     {
+        $idClinica = Auth::user()->id_clinica;
 
-        $cita=Cita::findOrFail($idCita);
+        // Verificar que la cita pertenece a la clínica del usuario autenticado
+        $cita = Cita::where('id_clinica', $idClinica)->findOrFail($idCita);
 
         $cita->estado_cita='completada';
         $cita->save();

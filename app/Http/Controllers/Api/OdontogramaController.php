@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Paciente;
 use Illuminate\Http\Request;
 use App\Models\Odontograma;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * API del Odontograma mapeada a las columnas reales de la tabla `odontograma`.
@@ -14,10 +16,28 @@ use App\Models\Odontograma;
 class OdontogramaController extends Controller
 {
     /**
+     * Verifica que el paciente pertenece a la clínica del usuario autenticado.
+     */
+    private function verificarPacienteClinica(int $idPaciente): void
+    {
+        $idClinica = Auth::user()->id_clinica;
+
+        $existe = Paciente::whereHas('usuario', function ($q) use ($idClinica) {
+            $q->where('id_clinica', $idClinica);
+        })->where('id_paciente', $idPaciente)->exists();
+
+        if (! $existe) {
+            abort(403, 'No tienes acceso a los datos de este paciente.');
+        }
+    }
+
+    /**
      * Obtiene todo el historial dental de un paciente.
      */
     public function index($id_paciente)
     {
+        $this->verificarPacienteClinica((int) $id_paciente);
+
         $registros = Odontograma::where('id_paciente', $id_paciente)
             ->orderBy('id_odontograma', 'desc')
             ->get();
@@ -46,6 +66,8 @@ class OdontogramaController extends Controller
             'observaciones' => 'nullable|string|max:1000',
         ]);
 
+        $this->verificarPacienteClinica((int) $validated['id_paciente']);
+
         $validated['fecha_registro'] = now();
 
         $registro = Odontograma::create($validated);
@@ -58,29 +80,8 @@ class OdontogramaController extends Controller
     }
 
     /**
-     * Actualiza un registro existente del odontograma.
-     */
-    public function update(Request $request, $id_odontograma)
-    {
-        $registro = Odontograma::findOrFail($id_odontograma);
-
-        $validated = $request->validate([
-            'cara_diente' => 'nullable|string|max:50',
-            'estado_diente' => 'nullable|string|max:50',
-            'observaciones' => 'nullable|string|max:1000',
-        ]);
-
-        $registro->update(array_filter($validated, fn($v) => !is_null($v)));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Registro actualizado correctamente.',
-            'data' => $registro,
-        ]);
-    }
-
-    /**
      * Elimina un registro del odontograma.
+     * Solo se permite si el paciente pertenece a la clínica del usuario.
      */
     public function destroy($id_odontograma)
     {
@@ -92,6 +93,8 @@ class OdontogramaController extends Controller
                 'message' => 'Registro no encontrado.',
             ], 404);
         }
+
+        $this->verificarPacienteClinica((int) $registro->id_paciente);
 
         $registro->delete();
 
