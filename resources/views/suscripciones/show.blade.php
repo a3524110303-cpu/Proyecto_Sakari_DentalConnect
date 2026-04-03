@@ -1,9 +1,9 @@
 @extends('layouts.app')
 
-@section('titulo', 'Mi Suscripcion')
+@section('titulo', 'Mi Suscripción')
 
 @section('contenido')
-    <h2 class="page-title">Mi Suscripcion</h2>
+    <h2 class="page-title">Mi Suscripción</h2>
 
     @if(session('success'))
         <div style="background:#ecfdf5;border:1px solid #bbf7d0;padding:12px;border-radius:10px;margin-bottom:14px;color:#166534;font-weight:700;">
@@ -47,7 +47,7 @@
                     <td>{{ optional($suscripcion->periodo_fin)->format('d/m/Y H:i') ?? 'N/A' }}</td>
                 </tr>
                 <tr>
-                    <th>Renovacion automatica</th>
+                    <th>Renovación automática</th>
                     <td>{{ $suscripcion->auto_renovar ? 'Si' : 'No' }}</td>
                 </tr>
             </table>
@@ -73,7 +73,7 @@
             @endif
 
         @else
-            <p style="margin:0 0 12px;color:#475569;">Aun no tienes una suscripcion activa.</p>
+            <p style="margin:0 0 12px;color:#475569;">Aún no tienes una suscripción activa.</p>
             <a href="{{ route('landing') }}" class="ghost-btn">Ir a planes</a>
         @endif
     </div>

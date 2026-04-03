@@ -699,9 +699,9 @@
 
                         <div>
                             @if(Auth::user()->rol !== 'recepcionista')
-                            <div
-                                style="background: #fff5f5; border: 1px solid #fed7d7; border-radius: 18px; padding: 22px; margin-bottom: 15px;">
-                                <h4 style="color: #c53030; margin-bottom:15px;"><i
+                            <div id="card-alergias"
+                                style="background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 18px; padding: 22px; margin-bottom: 15px;">
+                                <h4 id="title-alergias" style="color: #6b7280; margin-bottom:15px;"><i
                                         class="fa-solid fa-triangle-exclamation"></i>
                                     Alergias</h4>
                                 <div id="view-alergias-badges">
@@ -709,9 +709,9 @@
                                 </div>
                             </div>
 
-                            <div
-                                style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 18px; padding: 22px; margin-bottom: 25px;">
-                                <h4 style="color: #b45309; margin-bottom:12px;"><i class="fa-solid fa-notes-medical"></i>
+                            <div id="card-enfermedades"
+                                style="background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 18px; padding: 22px; margin-bottom: 25px;">
+                                <h4 id="title-enfermedades" style="color: #6b7280; margin-bottom:12px;"><i class="fa-solid fa-notes-medical"></i>
                                     Enfermedades Crónicas</h4>
                                 <p id="view-enfermedades"
                                     style="margin: 0; color: #555; font-size: 0.95rem; line-height: 1.5;">
@@ -1279,7 +1279,26 @@
             document.getElementById('view-direccion').innerText = construirDireccionPaciente(paciente);
             document.getElementById('view-ocupacion').innerText = paciente.ocupacion || 'S/D';
             const viewEnfermedades = document.getElementById('view-enfermedades');
-            if (viewEnfermedades) viewEnfermedades.innerText = paciente.enfermedades_cronicas || 'Ninguna registrada';
+            const cardEnfermedades = document.getElementById('card-enfermedades');
+            const titleEnfermedades = document.getElementById('title-enfermedades');
+            const enfVal = (paciente.enfermedades_cronicas || '').trim();
+            const sinEnf = !enfVal || enfVal.toLowerCase() === 'ninguna';
+            if (viewEnfermedades) viewEnfermedades.innerText = enfVal || 'Ninguna registrada';
+            if (cardEnfermedades) {
+                cardEnfermedades.style.background = sinEnf ? '#f8f9fa' : '#fffbeb';
+                cardEnfermedades.style.borderColor = sinEnf ? '#e5e7eb' : '#fde68a';
+            }
+            if (titleEnfermedades) titleEnfermedades.style.color = sinEnf ? '#6b7280' : '#b45309';
+
+            // Alergias card color
+            const cardAlergias = document.getElementById('card-alergias');
+            const titleAlergias = document.getElementById('title-alergias');
+            const sinAl = (() => { const v = (paciente.alergias || '').trim(); return !v || v.toLowerCase() === 'ninguna'; })();
+            if (cardAlergias) {
+                cardAlergias.style.background = sinAl ? '#f8f9fa' : '#fff5f5';
+                cardAlergias.style.borderColor = sinAl ? '#e5e7eb' : '#fed7d7';
+            }
+            if (titleAlergias) titleAlergias.style.color = sinAl ? '#6b7280' : '#c53030';
 
             // Foto
             const fotoUrl = paciente.full_foto_url || null;
@@ -1302,14 +1321,16 @@
                 document.getElementById('view-emergencia-tel').innerText = '---';
             }
 
-            // Alergias
+            // Alergias: badge rojo solo si hay alergias reales (no "Ninguna")
             const badges = document.getElementById('view-alergias-badges');
             if (badges) {
-                if (paciente.alergias) {
+                const alergiasVal = (paciente.alergias || '').trim();
+                const sinAlergias = !alergiasVal || alergiasVal.toLowerCase() === 'ninguna';
+                if (!sinAlergias) {
                     badges.innerHTML = `<span style="background:#ef4444; color:white; border-radius:20px; padding:5px 15px; font-size:0.9em; font-weight:700;">
                                                                                                                                         <i class="fa-solid fa-pills"></i> ${paciente.alergias}</span>`;
                 } else {
-                    badges.innerHTML = '<span style="color: #6c757d; font-style: italic;">Sin alergias registradas</span>';
+                    badges.innerHTML = '<span style="background:#e9ecef; color:#6c757d; border-radius:20px; padding:5px 15px; font-size:0.9em; font-weight:600;"><i class="fa-solid fa-check"></i> Ninguna</span>';
                 }
             }
 

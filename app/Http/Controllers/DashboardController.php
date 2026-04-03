@@ -62,9 +62,8 @@ class DashboardController extends Controller
 
         $proximasCitas = $citasFuturas->concat($citasVencidas)->take(15);
 
-        // Citas de hoy
-        $citasHoyCount = Cita::where($citasBaseQuery)
-            ->whereDate('fecha_hora_inicio',$hoy)
+        // Citas pendientes (total, no solo hoy)
+        $citasPendientesCount = Cita::where($citasBaseQuery)
             ->whereIn('estado_cita', ['pendiente', 'confirmada'])
             ->count();
 
@@ -116,7 +115,7 @@ class DashboardController extends Controller
 
         return view('dashboard',compact(
             'proximasCitas',
-            'citasHoyCount',
+            'citasPendientesCount',
             'totalPacientes',
             'ingresosMes',
             'itemsBajoStock',

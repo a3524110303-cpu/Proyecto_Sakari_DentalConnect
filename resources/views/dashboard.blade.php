@@ -153,8 +153,8 @@ Resumen de secciones:
                 <i class="fa-solid fa-calendar-plus" style="color: #4CAF50; font-size: 1.4em;"></i>
             </div>
             <div>
-                <div style="font-size: 1.8em; font-weight: 800; color: #333; line-height: 1;">{{ $citasHoyCount }}</div>
-                <div style="color: #888; font-size: 0.85em; margin-top: 3px;">Generar / Ver Citas</div>
+                <div style="font-size: 1.8em; font-weight: 800; color: #333; line-height: 1;">{{ $citasPendientesCount }}</div>
+                <div style="color: #888; font-size: 0.85em; margin-top: 3px;">Citas Pendientes</div>
             </div>
         </div>
 
@@ -364,15 +364,15 @@ Resumen de secciones:
                             </div>
 
                             <div style="grid-column: span 2;">
-                                <small style="font-weight:700; color:#ef4444;"><i
+                                <small id="lbl-alergias-label" style="font-weight:700; color:#9ca3af;"><i
                                         class="fa-solid fa-triangle-exclamation"></i>
                                     Alergias:</small>
-                                <div id="lbl-alergias" style="color:#ef4444;">...</div>
+                                <div id="lbl-alergias" style="color:#9ca3af;">...</div>
                             </div>
                             <div style="grid-column: span 2;">
-                                <small style="font-weight:700; color:#ef4444;"><i class="fa-solid fa-notes-medical"></i>
+                                <small id="lbl-enfermedades-label" style="font-weight:700; color:#9ca3af;"><i class="fa-solid fa-notes-medical"></i>
                                     Enfermedades Crónicas:</small>
-                                <div id="lbl-enfermedades" style="color:#ef4444;">...</div>
+                                <div id="lbl-enfermedades" style="color:#9ca3af;">...</div>
                             </div>
                         </div>
                     </div>
@@ -812,8 +812,23 @@ Resumen de secciones:
         
         document.getElementById('lbl-sangre').innerText = data.paciente.tipo_sangre || 'N/A';
         document.getElementById('lbl-peso').innerText = data.paciente.peso || 'N/A';
-        document.getElementById('lbl-alergias').innerText = data.paciente.alergias || 'Ninguna';
-        document.getElementById('lbl-enfermedades').innerText = data.paciente.enfermedades || 'Ninguna';
+        // Color dinámico: rojo si hay alergias reales, gris si dice "Ninguna"
+        const alergiasTxt = data.paciente.alergias || 'Ninguna';
+        const enfermedadesTxt = data.paciente.enfermedades || 'Ninguna';
+        const tieneAlergias = alergiasTxt.toLowerCase() !== 'ninguna' && alergiasTxt.toLowerCase() !== 'ninguna registrada' && alergiasTxt.trim() !== '';
+        const tieneEnfermedades = enfermedadesTxt.toLowerCase() !== 'ninguna' && enfermedadesTxt.toLowerCase() !== 'ninguna registrada' && enfermedadesTxt.trim() !== '';
+
+        const lblAlergias = document.getElementById('lbl-alergias');
+        const lblAlergLabel = document.getElementById('lbl-alergias-label');
+        lblAlergias.innerText = alergiasTxt;
+        lblAlergias.style.color = tieneAlergias ? '#ef4444' : '#6b7280';
+        if(lblAlergLabel) lblAlergLabel.style.color = tieneAlergias ? '#ef4444' : '#9ca3af';
+
+        const lblEnfermedades = document.getElementById('lbl-enfermedades');
+        const lblEnfLabel = document.getElementById('lbl-enfermedades-label');
+        lblEnfermedades.innerText = enfermedadesTxt;
+        lblEnfermedades.style.color = tieneEnfermedades ? '#ef4444' : '#6b7280';
+        if(lblEnfLabel) lblEnfLabel.style.color = tieneEnfermedades ? '#ef4444' : '#9ca3af';
 
         // Tabla de Historial (Paginada)
         const tbody = document.getElementById('cita-tabla-body');
