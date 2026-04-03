@@ -22,6 +22,17 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            // 🚨 VALIDACIÓN DE SEGURIDAD: Bloquear acceso a pacientes en la plataforma web
+            if (Auth::user()->rol === 'paciente') {
+                Auth::logout(); // Cerramos la sesión que se acaba de crear
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return back()->withErrors([
+                    'email' => 'Acceso denegado. Los pacientes solo pueden acceder a través de la aplicación móvil.',
+                ]);
+            }
+
             $request->session()->regenerate();
 
             // CRÍTICO PARA SAAS MULTI-TENANT: Guardamos en sesión la clínica del usuario logueado
