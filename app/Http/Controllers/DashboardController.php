@@ -187,39 +187,58 @@ class DashboardController extends Controller
             ->get();
 
         $filasTabla = [];
+        $filasTabla = [];
         foreach ($citasPaciente as $c) {
-            // Extraer el historial real (Seguimientos y Pagos) de esta cita
+            // Extraer el historial real. 
             $seguimientos = \App\Models\SeguimientoClinico::where('id_cita', $c->id_cita)->orderBy('id_seguimiento', 'asc')->get();
             $pagos = \App\Models\IngresoCaja::where('id_cita', $c->id_cita)->orderBy('fecha_ingreso', 'asc')->get();
 
+            // Blindaje 1: Si la cita base no tiene fecha, usamos la fecha actual por defecto
+            $fechaBaseCita = $c->fecha_hora_inicio ? \Carbon\Carbon::parse($c->fecha_hora_inicio) : now();
+
             if ($seguimientos->isEmpty() && $pagos->isEmpty()) {
                 // Cita normal agendada que aún no tiene movimientos
+                $horaFinFormateada = $c->fecha_hora_fin ? \Carbon\Carbon::parse($c->fecha_hora_fin)->format('h:i A') : 'N/A';
+                
                 $filasTabla[] = [
-                    'timestamp' => Carbon::parse($c->fecha_hora_inicio)->timestamp,
+                    'timestamp' => $fechaBaseCita->timestamp,
                     'id_cita' => $c->id_cita,
-                    'dia' => Carbon::parse($c->fecha_hora_inicio)->format('d/m/Y'),
-                    'hora' => Carbon::parse($c->fecha_hora_inicio)->format('h:i A') . ' – ' . Carbon::parse($c->fecha_hora_fin)->format('h:i A'),
+                    'dia' => $fechaBaseCita->format('d/m/Y'),
+                    'hora' => $fechaBaseCita->format('h:i A') . ' – ' . $horaFinFormateada,
                     'seguimiento' => $c->motivo ?? ($c->servicio?->nombre_servicio ?? 'Consulta'),
                     'abono' => '0.00',
                     'estado' => $c->estado_cita ?? 'Pendiente'
                 ];
             } else {
-                // La cita tiene movimientos: Crear una fila por cada vez que se le dio a "Guardar Cambios"
+                // La cita tiene movimientos
                 $eventos = collect();
 
                 foreach ($seguimientos as $seg) {
-                    $eventos->push(['fecha' => $seg->created_at, 'tipo' => 'seguimiento', 'texto' => $seg->observaciones, 'monto' => 0]);
+                    $eventos->push([
+                        'fecha' => $fechaBaseCita, 
+                        'tipo' => 'seguimiento', 
+                        'texto' => $seg->observaciones, 
+                        'monto' => 0
+                    ]);
                 }
 
                 foreach ($pagos as $pago) {
-                    $eventos->push(['fecha' => $pago->fecha_ingreso, 'tipo' => 'pago', 'texto' => $pago->descripcion ?? 'Abono registrado', 'monto' => $pago->monto]);
+                    // Blindaje 2: Si por alguna razón el pago se guardó sin fecha, hereda la de la cita
+                    $fechaPago = $pago->fecha_ingreso ? \Carbon\Carbon::parse($pago->fecha_ingreso) : $fechaBaseCita;
+                    $eventos->push([
+                        'fecha' => $fechaPago, 
+                        'tipo' => 'pago', 
+                        'texto' => $pago->descripcion ?? 'Abono registrado', 
+                        'monto' => $pago->monto
+                    ]);
                 }
 
-                // Agrupar eventos que sucedieron en el mismo minuto para no hacer filas dobles
+                // Agrupar eventos que sucedieron en el mismo minuto
                 $agrupados = $eventos->groupBy(function($item) {
-                    return $item['fecha']->format('Y-m-d H:i');
+                    // Blindaje 3: Aseguramos que sea un objeto de tipo Carbon antes de llamar a format()
+                    $f = $item['fecha'] instanceof \Carbon\Carbon ? $item['fecha'] : \Carbon\Carbon::parse($item['fecha'] ?? now());
+                    return $f->format('Y-m-d H:i');
                 });
-
 
                 foreach ($agrupados as $fechaStr => $items) {
                     $textoFinal = collect();
@@ -236,12 +255,12 @@ class DashboardController extends Controller
                         }
                     }
 
-                    $fechaObj = Carbon::parse($fechaStr);
+                    $fechaObj = \Carbon\Carbon::parse($fechaStr);
                     $filasTabla[] = [
                         'timestamp' => $fechaObj->timestamp,
                         'id_cita' => $c->id_cita,
                         'dia' => $fechaObj->format('d/m/Y'), 
-                        'hora' => $fechaObj->format('h:i A'), // Muestra la hora exacta en que se guardó el cambio
+                        'hora' => $fechaObj->format('h:i A'), 
                         'seguimiento' => $textoFinal->implode(' | ') ?: ($c->servicio?->nombre_servicio ?? 'Consulta'),
                         'abono' => number_format($montoTotal, 2),
                         'estado' => 'Actualización'
@@ -249,6 +268,7 @@ class DashboardController extends Controller
                 }
             }
         }
+
 
         // Ordenar absolutamente todo cronológicamente (lo más reciente arriba)
         usort($filasTabla, function($a, $b) {

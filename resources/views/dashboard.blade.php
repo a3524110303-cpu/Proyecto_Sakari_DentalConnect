@@ -786,7 +786,17 @@ Resumen de secciones:
         if(textareaNotas) textareaNotas.value = '';
     }
 
+    // Limpieza total del modal para evitar "datos fantasma" de otros pacientes
     document.getElementById('lbl-nombre').innerText = 'Cargando...';
+    document.getElementById('lbl-paterno').innerText = '...';
+    document.getElementById('lbl-materno').innerText = '...';
+    document.getElementById('lbl-edad').innerText = '...';
+    document.getElementById('lbl-sexo').innerText = '...';
+    document.getElementById('lbl-telefono').innerText = '...';
+    document.getElementById('lbl-alergias').innerText = '...';
+    document.getElementById('lbl-enfermedades').innerText = '...';
+    document.getElementById('cita-tabla-body').innerHTML = '<tr><td colspan="5" style="padding: 20px;">Cargando historial...</td></tr>';
+
 
     fetch(`/api/citas/${idCita}/modal-detalles`)
     .then(res => res.json())
