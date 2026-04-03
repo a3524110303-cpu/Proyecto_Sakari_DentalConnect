@@ -38,20 +38,35 @@ class AuthController extends Controller
             ->where('email', $request->email)
             ->first();
 
-        if (!$row || !Hash::check($request->token, $row->token)) {
+        if (!$row) {
             return response()->json([
                 'success' => false,
                 'message' => 'Token de recuperación inválido o expirado.'
             ], 422);
         }
 
+        if (!$row->created_at) {
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            return response()->json([
+                'success' => false,
+                'message' => 'El enlace de recuperación ya expiró. Solicita uno nuevo.'
+            ], 422);
+        }
+
         $expiraMinutos = (int) config('auth.passwords.users.expire', 60);
-        $creado = Carbon::parse($row->created_at);
+        $creado = Carbon::parse($row->created_at)->setTimezone('UTC');
         if ($creado->addMinutes($expiraMinutos)->isPast()) {
             DB::table('password_reset_tokens')->where('email', $request->email)->delete();
             return response()->json([
                 'success' => false,
                 'message' => 'El enlace de recuperación ya expiró. Solicita uno nuevo.'
+            ], 422);
+        }
+
+        if (!Hash::check($request->token, $row->token)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token de recuperación inválido o expirado.'
             ], 422);
         }
 
@@ -196,27 +211,51 @@ class AuthController extends Controller
             ], 404);
         }
 
-        // Crear token seguro
+        // Crear token seguro y mantener solo hash en DB
         $token = Str::random(64);
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $request->email],
             ['token' => Hash::make($token), 'created_at' => now()]
         );
 
-        // Crear la URL que apunta a la vista web de tu equipo
-        $url = url("/recuperar-password?token={$token}&email=" . urlencode($request->email));
+        $url = url('/recuperar-password?token=' . urlencode($token) . '&email=' . urlencode($request->email));
+        $texto = "Hola {$user->nombre_completo},\n\nHas solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para crear una nueva:\n\n{$url}\n\nSi no fuiste tú, ignora este mensaje.";
 
-        // Enviar el correo usando Mail::raw para evitar problemas de vistas
-        Mail::raw("Hola {$user->nombre_completo},\n\nHas solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para crear una nueva:\n\n{$url}\n\nSi no fuiste tú, ignora este mensaje.", function ($msg) use ($request) {
-            $msg->to($request->email)
-                ->subject('Recuperación de Contraseña - DentalConnect');
-        });
+        $fromEmail = env('MAIL_FROM_ADDRESS', 'onboarding@resend.dev');
+        $resendApiKey = env('RESEND_API_KEY', env('MAIL_PASSWORD'));
+
+        try {
+            if ($resendApiKey) {
+                $response = \Illuminate\Support\Facades\Http::withToken($resendApiKey)
+                    ->post('https://api.resend.com/emails', [
+                        'from' => 'DentalConnect <' . $fromEmail . '>',
+                        'to' => [$request->email],
+                        'subject' => 'Recuperación de Contraseña - DentalConnect',
+                        'text' => $texto,
+                    ]);
+
+                if (!$response->successful()) {
+                    throw new \Exception('Resend rechazó el envío: ' . $response->status() . ' ' . $response->body());
+                }
+                $cartero = 'resend';
+            } else {
+                Mail::raw($texto, function ($msg) use ($request) {
+                    $msg->to($request->email)
+                        ->subject('Recuperación de Contraseña - DentalConnect');
+                });
+                $cartero = config('mail.default');
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fallo al enviar correo de recuperación: ' . $e->getMessage(),
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Correo enviado exitosamente.',
-            // Esta línea extra le mandará a Flutter el nombre del cartero real que está usando
-            'cartero_usado' => config('mail.default'), 
+            'cartero_usado' => $cartero,
         ], 200);
     }
 }
