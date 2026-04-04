@@ -941,7 +941,10 @@ Incluye:
         }
 
         function cargarNotificacionesReagenda() {
-            fetch('/api/notificaciones/reagenda', { credentials: 'same-origin' })
+            fetch('/api/notificaciones/reagenda', { 
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin' 
+            })
                 .then(function (res) { 
                     if (!res.ok) throw new Error('API Error');
                     return res.json(); 
@@ -960,6 +963,7 @@ Incluye:
             fetch('/api/notificaciones/' + id + '/procesar', {
                 method: 'POST',
                 headers: {
+                    'Accept': 'application/json',
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },

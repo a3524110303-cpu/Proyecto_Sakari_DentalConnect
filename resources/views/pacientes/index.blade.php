@@ -1390,7 +1390,10 @@
             try {
                 const res = await fetch(`/api/pacientes/${currentPaciente.id_paciente}/foto`, {
                     method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    headers: { 
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}' 
+                    },
                     body: formData
                 });
                 const json = await res.json();
@@ -1414,7 +1417,9 @@
             list.innerHTML = '<div style="text-align:center;color:#888;padding:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando historial...</div>';
 
             try {
-                const res = await fetch(`/api/pacientes/${currentPaciente.id_paciente}/citas`);
+                const res = await fetch(`/api/pacientes/${currentPaciente.id_paciente}/citas`, {
+                    headers: { 'Accept': 'application/json' }
+                });
                 const json = await res.json();
 
                 if (!json.data || json.data.length === 0) {
@@ -1483,7 +1488,9 @@
             list.innerHTML = '<div style="text-align:center;color:#888;padding:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>';
 
             try {
-                const res = await fetch(`/api/pacientes/${currentPaciente.id_paciente}/evoluciones`);
+                const res = await fetch(`/api/pacientes/${currentPaciente.id_paciente}/evoluciones`, {
+                    headers: { 'Accept': 'application/json' }
+                });
                 const json = await res.json();
 
                 if (!json.data || json.data.length === 0) {
@@ -1542,7 +1549,10 @@
             try {
                 const res = await fetch(`/api/pacientes/${currentPaciente.id_paciente}/evoluciones`, {
                     method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    headers: { 
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}' 
+                    },
                     body: formData
                 });
                 const json = await res.json();
@@ -1737,7 +1747,9 @@ function cargarCalendarioReserva(mes, anio) {
 
     grid.innerHTML = '<div style="grid-column:span 7; text-align:center; padding:30px;"><i class="fa-solid fa-circle-notch fa-spin" style="color: var(--primary-color); font-size: 2rem;"></i></div>';
 
-    fetch(`/api/calendario/disponibilidad?mes=${mes}&anio=${anio}`)
+    fetch(`/api/calendario/disponibilidad?mes=${mes}&anio=${anio}`, {
+        headers: { 'Accept': 'application/json' }
+    })
         .then(res => res.json())
         .then(disponibilidad => {
 
@@ -1819,7 +1831,9 @@ async function generarHorasReserva(fecha, horaInicioStr, horaFinStr) {
     let horasOcupadas = [];
 
     try {
-        const res = await fetch(`/api/citas/ocupadas?fecha=${fecha}`);
+        const res = await fetch(`/api/citas/ocupadas?fecha=${fecha}`, {
+            headers: { 'Accept': 'application/json' }
+        });
         const data = await res.json();
         horasOcupadas = data.ocupadas || [];
     } catch (e) {}

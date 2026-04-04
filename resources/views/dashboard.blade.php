@@ -37,7 +37,9 @@ Resumen de secciones:
             const badge = document.getElementById('badge-reagenda-count');
             if (!panel || !lista || !badge) return;
 
-            fetch('/api/notificaciones/reagenda')
+            fetch('/api/notificaciones/reagenda', { 
+                headers: { 'Accept': 'application/json' }
+            })
                 .then(r => r.json())
                 .then(data => {
                     const payload = Array.isArray(data)
@@ -102,6 +104,7 @@ Resumen de secciones:
             fetch('/api/notificaciones/' + id + '/leer', {
                 method: 'POST',
                 headers: {
+                    'Accept': 'application/json',
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 }
@@ -798,7 +801,9 @@ Resumen de secciones:
     document.getElementById('cita-tabla-body').innerHTML = '<tr><td colspan="5" style="padding: 20px;">Cargando historial...</td></tr>';
 
 
-    fetch(`/api/citas/${idCita}/modal-detalles`)
+    fetch(`/api/citas/${idCita}/modal-detalles`, {
+        headers: { 'Accept': 'application/json' }
+    })
     .then(res => res.json())
     .then(data => {
 
@@ -962,7 +967,9 @@ function cargarCalendarioFuncional(mes, anio){
         '<div style="grid-column: span 7; text-align:center; padding:20px;">\
         <i class="fa-solid fa-spinner fa-spin"></i></div>';
 
-    fetch(`/api/calendario/disponibilidad?mes=${mes}&anio=${anio}`)
+    fetch(`/api/calendario/disponibilidad?mes=${mes}&anio=${anio}`, {
+        headers: { 'Accept': 'application/json' }
+    })
     .then(res => res.ok ? res.json() : Promise.reject())
     .then(disponibilidad => {
 
@@ -1206,7 +1213,9 @@ function recalcularHorariosWidget() {
     if (!nuevaFecha) return;
 
     if (contextoHorarioWidget.fecha !== nuevaFecha) {
-        fetch(`/api/calendario/horas-ocupadas?fecha=${nuevaFecha}`)
+        fetch(`/api/calendario/horas-ocupadas?fecha=${nuevaFecha}`, {
+            headers: { 'Accept': 'application/json' }
+        })
             .then(res => res.ok ? res.json() : { horas_ocupadas: [], intervalo_minutos: 15 })
             .then(data => {
                 contextoHorarioWidget.fecha = nuevaFecha;
@@ -1246,7 +1255,9 @@ function recalcularHorariosWidget() {
 
         document.getElementById('input-nueva-fecha').value=fechaString;
 
-        fetch(`/api/calendario/horas-ocupadas?fecha=${fechaString}`)
+        fetch(`/api/calendario/horas-ocupadas?fecha=${fechaString}`, {
+            headers: { 'Accept': 'application/json' }
+        })
         .then(res=>res.ok?res.json():{horas_ocupadas:[]})
         .then(data=>{
 

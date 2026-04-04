@@ -15,7 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->validateCsrfTokens(except: [
-            'stripe/webhook',
+            'stripe/*', 
         ]);
 
         $middleware->alias([
