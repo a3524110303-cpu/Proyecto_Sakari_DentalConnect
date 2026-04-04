@@ -60,6 +60,12 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
     Route::get('/suscripciones/success', [SuscripcionController::class, 'success'])->name('suscripciones.success');
     Route::get('/suscripciones/cancel', [SuscripcionController::class, 'cancel'])->name('suscripciones.cancel');
 
+    // 👇 RUTAS DE NOTIFICACIONES (Zona Libre) 👇
+    Route::get('/api/notificaciones/reagenda', [DashboardController::class, 'notificacionesReagenda'])->name('api.notificaciones.reagenda');
+    Route::post('/api/notificaciones/{id}/leer', [DashboardController::class, 'marcarNotificacionLeida'])->name('api.notificaciones.leer');
+    Route::post('/api/notificaciones/{id}/procesar', [DashboardController::class, 'procesarReagenda'])->name('api.notificaciones.procesar');
+
+
     // ============================
     // 🛠️ ADMIN PANEL (Sacado de la restricción de planes)
     // ============================
@@ -116,9 +122,7 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
         Route::post('/api/pacientes/{id}/odontograma', [OdontogramaController::class, 'store'])->name('api.odontograma.update');
         Route::delete('/api/odontograma/{id_odontograma}', [OdontogramaController::class, 'destroy'])->name('api.odontograma.delete');
 
-        Route::get('/api/notificaciones/reagenda', [DashboardController::class, 'notificacionesReagenda'])->name('api.notificaciones.reagenda');
-        Route::post('/api/notificaciones/{id}/leer', [DashboardController::class, 'marcarNotificacionLeida'])->name('api.notificaciones.leer');
-        Route::post('/api/notificaciones/{id}/procesar', [DashboardController::class, 'procesarReagenda'])->name('api.notificaciones.procesar');
+
 
         // ============================
         // 📅 CITAS
