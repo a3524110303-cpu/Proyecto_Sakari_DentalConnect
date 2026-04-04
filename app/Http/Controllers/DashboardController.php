@@ -341,8 +341,6 @@ class DashboardController extends Controller
     public function actualizarCita(Request $request,$idCita)
     {
         $idClinica = Auth::user()->id_clinica;
-
-        // Verificar que la cita pertenece a la clínica del usuario autenticado
         $cita = Cita::where('id_clinica', $idClinica)->findOrFail($idCita);
 
         $esReagendaMovilPendiente =
@@ -358,7 +356,20 @@ class DashboardController extends Controller
             $cita->costo_estimado=$request->costo_estimado;
         }
 
-        if($request->filled('nueva_fecha')){
+        // 🟢 BLINDAJE: Verificar si REALMENTE cambiaron la fecha o la hora
+        $fechaActualCita = Carbon::parse($cita->fecha_hora_inicio)->format('Y-m-d');
+        $horaActualCita = Carbon::parse($cita->fecha_hora_inicio)->format('H:i');
+        
+        $nuevaFecha = $request->filled('nueva_fecha') ? $request->nueva_fecha : $fechaActualCita;
+        $nuevaHora = $request->filled('nueva_hora') ? $request->nueva_hora : $horaActualCita;
+
+        // Si hay reagenda pendiente y no se envió hora nueva, usar la solicitada
+        if ($esReagendaMovilPendiente && !$request->filled('nueva_hora') && !empty($cita->reagenda_hora_solicitada)) {
+            $nuevaHora = Carbon::parse($cita->reagenda_hora_solicitada)->format('H:i');
+        }
+
+        // 🟢 SOLO ENTRA AQUÍ SI EL USUARIO CAMBIÓ LA FECHA U HORA INTENCIONALMENTE
+        if ($nuevaFecha !== $fechaActualCita || $nuevaHora !== $horaActualCita) {
 
             if ($esReagendaMovilPendiente) {
                 $fechaSolicitud = Carbon::parse($cita->reagenda_solicitada_at)->toDateString();
@@ -367,35 +378,18 @@ class DashboardController extends Controller
                 if ($fechaSolicitud !== $hoy) {
                     $cita->reagenda_estatus = 'expirada';
                     $cita->save();
-
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'La solicitud de reagenda expiro. Solo se puede aplicar el mismo dia en que el paciente la envio.'
-                    ], 422);
+                    return response()->json(['success' => false, 'message' => 'La solicitud de reagenda expiro.'], 422);
                 }
-            }
 
-            $hora=$request->filled('nueva_hora')
-                ? $request->nueva_hora
-                : (
-                    $esReagendaMovilPendiente && !empty($cita->reagenda_hora_solicitada)
-                        ? Carbon::parse($cita->reagenda_hora_solicitada)->format('H:i')
-                        : Carbon::parse($cita->fecha_hora_inicio)->format('H:i')
-                );
-
-            if ($esReagendaMovilPendiente) {
                 $horaSolicitada = !empty($cita->reagenda_hora_solicitada)
                     ? Carbon::parse($cita->reagenda_hora_solicitada)->format('H:i')
                     : null;
 
                 if (
-                    $request->nueva_fecha !== $cita->reagenda_fecha_solicitada
-                    || ($horaSolicitada !== null && $hora !== $horaSolicitada)
+                    $nuevaFecha !== $cita->reagenda_fecha_solicitada
+                    || ($horaSolicitada !== null && $nuevaHora !== $horaSolicitada)
                 ) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Para una reagenda solicitada desde la app, solo se puede aplicar la fecha y hora solicitadas por el paciente.'
-                    ], 422);
+                    return response()->json(['success' => false, 'message' => 'Solo se puede aplicar la fecha solicitada por el paciente.'], 422);
                 }
             }
 
@@ -404,24 +398,20 @@ class DashboardController extends Controller
                 $duracionMinutos = 30;
             }
 
-            $nuevoInicio = Carbon::createFromFormat('Y-m-d H:i', $request->nueva_fecha.' '.$hora);
+            $nuevoInicio = Carbon::createFromFormat('Y-m-d H:i', $nuevaFecha.' '.$nuevaHora);
             $nuevoFin = $nuevoInicio->copy()->addMinutes($duracionMinutos);
 
             $idDoctorDisponible = $this->buscarDoctorDisponible($idClinica, $nuevoInicio, $nuevoFin, (int) $cita->id_cita);
 
             if (!$idDoctorDisponible) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No hay doctores disponibles para ese horario y duración.'
-                ], 422);
+                return response()->json(['success' => false, 'message' => 'No hay doctores disponibles para ese horario y duración.'], 422);
             }
 
-            // NUEVA LÓGICA: Separar reprogramación vs nueva cita de seguimiento
             $hayNotasOPago = $request->filled('notas_seguimiento') || floatval($request->input('monto_abono', 0)) > 0;
             $citaYaPasoOPasaHoy = \Carbon\Carbon::parse($cita->fecha_hora_inicio)->startOfDay() <= now()->startOfDay();
 
             if ($hayNotasOPago || $citaYaPasoOPasaHoy) {
-                // El paciente está siendo atendido. Crear NUEVA cita para su próxima visita.
+                // Crear nueva cita SOLO porque cambió la fecha a futuro para seguimiento
                 \App\Models\Cita::create([
                     'id_clinica' => $idClinica,
                     'id_paciente' => $cita->id_paciente,
@@ -435,39 +425,31 @@ class DashboardController extends Controller
                     'reagenda_estatus' => $esReagendaMovilPendiente ? 'aplicada' : 'ninguna'
                 ]);
 
-                // Marcar la cita de hoy como completada para que se quede en el historial
                 $cita->estado_cita = 'completada';
                 if ($esReagendaMovilPendiente) {
                     $cita->reagenda_estatus = 'aplicada';
                 }
             } else {
-                // Solo está reprogramando una cita futura (sin atenderla ni hacer pagos)
+                // Reprogramación normal sin seguimiento previo
                 $cita->id_doctor = $idDoctorDisponible;
                 $cita->fecha_hora_inicio = $nuevoInicio;
                 $cita->fecha_hora_fin = $nuevoFin;
-
                 if ($esReagendaMovilPendiente) {
                     $cita->reagenda_estatus = 'aplicada';
                 }
             }
-
-
         }
 
         $cita->save();
 
+        // 🟢 EL PAGO Y EL SEGUIMIENTO SE REGISTRAN NORMALMENTE AQUÍ AFUERA
         if($request->filled('notas_seguimiento')){
-
             SeguimientoClinico::create([
-
                 'id_cita'=>$cita->id_cita,
                 'observaciones'=>$request->notas_seguimiento
-
             ]);
-
             $cita->motivo=$request->notas_seguimiento;
             $cita->save();
-
         }
 
         $montoAbono = floatval($request->input('monto_abono', 0));
@@ -496,10 +478,8 @@ class DashboardController extends Controller
         }
 
         return response()->json([
-
             'success'=>true,
             'message'=>'Cita actualizada correctamente'
-
         ]);
 
     }
