@@ -194,102 +194,55 @@ class DashboardController extends Controller
 
         $filasTabla = [];
         foreach ($citasPaciente as $c) {
-            // Extraer el historial real. 
             $seguimientos = \App\Models\SeguimientoClinico::where('id_cita', $c->id_cita)->orderBy('id_seguimiento', 'asc')->get();
             $pagos = \App\Models\IngresoCaja::where('id_cita', $c->id_cita)->orderBy('fecha_ingreso', 'asc')->get();
 
-            // Blindaje 1: Si la cita base no tiene fecha, usamos la fecha actual por defecto
             $fechaBaseCita = $c->fecha_hora_inicio ? \Carbon\Carbon::parse($c->fecha_hora_inicio) : now();
+            $horaFinFormateada = $c->fecha_hora_fin ? \Carbon\Carbon::parse($c->fecha_hora_fin)->format('h:i A') : 'N/A';
 
-            if ($seguimientos->isEmpty() && $pagos->isEmpty()) {
-                // Cita normal agendada que aún no tiene movimientos
-                $horaFinFormateada = $c->fecha_hora_fin ? \Carbon\Carbon::parse($c->fecha_hora_fin)->format('h:i A') : 'N/A';
+            // 1. SIEMPRE agregar la Cita Original como punto de partida en el historial
+            $filasTabla[] = [
+                'timestamp' => $fechaBaseCita->timestamp,
+                'id_cita' => $c->id_cita,
+                'dia' => $fechaBaseCita->format('d/m/Y'),
+                'hora' => $fechaBaseCita->format('h:i A') . ' – ' . $horaFinFormateada,
+                'seguimiento' => $c->motivo ?? ($c->servicio?->nombre_servicio ?? 'Consulta agendada'),
+                'abono' => '0.00',
+                'estado' => ucfirst($c->estado_cita ?? 'pendiente')
+            ];
+
+            // 2. Agregar los Seguimientos (notas) como filas totalmente individuales
+            foreach ($seguimientos as $seg) {
+                $fechaSeg = $seg->created_at ? Carbon::parse($seg->created_at) : $fechaBaseCita;
                 
                 $filasTabla[] = [
-                    'timestamp' => $fechaBaseCita->timestamp,
+                    'timestamp' => $fechaSeg->timestamp,
                     'id_cita' => $c->id_cita,
-                    'dia' => $fechaBaseCita->format('d/m/Y'),
-                    'hora' => $fechaBaseCita->format('h:i A') . ' – ' . $horaFinFormateada,
-                    'seguimiento' => $c->motivo ?? ($c->servicio?->nombre_servicio ?? 'Consulta'),
+                    'dia' => $fechaSeg->format('d/m/Y'), 
+                    'hora' => $fechaSeg->format('h:i A'), 
+                    'seguimiento' => 'Nota: ' . $seg->observaciones,
                     'abono' => '0.00',
-                    'estado' => ucfirst($c->estado_cita ?? 'pendiente')
+                    'estado' => 'Actualización'
                 ];
-            } else {
-                // La cita tiene movimientos
-                $eventos = collect();
+            }
 
-                foreach ($seguimientos as $seg) {
-                    // Usar la fecha real del seguimiento si tiene timestamps,
-                    // de lo contrario hereda la fecha de la cita base.
-                    $fechaSeg = $seg->created_at
-                        ? Carbon::parse($seg->created_at)
-                        : $fechaBaseCita;
-
-                    $eventos->push([
-                        'fecha' => $fechaSeg, 
-                        'tipo' => 'seguimiento', 
-                        'texto' => $seg->observaciones, 
-                        'monto' => 0
-                    ]);
-                }
-
-                foreach ($pagos as $pago) {
-                    // Blindaje 2: Si por alguna razón el pago se guardó sin fecha, hereda la de la cita
-                    $fechaPago = $pago->fecha_ingreso ? \Carbon\Carbon::parse($pago->fecha_ingreso) : $fechaBaseCita;
-                    $eventos->push([
-                        'fecha' => $fechaPago, 
-                        'tipo' => 'pago', 
-                        'texto' => $pago->descripcion ?? 'Abono registrado', 
-                        'monto' => $pago->monto
-                    ]);
-                }
-
-                // Agrupar eventos que sucedieron en el mismo minuto
-                $agrupados = $eventos->groupBy(function($item) {
-                    // Blindaje 3: Aseguramos que sea un objeto de tipo Carbon antes de llamar a format()
-                    $f = $item['fecha'] instanceof \Carbon\Carbon ? $item['fecha'] : \Carbon\Carbon::parse($item['fecha'] ?? now());
-                    return $f->format('Y-m-d H:i');
-                });
-
-                foreach ($agrupados as $fechaStr => $items) {
-                    $textoFinal = collect();
-                    $montoTotal = 0;
-
-                    foreach ($items as $item) {
-                        if ($item['tipo'] === 'seguimiento') {
-                            $textoFinal->push($item['texto']);
-                        } else {
-                            $montoTotal += $item['monto'];
-                            if ($items->where('tipo', 'seguimiento')->count() === 0) {
-                                $textoFinal->push($item['texto']);
-                            }
-                        }
-                    }
-
-                    $fechaObj = \Carbon\Carbon::parse($fechaStr);
-
-                    // Determinar estado de la fila: si solo tiene pagos sin seguimiento,
-                    // mostrar "Abono"; si tiene seguimiento, "Actualización".
-                    $tieneSeguimientos = $items->where('tipo', 'seguimiento')->count() > 0;
-                    $tienePagos = $montoTotal > 0;
-                    $estadoFila = 'Actualización';
-                    if ($tienePagos && !$tieneSeguimientos) {
-                        $estadoFila = 'Abono';
-                    }
-
-                    $filasTabla[] = [
-                        'timestamp' => $fechaObj->timestamp,
-                        'id_cita' => $c->id_cita,
-                        'dia' => $fechaObj->format('d/m/Y'), 
-                        'hora' => $fechaObj->format('h:i A'), 
-                        'seguimiento' => $textoFinal->implode(' | ') ?: ($c->servicio?->nombre_servicio ?? 'Consulta'),
-                        'abono' => number_format($montoTotal, 2),
-                        'estado' => $estadoFila
-                    ];
-                }
+            // 3. Agregar los Pagos como filas totalmente individuales
+            foreach ($pagos as $pago) {
+                // Dar prioridad a created_at para tener la hora exacta de cada pago
+                $fechaPago = $pago->created_at ? \Carbon\Carbon::parse($pago->created_at) : 
+                            ($pago->fecha_ingreso ? \Carbon\Carbon::parse($pago->fecha_ingreso) : $fechaBaseCita);
+                
+                $filasTabla[] = [
+                    'timestamp' => $fechaPago->timestamp,
+                    'id_cita' => $c->id_cita,
+                    'dia' => $fechaPago->format('d/m/Y'), 
+                    'hora' => $fechaPago->format('h:i A'), 
+                    'seguimiento' => $pago->descripcion ?? 'Abono registrado',
+                    'abono' => number_format($pago->monto, 2),
+                    'estado' => 'Abono'
+                ];
             }
         }
-
 
         // Ordenar absolutamente todo cronológicamente (lo más reciente arriba)
         usort($filasTabla, function($a, $b) {
