@@ -467,7 +467,7 @@
                         oninput="formatearEnVivo(this)" onpaste="sanitizarPaste(event, 'letras')">
 
                     <input type="email" name="email" class="modern-input" placeholder="Correo Electrónico*" required
-                        value="{{ old('email') }}">
+                        value="{{ old('email') }}" pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}">
 
                     <input type="text" name="telefono" class="modern-input" placeholder="Teléfono Celular*" required
                         maxlength="15" value="{{ old('telefono') }}" oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
@@ -496,7 +496,7 @@
                     </select>
 
                     <input type="number" name="peso" class="modern-input" placeholder="Peso (kg) ej: 32.50" step="0.01" min="0.5" max="500"
-                        value="{{ old('peso') }}" oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1')">
+                        value="{{ old('peso') }}">
 
 
                     <input type="text" name="calle" class="modern-input" placeholder="Calle*" required
@@ -1101,11 +1101,11 @@
                     </div>
 
                     <input type="email" name="email" id="edit-email" class="modern-input" placeholder="Email (Usuario App)*"
-                        required>
+                        required pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}">
                     <input type="text" name="telefono" id="edit-telefono" class="modern-input" placeholder="Teléfono*"
                         required maxlength="15" oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
                     <input type="number" name="peso" id="edit-peso" class="modern-input" placeholder="Peso (kg) ej: 32.50" step="0.01" min="0.5"
-                        max="500" oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1')">
+                        max="500">
                     <input type="text" name="calle" id="edit-calle" class="modern-input" placeholder="Calle*" required maxlength="100" oninput="sanitizarDireccion(this)" onpaste="sanitizarPaste(event, 'direccion')">
                     <input type="text" name="num_exterior" id="edit-num-exterior" class="modern-input"
                         placeholder="Número Exterior*" required maxlength="20" oninput="sanitizarNumDireccion(this)" onpaste="sanitizarPaste(event, 'numero')">

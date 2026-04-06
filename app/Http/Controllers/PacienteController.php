@@ -236,28 +236,29 @@ class PacienteController extends Controller
         $rules = [
             'email' => [
                 'required',
-                'email:rfc,dns',
+                'email',
                 'max:150',
+                'regex:/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/',
                 Rule::unique('usuarios_sistema', 'email')->ignore($paciente->id_usuario, 'id_usuario'),
             ],
             'telefono'     => ['required', 'string', 'max:20', 'regex:/^\+?[0-9]+$/'],
-            'calle'        => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\pN\s.,#\-\/°]+$/u'],
+            'calle'        => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,#\-\/°]+$/'],
             'num_exterior' => ['required', 'string', 'max:20', 'regex:/^[a-zA-Z0-9\s\-\/#]+$/'],
             'num_interior' => ['nullable', 'string', 'max:20', 'regex:/^[a-zA-Z0-9\s\-\/#]+$/'],
-            'colonia'      => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\pN\s.,#\-\/°]+$/u'],
-            'municipio'    => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\pN\s.,\-]+$/u'],
+            'colonia'      => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,#\-\/°]+$/'],
+            'municipio'    => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,\-]+$/'],
             'ocupacion'    => ['nullable', 'string', 'max:100'],
             'peso'         => ['nullable', 'numeric', 'min:0.5', 'max:500', 'regex:/^\d{1,3}(\.\d{1,2})?$/'],
-            'emergencia_nombre'           => ['nullable', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
-            'emergencia_apellido_paterno' => ['nullable', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
-            'emergencia_apellido_materno' => ['nullable', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
+            'emergencia_nombre'           => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'emergencia_apellido_paterno' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'emergencia_apellido_materno' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'emergencia_telefono'         => ['nullable', 'string', 'max:20', 'regex:/^\+?[0-9]+$/'],
         ];
 
         // Agregar reglas de campos médicos solo si el rol lo permite
         if (Auth::user()->rol !== 'recepcionista') {
-            $rules['enfermedades_cronicas'] = ['nullable', 'string', 'max:500', 'regex:/^[\pL\pN\s.,;:()\-\/\"\'\+\%°#]+$/u'];
-            $rules['alergias']              = ['nullable', 'string', 'max:500', 'regex:/^[\pL\pN\s.,;:()\-\/\"\'\+\%°#]+$/u'];
+            $rules['enfermedades_cronicas'] = ['nullable', 'string', 'max:500', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'];
+            $rules['alergias']              = ['nullable', 'string', 'max:500', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'];
         }
 
         $request->validate($rules, [

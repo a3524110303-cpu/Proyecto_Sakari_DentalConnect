@@ -93,14 +93,15 @@ class StorePacienteRequest extends FormRequest
     {
         return [
             // ── Datos básicos obligatorios ──
-            'nombre'            => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\s]+$/u'],
-            'apellido_paterno'  => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\s]+$/u'],
-            'apellido_materno'  => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\s]+$/u'],
+            'nombre'            => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'apellido_paterno'  => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'apellido_materno'  => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'telefono'          => ['required', 'string', 'max:20', 'regex:/^\+?[0-9]+$/'],
             'email'             => [
                 'required',
-                'email:rfc,dns',
+                'email',
                 'max:150',
+                'regex:/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/',
                 Rule::unique('usuarios_sistema', 'email')
                     ->where(function ($query) {
                         return $query->where('id_clinica', Auth::user()->id_clinica);
@@ -114,22 +115,22 @@ class StorePacienteRequest extends FormRequest
             'peso'              => ['nullable', 'numeric', 'min:0.5', 'max:500', 'regex:/^\d{1,3}(\.\d{1,2})?$/'],
 
             // ── Dirección ──
-            'calle'             => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\pN\s.,#\-\/°]+$/u'],
+            'calle'             => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,#\-\/°]+$/'],
             'num_exterior'      => ['required', 'string', 'max:20', 'regex:/^[a-zA-Z0-9\s\-\/#]+$/'],
             'num_interior'      => ['nullable', 'string', 'max:20', 'regex:/^[a-zA-Z0-9\s\-\/#]+$/'],
-            'colonia'           => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\pN\s.,#\-\/°]+$/u'],
-            'municipio'         => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\pN\s.,\-]+$/u'],
+            'colonia'           => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,#\-\/°]+$/'],
+            'municipio'         => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,\-]+$/'],
             'direccion'         => ['nullable', 'string', 'max:255'],
             'ocupacion'         => ['required', 'string', 'max:100'],
 
             // ── Información de salud ──
-            'enfermedades_cronicas' => ['required', 'string', 'min:3', 'max:500', 'regex:/^[\pL\pN\s.,;:()\-\/\"\'\+\%°#]+$/u'],
-            'alergias'             => ['required', 'string', 'min:3', 'max:500', 'regex:/^[\pL\pN\s.,;:()\-\/\"\'\+\%°#]+$/u'],
+            'enfermedades_cronicas' => ['required', 'string', 'min:3', 'max:500', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'],
+            'alergias'             => ['required', 'string', 'min:3', 'max:500', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'],
 
             // ── Contacto de emergencia ──
-            'emergencia_nombre'            => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\s]+$/u'],
-            'emergencia_apellido_paterno'  => ['nullable', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
-            'emergencia_apellido_materno'  => ['nullable', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
+            'emergencia_nombre'            => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'emergencia_apellido_paterno'  => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'emergencia_apellido_materno'  => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'emergencia_telefono'          => ['required', 'string', 'max:20', 'regex:/^\+?[0-9]+$/'],
         ];
     }
@@ -162,6 +163,7 @@ class StorePacienteRequest extends FormRequest
             // ── Email ──
             'email.required' => 'El correo electrónico es obligatorio.',
             'email.email'    => 'El correo electrónico debe tener un formato válido con un dominio existente (ej: nombre@gmail.com).',
+            'email.regex'    => 'El correo debe tener un formato válido con un dominio real (ej: usuario@gmail.com).',
             'email.unique'   => 'Este correo ya está registrado en el sistema.',
 
             // ── Fecha & Sexo ──
