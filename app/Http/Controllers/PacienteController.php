@@ -7,8 +7,10 @@ use App\Models\Paciente;
 use App\Models\User;
 use App\Models\Token;
 use App\Models\Servicio;
+use App\Helpers\StringHelper;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -183,8 +185,19 @@ class PacienteController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
+            // ── SEGURIDAD: No exponer mensajes de error de BD al usuario ──
+            Log::error('Error al registrar paciente', [
+                'user_id'   => Auth::id(),
+                'clinica'   => $idClinica,
+                'message'   => $e->getMessage(),
+                'file'      => $e->getFile(),
+                'line'      => $e->getLine(),
+                'trace'     => $e->getTraceAsString(),
+            ]);
+
             return redirect()->back()
-                ->with('error', 'Error al guardar el paciente: ' . $e->getMessage())
+                ->with('error', 'Ocurrió un error al guardar el paciente. Si el problema persiste, contacta al administrador del sistema.')
                 ->withInput();
         }
     }
@@ -197,19 +210,79 @@ class PacienteController extends Controller
                 $q->where('id_clinica', $idClinica);
             })->firstOrFail();
 
-        $request->validate([
+        // ── SANITIZACIÓN PRE-VALIDACIÓN ──
+        $request->merge([
+            'email'     => mb_strtolower(trim((string) $request->input('email', '')), 'UTF-8'),
+            'calle'     => StringHelper::sanitizeAddress($request->input('calle', '')),
+            'colonia'   => StringHelper::sanitizeAddress($request->input('colonia', '')),
+            'municipio' => StringHelper::sanitizeAddress($request->input('municipio', '')),
+            'num_exterior' => StringHelper::sanitizeAddressNumber($request->input('num_exterior', '')),
+            'num_interior' => StringHelper::sanitizeAddressNumber($request->input('num_interior', '')),
+            'ocupacion' => StringHelper::sanitizeAddress($request->input('ocupacion', '')),
+            'emergencia_nombre'            => StringHelper::sanitizeText($request->input('emergencia_nombre', '')),
+            'emergencia_apellido_paterno'  => StringHelper::sanitizeText($request->input('emergencia_apellido_paterno', '')),
+            'emergencia_apellido_materno'  => StringHelper::sanitizeText($request->input('emergencia_apellido_materno', '')),
+        ]);
+
+        // Sanitizar campos médicos solo si el rol lo permite
+        if (Auth::user()->rol !== 'recepcionista') {
+            $request->merge([
+                'enfermedades_cronicas' => StringHelper::sanitizeHealthText($request->input('enfermedades_cronicas', '')),
+                'alergias'              => StringHelper::sanitizeHealthText($request->input('alergias', '')),
+            ]);
+        }
+
+        // ── VALIDACIÓN COMPLETA ──
+        $rules = [
             'email' => [
                 'required',
-                'email',
+                'email:rfc,dns',
+                'max:150',
                 Rule::unique('usuarios_sistema', 'email')->ignore($paciente->id_usuario, 'id_usuario'),
             ],
-            'calle' => 'required|string|max:100',
-            'num_exterior' => 'required|string|max:20',
-            'num_interior' => 'nullable|string|max:20',
-            'colonia' => 'required|string|max:100',
-            'municipio' => 'required|string|max:100',
-            'emergencia_nombre' => 'nullable|string|max:100',
-            'emergencia_apellido_paterno' => 'nullable|string|max:100',
+            'telefono'     => ['required', 'string', 'max:20', 'regex:/^\+?[0-9]+$/'],
+            'calle'        => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\pN\s.,#\-\/°]+$/u'],
+            'num_exterior' => ['required', 'string', 'max:20', 'regex:/^[a-zA-Z0-9\s\-\/#]+$/'],
+            'num_interior' => ['nullable', 'string', 'max:20', 'regex:/^[a-zA-Z0-9\s\-\/#]+$/'],
+            'colonia'      => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\pN\s.,#\-\/°]+$/u'],
+            'municipio'    => ['required', 'string', 'min:2', 'max:100', 'regex:/^[\pL\pN\s.,\-]+$/u'],
+            'ocupacion'    => ['nullable', 'string', 'max:100'],
+            'peso'         => ['nullable', 'numeric', 'min:0.5', 'max:500', 'regex:/^\d{1,3}(\.\d{1,2})?$/'],
+            'emergencia_nombre'           => ['nullable', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
+            'emergencia_apellido_paterno' => ['nullable', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
+            'emergencia_apellido_materno' => ['nullable', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
+            'emergencia_telefono'         => ['nullable', 'string', 'max:20', 'regex:/^\+?[0-9]+$/'],
+        ];
+
+        // Agregar reglas de campos médicos solo si el rol lo permite
+        if (Auth::user()->rol !== 'recepcionista') {
+            $rules['enfermedades_cronicas'] = ['nullable', 'string', 'max:500', 'regex:/^[\pL\pN\s.,;:()\-\/\"\'\+\%°#]+$/u'];
+            $rules['alergias']              = ['nullable', 'string', 'max:500', 'regex:/^[\pL\pN\s.,;:()\-\/\"\'\+\%°#]+$/u'];
+        }
+
+        $request->validate($rules, [
+            'email.email'           => 'El correo debe tener un formato válido con un dominio existente.',
+            'email.unique'          => 'Este correo ya está registrado en el sistema.',
+            'telefono.regex'        => 'El teléfono solo puede contener números.',
+            'peso.numeric'          => 'El peso debe ser un valor numérico (ej: 32.50).',
+            'peso.regex'            => 'El peso debe tener máximo 2 decimales.',
+            'peso.max'              => 'El peso no puede exceder 500 kg.',
+            'calle.regex'           => 'La calle contiene caracteres no permitidos.',
+            'calle.max'             => 'La calle no puede exceder 100 caracteres.',
+            'num_exterior.regex'    => 'El número exterior solo permite letras, números, -, / y #.',
+            'num_interior.regex'    => 'El número interior solo permite letras, números, -, / y #.',
+            'colonia.regex'         => 'La colonia contiene caracteres no permitidos.',
+            'colonia.max'           => 'La colonia no puede exceder 100 caracteres.',
+            'municipio.regex'       => 'El municipio contiene caracteres no permitidos.',
+            'municipio.max'         => 'El municipio no puede exceder 100 caracteres.',
+            'emergencia_nombre.regex'           => 'El nombre del contacto solo permite letras y espacios.',
+            'emergencia_apellido_paterno.regex' => 'El apellido del contacto solo permite letras y espacios.',
+            'emergencia_apellido_materno.regex' => 'El apellido del contacto solo permite letras y espacios.',
+            'emergencia_telefono.regex'         => 'El teléfono del contacto solo puede contener números.',
+            'enfermedades_cronicas.max'         => 'Las enfermedades crónicas no pueden exceder 500 caracteres.',
+            'enfermedades_cronicas.regex'       => 'Las enfermedades crónicas contienen caracteres no permitidos.',
+            'alergias.max'                      => 'Las alergias no pueden exceder 500 caracteres.',
+            'alergias.regex'                    => 'Las alergias contienen caracteres no permitidos.',
         ]);
 
         try {
@@ -281,7 +354,19 @@ class PacienteController extends Controller
             return redirect()->back()->with('success', 'Paciente actualizado correctamente.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Error al actualizar: ' . $e->getMessage());
+
+            // ── SEGURIDAD: No exponer mensajes de error de BD al usuario ──
+            Log::error('Error al actualizar paciente', [
+                'user_id'    => Auth::id(),
+                'paciente'   => $id,
+                'message'    => $e->getMessage(),
+                'file'       => $e->getFile(),
+                'line'       => $e->getLine(),
+                'trace'      => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'Ocurrió un error al actualizar el paciente. Si el problema persiste, contacta al administrador del sistema.');
         }
     }
 

@@ -456,15 +456,15 @@
                         <i class="fa-solid fa-id-card" style="margin-right: 5px;"></i> Datos Personales
                     </div>
                     <input type="text" name="nombre" class="modern-input" placeholder="Nombre(s)*" required
-                        value="{{ old('nombre') }}" onkeypress="return soloLetras(event)" oninput="formatearEnVivo(this)">
+                        value="{{ old('nombre') }}" maxlength="100" onkeypress="return soloLetras(event)" oninput="formatearEnVivo(this)" onpaste="sanitizarPaste(event, 'letras')">
 
                     <input type="text" name="apellido_paterno" class="modern-input" placeholder="Apellido Paterno*" required
-                        value="{{ old('apellido_paterno') }}" onkeypress="return soloLetras(event)"
-                        oninput="formatearEnVivo(this)">
+                        value="{{ old('apellido_paterno') }}" maxlength="100" onkeypress="return soloLetras(event)"
+                        oninput="formatearEnVivo(this)" onpaste="sanitizarPaste(event, 'letras')">
 
                     <input type="text" name="apellido_materno" class="modern-input" placeholder="Apellido Materno"
-                        value="{{ old('apellido_materno') }}" onkeypress="return soloLetras(event)"
-                        oninput="formatearEnVivo(this)">
+                        value="{{ old('apellido_materno') }}" maxlength="100" onkeypress="return soloLetras(event)"
+                        oninput="formatearEnVivo(this)" onpaste="sanitizarPaste(event, 'letras')">
 
                     <input type="email" name="email" class="modern-input" placeholder="Correo Electrónico*" required
                         value="{{ old('email') }}">
@@ -495,27 +495,27 @@
                         @endforeach
                     </select>
 
-                    <input type="number" name="peso" class="modern-input" placeholder="Peso (kg)" step="1" min="1" max="500"
-                        value="{{ old('peso') }}" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                    <input type="number" name="peso" class="modern-input" placeholder="Peso (kg) ej: 32.50" step="0.01" min="0.5" max="500"
+                        value="{{ old('peso') }}" oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1')">
 
 
                     <input type="text" name="calle" class="modern-input" placeholder="Calle*" required
-                        value="{{ old('calle') }}">
+                        value="{{ old('calle') }}" maxlength="100" oninput="sanitizarDireccion(this)" onpaste="sanitizarPaste(event, 'direccion')">
 
                     <input type="text" name="num_exterior" class="modern-input" placeholder="Número Exterior*" required
-                        value="{{ old('num_exterior') }}">
+                        value="{{ old('num_exterior') }}" maxlength="20" oninput="sanitizarNumDireccion(this)" onpaste="sanitizarPaste(event, 'numero')">
 
                     <input type="text" name="num_interior" class="modern-input" placeholder="Número Interior"
-                        value="{{ old('num_interior') }}">
+                        value="{{ old('num_interior') }}" maxlength="20" oninput="sanitizarNumDireccion(this)" onpaste="sanitizarPaste(event, 'numero')">
 
                     <input type="text" name="colonia" class="modern-input" placeholder="Colonia*" required
-                        value="{{ old('colonia') }}">
+                        value="{{ old('colonia') }}" maxlength="100" oninput="sanitizarDireccion(this)" onpaste="sanitizarPaste(event, 'direccion')">
 
                     <input type="text" name="municipio" class="modern-input" placeholder="Municipio*" required
-                        value="{{ old('municipio') }}">
+                        value="{{ old('municipio') }}" maxlength="100" oninput="sanitizarDireccion(this)" onpaste="sanitizarPaste(event, 'direccion')">
 
                     <input type="text" name="ocupacion" class="modern-input" placeholder="Ocupación"
-                        value="{{ old('ocupacion') }}">
+                        value="{{ old('ocupacion') }}" maxlength="100" oninput="sanitizarDireccion(this)" onpaste="sanitizarPaste(event, 'direccion')">
 
                     {{-- Contacto de Emergencia --}}
                     <div class="full-width"
@@ -524,16 +524,16 @@
                     </div>
 
                     <input type="text" name="emergencia_nombre" class="modern-input" placeholder="Nombre Contacto*" required
-                        value="{{ old('emergencia_nombre') }}" onkeypress="return soloLetras(event)"
-                        oninput="formatearEnVivo(this)">
+                        value="{{ old('emergencia_nombre') }}" maxlength="100" onkeypress="return soloLetras(event)"
+                        oninput="formatearEnVivo(this)" onpaste="sanitizarPaste(event, 'letras')">
 
                     <input type="text" name="emergencia_apellido_paterno" class="modern-input"
-                        placeholder="Apellido Paterno" value="{{ old('emergencia_apellido_paterno') }}"
-                        onkeypress="return soloLetras(event)" oninput="formatearEnVivo(this)">
+                        placeholder="Apellido Paterno" value="{{ old('emergencia_apellido_paterno') }}" maxlength="100"
+                        onkeypress="return soloLetras(event)" oninput="formatearEnVivo(this)" onpaste="sanitizarPaste(event, 'letras')">
 
                     <input type="text" name="emergencia_apellido_materno" class="modern-input"
-                        placeholder="Apellido Materno" value="{{ old('emergencia_apellido_materno') }}"
-                        onkeypress="return soloLetras(event)" oninput="formatearEnVivo(this)">
+                        placeholder="Apellido Materno" value="{{ old('emergencia_apellido_materno') }}" maxlength="100"
+                        onkeypress="return soloLetras(event)" oninput="formatearEnVivo(this)" onpaste="sanitizarPaste(event, 'letras')">
 
                     <input type="text" name="emergencia_telefono" class="modern-input" placeholder="Teléfono Emergencia*"
                         required maxlength="15" value="{{ old('emergencia_telefono') }}"
@@ -544,12 +544,14 @@
                         <i class="fa-solid fa-notes-medical" style="margin-right: 5px;"></i> Información de Salud
                     </div>
                     <div class="full-width">
-                        <textarea name="enfermedades_cronicas" class="modern-input" rows="2" required
-                            placeholder="Enfermedades Crónicas* (Si no tiene, escriba 'Ninguna')">{{ old('enfermedades_cronicas') }}</textarea>
+                        <textarea name="enfermedades_cronicas" class="modern-input" rows="2" required maxlength="500"
+                            placeholder="Enfermedades Crónicas* (Si no tiene, escriba 'Ninguna')" oninput="sanitizarSalud(this); actualizarContador(this)" onpaste="sanitizarPaste(event, 'salud')">{{ old('enfermedades_cronicas') }}</textarea>
+                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/500</small>
                     </div>
                     <div class="full-width">
-                        <textarea name="alergias" class="modern-input" rows="2" required
-                            placeholder="Alergias a Medicamentos* (Si no tiene, escriba 'Ninguna')">{{ old('alergias') }}</textarea>
+                        <textarea name="alergias" class="modern-input" rows="2" required maxlength="500"
+                            placeholder="Alergias a Medicamentos* (Si no tiene, escriba 'Ninguna')" oninput="sanitizarSalud(this); actualizarContador(this)" onpaste="sanitizarPaste(event, 'salud')">{{ old('alergias') }}</textarea>
+                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/500</small>
                     </div>
                     @endif
                 </div>
@@ -1102,32 +1104,32 @@
                         required>
                     <input type="text" name="telefono" id="edit-telefono" class="modern-input" placeholder="Teléfono*"
                         required maxlength="15" oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
-                    <input type="number" name="peso" id="edit-peso" class="modern-input" placeholder="Peso" step="1" min="0"
-                        max="500" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                    <input type="text" name="calle" id="edit-calle" class="modern-input" placeholder="Calle*" required>
+                    <input type="number" name="peso" id="edit-peso" class="modern-input" placeholder="Peso (kg) ej: 32.50" step="0.01" min="0.5"
+                        max="500" oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1')">
+                    <input type="text" name="calle" id="edit-calle" class="modern-input" placeholder="Calle*" required maxlength="100" oninput="sanitizarDireccion(this)" onpaste="sanitizarPaste(event, 'direccion')">
                     <input type="text" name="num_exterior" id="edit-num-exterior" class="modern-input"
-                        placeholder="Número Exterior*" required>
+                        placeholder="Número Exterior*" required maxlength="20" oninput="sanitizarNumDireccion(this)" onpaste="sanitizarPaste(event, 'numero')">
                     <input type="text" name="num_interior" id="edit-num-interior" class="modern-input"
-                        placeholder="Número Interior">
+                        placeholder="Número Interior" maxlength="20" oninput="sanitizarNumDireccion(this)" onpaste="sanitizarPaste(event, 'numero')">
                     <input type="text" name="colonia" id="edit-colonia" class="modern-input" placeholder="Colonia*"
-                        required>
+                        required maxlength="100" oninput="sanitizarDireccion(this)" onpaste="sanitizarPaste(event, 'direccion')">
                     <input type="text" name="municipio" id="edit-municipio" class="modern-input"
-                        placeholder="Municipio*" required>
-                    <input type="text" name="ocupacion" id="edit-ocupacion" class="modern-input" placeholder="Ocupación">
+                        placeholder="Municipio*" required maxlength="100" oninput="sanitizarDireccion(this)" onpaste="sanitizarPaste(event, 'direccion')">
+                    <input type="text" name="ocupacion" id="edit-ocupacion" class="modern-input" placeholder="Ocupación" maxlength="100" oninput="sanitizarDireccion(this)" onpaste="sanitizarPaste(event, 'direccion')">
 
                     <div class="full-width"
                         style="font-size: 0.78em; font-weight: 700; color: #ef4444; text-transform: uppercase; border-bottom: 2px solid #fee2e2; padding-bottom: 6px; margin-top: 12px; margin-bottom: 5px;">
                         <i class="fa-solid fa-phone-volume" style="margin-right: 5px;"></i> Contacto de Emergencia
                     </div>
                     <input type="text" name="emergencia_nombre" id="edit-em-nombre" class="modern-input"
-                        placeholder="Nombre Contacto"
-                        oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
+                        placeholder="Nombre Contacto" maxlength="100"
+                        oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')" onpaste="sanitizarPaste(event, 'letras')">
                     <input type="text" name="emergencia_apellido_paterno" id="edit-em-paterno" class="modern-input"
-                        placeholder="Apellido Paterno"
-                        oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
+                        placeholder="Apellido Paterno" maxlength="100"
+                        oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')" onpaste="sanitizarPaste(event, 'letras')">
                     <input type="text" name="emergencia_apellido_materno" id="edit-em-materno" class="modern-input"
-                        placeholder="Apellido Materno"
-                        oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
+                        placeholder="Apellido Materno" maxlength="100"
+                        oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')" onpaste="sanitizarPaste(event, 'letras')">
                     <input type="text" name="emergencia_telefono" id="edit-em-telefono" class="modern-input"
                         placeholder="Teléfono Emergencia" maxlength="15"
                         oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
@@ -1138,12 +1140,14 @@
                         <i class="fa-solid fa-notes-medical" style="margin-right: 5px;"></i> Información de Salud
                     </div>
                     <div class="full-width">
-                        <textarea name="enfermedades_cronicas" id="edit-enfermedades" class="modern-input" rows="2"
-                            placeholder="Enfermedades Crónicas (Texto libre)"></textarea>
+                        <textarea name="enfermedades_cronicas" id="edit-enfermedades" class="modern-input" rows="2" maxlength="500"
+                            placeholder="Enfermedades Crónicas (Texto libre)" oninput="sanitizarSalud(this); actualizarContador(this)" onpaste="sanitizarPaste(event, 'salud')"></textarea>
+                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/500</small>
                     </div>
                     <div class="full-width">
-                        <textarea name="alergias" id="edit-alergias" class="modern-input" rows="2"
-                            placeholder="Alergias a Medicamentos (Texto libre)"></textarea>
+                        <textarea name="alergias" id="edit-alergias" class="modern-input" rows="2" maxlength="500"
+                            placeholder="Alergias a Medicamentos (Texto libre)" oninput="sanitizarSalud(this); actualizarContador(this)" onpaste="sanitizarPaste(event, 'salud')"></textarea>
+                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/500</small>
                     </div>
                     @endif
                 </div>
@@ -1275,7 +1279,7 @@
             document.getElementById('view-edad').innerText = calcularEdad(paciente.fecha_nacimiento);
             document.getElementById('view-sexo').innerText = paciente.sexo === 'M' ? 'Masculino' : (paciente.sexo === 'F' ? 'Femenino' : 'Otro');
             document.getElementById('view-sangre').innerText = paciente.tipo_sangre || 'S/D';
-            document.getElementById('view-peso').innerText = (paciente.peso ? parseInt(paciente.peso) : '0') + ' kg';
+            document.getElementById('view-peso').innerText = (paciente.peso ? parseFloat(paciente.peso) : '0') + ' kg';
             document.getElementById('view-direccion').innerText = construirDireccionPaciente(paciente);
             document.getElementById('view-ocupacion').innerText = paciente.ocupacion || 'S/D';
             const viewEnfermedades = document.getElementById('view-enfermedades');
@@ -1618,7 +1622,7 @@
             // Campos Editables
             document.getElementById('edit-email').value = currentPaciente.correo_electronico || '';
             document.getElementById('edit-telefono').value = currentPaciente.telefono || '';
-            document.getElementById('edit-peso').value = currentPaciente.peso ? parseInt(currentPaciente.peso) : '';
+            document.getElementById('edit-peso').value = currentPaciente.peso ? parseFloat(currentPaciente.peso) : '';
             document.getElementById('edit-calle').value = currentPaciente.calle || '';
             document.getElementById('edit-num-exterior').value = currentPaciente.num_exterior || '';
             document.getElementById('edit-num-interior').value = currentPaciente.num_interior || '';
@@ -1638,14 +1642,6 @@
                 document.getElementById('edit-em-materno').value = ce.apellido_materno || '';
                 document.getElementById('edit-em-telefono').value = ce.numero_telefono || '';
             }
-        }
-        function formatearNombre(input) {
-            let valor = input.value.trim().toLowerCase();
-            valor = valor.split(' ').map(palabra => {
-                if (palabra.length === 0) return '';
-                return palabra.charAt(0).toUpperCase() + palabra.slice(1);
-            }).join(' ');
-            input.value = valor;
         }
 
         // Eliminación de pacientes deshabilitada por cumplimiento NOM-004-SSA3-2012
@@ -1678,49 +1674,176 @@
                 btn.style.cursor = 'not-allowed';
             }
         });
-        // ─────────────────────────────────────────────
-        // SOLO LETRAS (bloquea números en tiempo real)
-        // ─────────────────────────────────────────────
+        // ───────────────────────────────────────────────────────────────
+        // FUNCIONES DE SANITIZACIÓN Y VALIDACIÓN FRONTEND
+        // ───────────────────────────────────────────────────────────────
+
+        /**
+         * Elimina emojis y caracteres especiales de una cadena.
+         */
+        function eliminarEmojis(str) {
+            return str.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{10000}-\u{10FFFF}]/gu, '');
+        }
+
+        /**
+         * Elimina tags HTML de texto pegado.
+         */
+        function stripHtml(str) {
+            const temp = document.createElement('div');
+            temp.innerHTML = str;
+            return temp.textContent || temp.innerText || '';
+        }
+
+        /**
+         * SOLO LETRAS — Bloquea teclas que no sean letras o espacio.
+         * Soporta acentos y ñ.
+         */
         function soloLetras(e) {
             let tecla = e.key;
-            let regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ ]$/;
-
+            let regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñÀ-ÿ ]$/;
             if (!regex.test(tecla)) {
                 return false;
             }
         }
 
+        /**
+         * FORMATEAR EN VIVO — Capitaliza cada palabra sin el bug del acento.
+         * Usa una técnica cursor-aware para no perder la posición.
+         * FIX: Ya no capitaliza la letra después de un acento.
+         */
         function formatearEnVivo(input) {
+            // Guardar posición del cursor
+            const cursorPos = input.selectionStart;
+            const valorOriginal = input.value;
 
-            let valor = input.value.toLowerCase();
+            // 1. Eliminar emojis y caracteres no permitidos
+            let valor = eliminarEmojis(input.value);
+            valor = valor.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÀ-ÿ ]/g, '');
 
-            valor = valor.replace(/\b\w/g, function (letra) {
-                return letra.toUpperCase();
+            // 2. Eliminar espacios múltiples
+            valor = valor.replace(/\s{2,}/g, ' ');
+
+            // 3. Eliminar espacio al inicio
+            valor = valor.replace(/^\s+/, '');
+
+            // 4. Capitalizar cada palabra de forma segura (sin afectar acentos)
+            valor = valor.toLowerCase().replace(/(^|\s)(\p{L})/gu, function(match, espacio, letra) {
+                return espacio + letra.toUpperCase();
             });
 
             input.value = valor;
+
+            // Restaurar posición del cursor
+            const diff = valorOriginal.length - valor.length;
+            const newPos = Math.max(0, cursorPos - diff);
+            input.setSelectionRange(newPos, newPos);
         }
 
-        // ─────────────────────────────────────────────
-        // Evita doble espacio
-        // ─────────────────────────────────────────────
-        function limpiarEspacios(input) {
-            input.value = input.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g, '')
-                .replace(/\s{2,}/g, ' ');
+        /**
+         * SANITIZAR PASTE — Intercepta el texto pegado y lo limpia.
+         * Tipos: 'letras', 'direccion', 'numero', 'salud'
+         */
+        function sanitizarPaste(e, tipo) {
+            e.preventDefault();
+
+            // Obtener solo texto plano (ignora rich text / HTML)
+            let texto = (e.clipboardData || window.clipboardData).getData('text/plain') || '';
+
+            // Eliminar HTML que pudiera colarse
+            texto = stripHtml(texto);
+
+            // Eliminar emojis
+            texto = eliminarEmojis(texto);
+
+            // Filtrar según tipo
+            switch (tipo) {
+                case 'letras':
+                    texto = texto.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÀ-ÿ ]/g, '');
+                    break;
+                case 'direccion':
+                    texto = texto.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÀ-ÿ0-9\s.,#\-\/°]/g, '');
+                    break;
+                case 'numero':
+                    texto = texto.replace(/[^A-Za-z0-9\s\-\/#]/g, '');
+                    break;
+                case 'salud':
+                    texto = texto.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÀ-ÿ0-9\s.,;:()\-\/"'\+\%°#]/g, '');
+                    break;
+            }
+
+            // Limpiar espacios
+            texto = texto.replace(/\s{2,}/g, ' ').trim();
+
+            // Respetar maxlength
+            const input = e.target;
+            const maxLen = input.maxLength;
+            if (maxLen > 0) {
+                const available = maxLen - input.value.length;
+                texto = texto.substring(0, available);
+            }
+
+            // Insertar el texto limpio en la posición del cursor
+            document.execCommand('insertText', false, texto);
+
+            // Actualizar contadores si es textarea
+            if (input.tagName === 'TEXTAREA') {
+                actualizarContador(input);
+            }
+
+            // Si es campo de letras, capitalizar
+            if (tipo === 'letras') {
+                formatearEnVivo(input);
+            }
         }
 
-        // ─────────────────────────────────────────────
-        // Primera letra mayúscula
-        // ─────────────────────────────────────────────
-        function formatearNombre(input) {
-            let valor = input.value.trim().toLowerCase();
+        /**
+         * SANITIZAR DIRECCIÓN — Limpia en tiempo real campos de dirección.
+         */
+        function sanitizarDireccion(input) {
+            input.value = eliminarEmojis(input.value)
+                .replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÀ-ÿ0-9\s.,#\-\/°]/g, '')
+                .replace(/\s{2,}/g, ' ')
+                .replace(/^\s+/, '');
+        }
 
-            valor = valor.split(' ').map(palabra => {
-                if (palabra.length === 0) return '';
-                return palabra.charAt(0).toUpperCase() + palabra.slice(1);
-            }).join(' ');
+        /**
+         * SANITIZAR NÚMERO DIRECCIÓN — Solo alfanuméricos, -, /, #
+         */
+        function sanitizarNumDireccion(input) {
+            input.value = eliminarEmojis(input.value)
+                .replace(/[^A-Za-z0-9\s\-\/#]/g, '')
+                .replace(/^\s+/, '');
+        }
 
-            input.value = valor;
+        /**
+         * SANITIZAR SALUD — Limpia campos médicos en tiempo real.
+         */
+        function sanitizarSalud(input) {
+            input.value = eliminarEmojis(input.value)
+                .replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÀ-ÿ0-9\s.,;:()\-\/"'\+\%°#]/g, '')
+                .replace(/^\s+/, '');
+        }
+
+        /**
+         * ACTUALIZAR CONTADOR — Actualiza el indicador de caracteres restantes.
+         */
+        function actualizarContador(input) {
+            const counter = input.closest('.full-width')?.querySelector('.char-count');
+            if (counter) {
+                const len = input.value.length;
+                const max = input.maxLength || 500;
+                counter.textContent = len;
+
+                // Cambiar color según proximidad al límite
+                const counterParent = counter.parentElement;
+                if (len >= max * 0.9) {
+                    counterParent.style.color = '#ef4444'; // rojo
+                } else if (len >= max * 0.75) {
+                    counterParent.style.color = '#f59e0b'; // amarillo
+                } else {
+                    counterParent.style.color = '#9ca3af'; // gris
+                }
+            }
         }
 
         // ─── Auto-abrir modal si hay errores de validación ──────────────
