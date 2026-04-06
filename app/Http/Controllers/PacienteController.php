@@ -257,8 +257,8 @@ class PacienteController extends Controller
 
         // Agregar reglas de campos médicos solo si el rol lo permite
         if (Auth::user()->rol !== 'recepcionista') {
-            $rules['enfermedades_cronicas'] = ['nullable', 'string', 'max:500', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'];
-            $rules['alergias']              = ['nullable', 'string', 'max:500', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'];
+            $rules['enfermedades_cronicas'] = ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'];
+            $rules['alergias']              = ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'];
         }
 
         $request->validate($rules, [
@@ -280,9 +280,9 @@ class PacienteController extends Controller
             'emergencia_apellido_paterno.regex' => 'El apellido del contacto solo permite letras y espacios.',
             'emergencia_apellido_materno.regex' => 'El apellido del contacto solo permite letras y espacios.',
             'emergencia_telefono.regex'         => 'El teléfono del contacto solo puede contener números.',
-            'enfermedades_cronicas.max'         => 'Las enfermedades crónicas no pueden exceder 500 caracteres.',
+            'enfermedades_cronicas.max'         => 'Las enfermedades crónicas no pueden exceder 100 caracteres.',
             'enfermedades_cronicas.regex'       => 'Las enfermedades crónicas contienen caracteres no permitidos.',
-            'alergias.max'                      => 'Las alergias no pueden exceder 500 caracteres.',
+            'alergias.max'                      => 'Las alergias no pueden exceder 100 caracteres.',
             'alergias.regex'                    => 'Las alergias contienen caracteres no permitidos.',
         ]);
 

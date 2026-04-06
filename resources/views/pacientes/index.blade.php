@@ -544,14 +544,14 @@
                         <i class="fa-solid fa-notes-medical" style="margin-right: 5px;"></i> Información de Salud
                     </div>
                     <div class="full-width">
-                        <textarea name="enfermedades_cronicas" class="modern-input" rows="2" required maxlength="500"
+                        <textarea name="enfermedades_cronicas" class="modern-input" rows="2" required maxlength="100"
                             placeholder="Enfermedades Crónicas* (Si no tiene, escriba 'Ninguna')" oninput="sanitizarSalud(this); actualizarContador(this)" onpaste="sanitizarPaste(event, 'salud')">{{ old('enfermedades_cronicas') }}</textarea>
-                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/500</small>
+                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/100</small>
                     </div>
                     <div class="full-width">
-                        <textarea name="alergias" class="modern-input" rows="2" required maxlength="500"
+                        <textarea name="alergias" class="modern-input" rows="2" required maxlength="100"
                             placeholder="Alergias a Medicamentos* (Si no tiene, escriba 'Ninguna')" oninput="sanitizarSalud(this); actualizarContador(this)" onpaste="sanitizarPaste(event, 'salud')">{{ old('alergias') }}</textarea>
-                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/500</small>
+                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/100</small>
                     </div>
                     @endif
                 </div>
@@ -1140,14 +1140,14 @@
                         <i class="fa-solid fa-notes-medical" style="margin-right: 5px;"></i> Información de Salud
                     </div>
                     <div class="full-width">
-                        <textarea name="enfermedades_cronicas" id="edit-enfermedades" class="modern-input" rows="2" maxlength="500"
+                        <textarea name="enfermedades_cronicas" id="edit-enfermedades" class="modern-input" rows="2" maxlength="100"
                             placeholder="Enfermedades Crónicas (Texto libre)" oninput="sanitizarSalud(this); actualizarContador(this)" onpaste="sanitizarPaste(event, 'salud')"></textarea>
-                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/500</small>
+                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/100</small>
                     </div>
                     <div class="full-width">
-                        <textarea name="alergias" id="edit-alergias" class="modern-input" rows="2" maxlength="500"
+                        <textarea name="alergias" id="edit-alergias" class="modern-input" rows="2" maxlength="100"
                             placeholder="Alergias a Medicamentos (Texto libre)" oninput="sanitizarSalud(this); actualizarContador(this)" onpaste="sanitizarPaste(event, 'salud')"></textarea>
-                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/500</small>
+                        <small class="char-counter" style="display:block; text-align:right; color:#9ca3af; font-size:0.75rem; margin-top:2px;"><span class="char-count">0</span>/100</small>
                     </div>
                     @endif
                 </div>

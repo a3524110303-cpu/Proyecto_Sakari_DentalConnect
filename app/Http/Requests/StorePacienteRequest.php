@@ -124,8 +124,8 @@ class StorePacienteRequest extends FormRequest
             'ocupacion'         => ['required', 'string', 'max:100'],
 
             // ── Información de salud ──
-            'enfermedades_cronicas' => ['required', 'string', 'min:3', 'max:500', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'],
-            'alergias'             => ['required', 'string', 'min:3', 'max:500', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'],
+            'enfermedades_cronicas' => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'],
+            'alergias'             => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-\/"\'\+\%°#]+$/'],
 
             // ── Contacto de emergencia ──
             'emergencia_nombre'            => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
@@ -200,12 +200,12 @@ class StorePacienteRequest extends FormRequest
             // ── Información de Salud ──
             'enfermedades_cronicas.required' => 'Las enfermedades crónicas son obligatorias. Si no tiene, escriba "Ninguna".',
             'enfermedades_cronicas.min'      => 'Las enfermedades crónicas deben tener al menos 3 caracteres.',
-            'enfermedades_cronicas.max'      => 'Las enfermedades crónicas no pueden exceder 500 caracteres.',
+            'enfermedades_cronicas.max'      => 'Las enfermedades crónicas no pueden exceder 100 caracteres.',
             'enfermedades_cronicas.regex'    => 'Las enfermedades crónicas contienen caracteres no permitidos (no se aceptan emojis).',
 
             'alergias.required' => 'Las alergias son obligatorias. Si no tiene, escriba "Ninguna".',
             'alergias.min'      => 'Las alergias deben tener al menos 3 caracteres.',
-            'alergias.max'      => 'Las alergias no pueden exceder 500 caracteres.',
+            'alergias.max'      => 'Las alergias no pueden exceder 100 caracteres.',
             'alergias.regex'    => 'Las alergias contienen caracteres no permitidos (no se aceptan emojis).',
 
             // ── Contacto de Emergencia ──
