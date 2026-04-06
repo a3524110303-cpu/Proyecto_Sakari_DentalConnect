@@ -495,7 +495,7 @@
                         @endforeach
                     </select>
 
-                    <input type="number" name="peso" class="modern-input" placeholder="Peso (kg) ej: 32.50" step="0.01" min="0.5" max="500"
+                    <input type="number" name="peso" class="modern-input" placeholder="Peso (kg) ej: 32.50" step="0.01" min="0.5" max="500" oninput="limitarDecimalesPeso(this)"
                         value="{{ old('peso') }}">
 
 
@@ -1104,7 +1104,7 @@
                         required pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}">
                     <input type="text" name="telefono" id="edit-telefono" class="modern-input" placeholder="Teléfono*"
                         required maxlength="15" oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
-                    <input type="number" name="peso" id="edit-peso" class="modern-input" placeholder="Peso (kg) ej: 32.50" step="0.01" min="0.5"
+                    <input type="number" name="peso" id="edit-peso" class="modern-input" placeholder="Peso (kg) ej: 32.50" step="0.01" min="0.5" oninput="limitarDecimalesPeso(this)"
                         max="500">
                     <input type="text" name="calle" id="edit-calle" class="modern-input" placeholder="Calle*" required maxlength="100" oninput="sanitizarDireccion(this)" onpaste="sanitizarPaste(event, 'direccion')">
                     <input type="text" name="num_exterior" id="edit-num-exterior" class="modern-input"
@@ -1822,6 +1822,34 @@
             input.value = eliminarEmojis(input.value)
                 .replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÀ-ÿ0-9\s.,;:()\-\/"'\+\%°#]/g, '')
                 .replace(/^\s+/, '');
+        }
+
+        /**
+         * LIMITAR PESO — Máximo 3 enteros y 2 decimales (ej: 55.10).
+         * Si el usuario intenta escribir más, regresa al último valor válido.
+         */
+        function limitarDecimalesPeso(input) {
+            const valor = input.value;
+
+            // Permitir temporalmente vacío para facilitar edición manual.
+            if (valor === '') {
+                input.dataset.lastValidPeso = '';
+                input.setCustomValidity('');
+                return;
+            }
+
+            const formatoValido = /^\d{1,3}(\.\d{0,2})?$/.test(valor);
+            const numero = Number(valor);
+            const rangoValido = !Number.isNaN(numero) && numero >= 0.5 && numero <= 500;
+
+            if (formatoValido && rangoValido) {
+                input.dataset.lastValidPeso = valor;
+                input.setCustomValidity('');
+                return;
+            }
+
+            input.value = input.dataset.lastValidPeso || '';
+            input.setCustomValidity('El peso debe tener máximo 2 decimales (ej: 55.10).');
         }
 
         /**
