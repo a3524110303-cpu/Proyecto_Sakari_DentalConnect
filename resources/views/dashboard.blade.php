@@ -1124,8 +1124,10 @@ function generarHorariosDisponibles(
     const contenedor = document.getElementById('contenedor-horarios');
     const inputHora = document.getElementById('input-nueva-hora');
 
-    if(!contenedor) return;
+    if(!contenedor || !inputHora) return;
 
+    // Guardamos la hora que estaba seleccionada antes de renderizar de nuevo
+    const horaPreviaSeleccionada = inputHora.value;
     inputHora.value='';
 
     let horariosClinica=[];
@@ -1154,6 +1156,7 @@ function generarHorariosDisponibles(
     const bloquesNecesarios = Math.max(1, Math.ceil(duracionMinutos / intervaloMinutos));
 
     contenedor.innerHTML='';
+    let botonARestaurar = null; // Variable para recuperar el foco
 
     horariosClinica.forEach(hora=>{
 
@@ -1198,11 +1201,21 @@ function generarHorariosDisponibles(
 
             };
 
+            // Si el botón que estamos creando es el mismo que estaba seleccionado antes, lo recordamos
+            if (hora === horaPreviaSeleccionada) {
+                botonARestaurar = btn;
+            }
+
         }
 
         contenedor.appendChild(btn);
 
     });
+
+    // Auto-click al botón si la hora sigue estando libre con la nueva duración
+    if (botonARestaurar) {
+        botonARestaurar.click();
+    }
 
 }
 
@@ -1588,10 +1601,10 @@ function confirmarHorario(){
         // ==========================================
         // Trigger submit when clicking the external button
         document.getElementById('btn-actualizar-cita').addEventListener('click', function () {
-            // VERIFICACIÓN DE FECHA (Petición del usuario)
-            if (window.fechaCitaActual) {
+            // VERIFICACIÓN DE FECHA CORREGIDA
+            if (typeof fechaCitaActual !== 'undefined' && fechaCitaActual) {
                 const hoyStr = new Date().toISOString().split('T')[0];
-                if (window.fechaCitaActual !== hoyStr) {
+                if (fechaCitaActual !== hoyStr) {
                     const confirmacion = confirm("Estás a punto de modificar datos de una cita días previos a la fecha programada o diferente al día de hoy. ¿Estás seguro de continuar?");
                     if (!confirmacion) return;
                 }
