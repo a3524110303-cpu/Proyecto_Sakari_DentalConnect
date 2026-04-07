@@ -162,14 +162,17 @@ class DashboardController extends Controller
         $primeraCita = true;
 
         foreach ($citasOrdenadas as $citaOrdenada) {
-            if (!$primeraCita && $saldoGrupo <= 0) {
+            $esCitaSeguimiento = strtolower(trim((string) ($citaOrdenada->motivo ?? ''))) === 'cita de seguimiento';
+            $costoCita = $esCitaSeguimiento ? 0.0 : (float) ($citaOrdenada->costo_estimado ?? 0);
+
+            if (!$primeraCita && $saldoGrupo <= 0 && $costoCita > 0) {
                 $grupoActual++;
                 $saldoGrupo = 0.0;
             }
 
             $grupoPorCita[$citaOrdenada->id_cita] = $grupoActual;
 
-            $saldoGrupo += (float) ($citaOrdenada->costo_estimado ?? 0);
+            $saldoGrupo += $costoCita;
             $saldoGrupo -= (float) ($pagosPorCita[$citaOrdenada->id_cita] ?? 0);
             if ($saldoGrupo < 0) {
                 $saldoGrupo = 0.0;
@@ -188,7 +191,10 @@ class DashboardController extends Controller
 
         // El total/restante se calcula sobre toda la cuenta activa del ciclo.
         // El bloqueo de pagos adelantados se valida en actualizarCita.
-        $costoTotal  = Cita::whereIn('id_cita', $idsCitasCiclo)->sum('costo_estimado');
+        $costoTotal = $citasCiclo->sum(function ($item) {
+            $esCitaSeguimiento = strtolower(trim((string) ($item->motivo ?? ''))) === 'cita de seguimiento';
+            return $esCitaSeguimiento ? 0 : (float) ($item->costo_estimado ?? 0);
+        });
         $totalPagado = IngresoCaja::whereIn('id_cita', $idsCitasCiclo)->sum('monto');
         $saldo       = max(0, $costoTotal - $totalPagado);
 
@@ -237,13 +243,17 @@ class DashboardController extends Controller
             $horaFinFormateada = $c->fecha_hora_fin ? \Carbon\Carbon::parse($c->fecha_hora_fin)->format('h:i A') : 'N/A';
 
             // 1. SIEMPRE agregar la Cita Original como punto de partida en el historial
+            $esCitaSeguimiento = strtolower(trim((string) ($c->motivo ?? ''))) === 'cita de seguimiento';
+            $procedimientoBase = $esCitaSeguimiento
+                ? 'Cita de seguimiento'
+                : ($c->servicio?->nombre_servicio ?? ($c->motivo ?? 'Consulta agendada'));
+
             $filasTabla[] = [
                 'timestamp' => $fechaBaseCita->timestamp,
                 'id_cita' => $c->id_cita,
                 'dia' => $fechaBaseCita->format('d/m/Y'),
                 'hora' => $fechaBaseCita->format('h:i A') . ' – ' . $horaFinFormateada,
-                'seguimiento' => $c->servicio?->nombre_servicio
-                    ?? ($c->motivo ?? 'Consulta agendada'),
+                'seguimiento' => $procedimientoBase,
                 'abono' => '0.00',
                 'estado' => ucfirst($c->estado_cita ?? 'pendiente')
             ];
@@ -496,7 +506,7 @@ class DashboardController extends Controller
                     'fecha_hora_inicio' => $nuevoInicio,
                     'fecha_hora_fin' => $nuevoFin,
                     'estado_cita' => 'pendiente',
-                    'costo_estimado' => $cita->costo_estimado,
+                    'costo_estimado' => 0,
                     'motivo' => 'Cita de seguimiento',
                     'reagenda_estatus' => $esReagendaMovilPendiente ? 'aplicada' : 'ninguna'
                 ]);
@@ -1107,8 +1117,8 @@ class DashboardController extends Controller
                     'fecha_hora_inicio' => $nuevaFecha,
                     'fecha_hora_fin' => $nuevaFechaFin,
                     'estado_cita' => 'pendiente',
-                    'costo_estimado' => $cita->costo_estimado,
-                    'motivo' => $cita->motivo,
+                    'costo_estimado' => 0,
+                    'motivo' => 'Cita de seguimiento',
                     'notas' => "[NUEVA CITA POR REAGENDA DE PACIENTE]",
                     'reagenda_estatus' => 'aplicada',
                 ]);
