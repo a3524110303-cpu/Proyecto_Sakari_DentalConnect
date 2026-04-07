@@ -186,28 +186,10 @@ class DashboardController extends Controller
 
         $idsCitasCiclo = $citasCiclo->pluck('id_cita');
 
-        // QA: no cargar costo de citas futuras sin movimiento en el saldo actual.
-        // Excepción: si una cita futura YA tiene abonos, se considera activa en cuenta.
-        $ahora = now();
-        $idsCitasDevengadas = $citasCiclo
-            ->filter(function ($item) use ($ahora, $pagosPorCita) {
-                $idCita = (int) $item->id_cita;
-                $tieneAbonos = ((float) ($pagosPorCita[$idCita] ?? 0)) > 0;
-
-                if (!empty($item->fecha_hora_inicio) && Carbon::parse($item->fecha_hora_inicio)->lte($ahora)) {
-                    return true;
-                }
-
-                if (in_array(strtolower((string) ($item->estado_cita ?? '')), ['completada'], true)) {
-                    return true;
-                }
-
-                return $tieneAbonos;
-            })
-            ->pluck('id_cita');
-
-        $costoTotal  = Cita::whereIn('id_cita', $idsCitasDevengadas)->sum('costo_estimado');
-        $totalPagado = IngresoCaja::whereIn('id_cita', $idsCitasDevengadas)->sum('monto');
+        // El total/restante se calcula sobre toda la cuenta activa del ciclo.
+        // El bloqueo de pagos adelantados se valida en actualizarCita.
+        $costoTotal  = Cita::whereIn('id_cita', $idsCitasCiclo)->sum('costo_estimado');
+        $totalPagado = IngresoCaja::whereIn('id_cita', $idsCitasCiclo)->sum('monto');
         $saldo       = max(0, $costoTotal - $totalPagado);
 
         $pacienteData = null;
