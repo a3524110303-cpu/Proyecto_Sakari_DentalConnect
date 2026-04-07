@@ -245,10 +245,16 @@ class DashboardController extends Controller
             $abonoCita = $estadoCita === 'cancelada' ? '-' : '0.00';
 
             // 1. SIEMPRE agregar la Cita Original como punto de partida en el historial
-            $esCitaSeguimiento = strtolower(trim((string) ($c->motivo ?? ''))) === 'cita de seguimiento';
-            $procedimientoBase = $esCitaSeguimiento
-                ? 'Cita de seguimiento'
-                : ($c->servicio?->nombre_servicio ?? ($c->motivo ?? 'Consulta agendada'));
+            $motivoCita = trim((string) ($c->motivo ?? ''));
+            $esCitaSeguimiento = strtolower($motivoCita) === 'cita de seguimiento';
+            if ($esCitaSeguimiento) {
+                $procedimientoBase = 'Cita de seguimiento';
+            } elseif ($motivoCita !== '') {
+                // Mostrar el texto real capturado en seguimiento cuando exista.
+                $procedimientoBase = $motivoCita;
+            } else {
+                $procedimientoBase = $c->servicio?->nombre_servicio ?? 'Consulta agendada';
+            }
 
             $filasTabla[] = [
                 'timestamp' => $fechaBaseCita->timestamp,

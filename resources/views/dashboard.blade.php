@@ -783,6 +783,7 @@ Resumen de secciones:
 
     if(form){
         form.action = `/citas/${idCita}/actualizar`;
+        reagendaHorarioConfirmada = false;
         
         // FIX: Limpiar valores previos para evitar fugas de estado a otras citas
         document.getElementById('input-nueva-fecha').value = '';
@@ -958,6 +959,7 @@ let horasOcupadas = [];
 let calMesActual = new Date().getMonth() + 1;
 let calAnioActual = new Date().getFullYear();
 let fechaCitaActual = null;
+let reagendaHorarioConfirmada = false;
 let contextoHorarioWidget = {
     fecha: null,
     horaInicio: '09:00',
@@ -1286,7 +1288,10 @@ function recalcularHorariosWidget() {
         const fechaString =
         `${anio}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
 
+        reagendaHorarioConfirmada = false;
+
         document.getElementById('input-nueva-fecha').value=fechaString;
+        document.getElementById('input-nueva-hora').value='';
 
         fetch(`/api/calendario/horas-ocupadas?fecha=${fechaString}`, {
             headers: { 'Accept': 'application/json' }
@@ -1365,6 +1370,8 @@ function confirmarHorario(){
         return;
 
     }
+
+    reagendaHorarioConfirmada = true;
 
     closeWidgets();
 
@@ -1628,7 +1635,21 @@ function confirmarHorario(){
             e.preventDefault();
 
             const form = e.target;
+            const inputNuevaFecha = document.getElementById('input-nueva-fecha');
+            const inputNuevaHora = document.getElementById('input-nueva-hora');
+            const reagendaConfirmada = reagendaHorarioConfirmada === true;
+
+            if (!reagendaConfirmada) {
+                if (inputNuevaFecha) inputNuevaFecha.value = '';
+                if (inputNuevaHora) inputNuevaHora.value = '';
+            }
+
             const formData = new FormData(form);
+            if (!reagendaConfirmada) {
+                formData.delete('nueva_fecha');
+                formData.delete('nueva_hora');
+                formData.delete('nueva_duracion_minutos');
+            }
             const actionUrl = form.action;
 
             // Visual feedback (optional)
@@ -1682,6 +1703,7 @@ function confirmarHorario(){
                         document.querySelector('textarea[name="notas_seguimiento"]').value = '';
                         document.getElementById('input-nueva-fecha').value = '';
                         document.getElementById('input-nueva-hora').value = '';
+                        reagendaHorarioConfirmada = false;
                         closeWidgets();
                     } else {
                         alert('Error: ' + data.message);
@@ -1737,13 +1759,22 @@ function confirmarHorario(){
         }
 
         function cancelarHorario() {
+            reagendaHorarioConfirmada = false;
             document.getElementById('input-nueva-fecha').value = '';
             document.getElementById('input-nueva-hora').value = '';
             closeWidgets();
         }
 
         // Cierra los widgets si das clic afuera (en el overlay)
-        document.getElementById('internal-widget-overlay').addEventListener('click', closeWidgets);
+        document.getElementById('internal-widget-overlay').addEventListener('click', function () {
+            const widgetHorario = document.getElementById('widget-horario');
+            if (widgetHorario && widgetHorario.style.display === 'block') {
+                cancelarHorario();
+                return;
+            }
+
+            closeWidgets();
+        });
 
         // --- CALCULO MATEMATICO EN TIEMPO REAL ---
         // Recalcula saldo restante en tiempo real segun abono ingresado.
