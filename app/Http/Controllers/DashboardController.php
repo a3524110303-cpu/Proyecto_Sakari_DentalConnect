@@ -310,12 +310,17 @@ class DashboardController extends Controller
             }
 
             foreach ($movimientos as $mov) {
+                // UX/QA: no mostrar filas de "nota" aislada (sin abono) en el historial principal.
+                if ($mov['abono_total'] <= 0 && !empty($mov['notas'])) {
+                    continue;
+                }
+
                 $textoSeguimiento = '';
 
                 if (!empty($mov['notas'])) {
-                    $textoSeguimiento = count($mov['notas']) === 1
-                        ? 'Nota: ' . $mov['notas'][0]
-                        : 'Notas: ' . implode(' | ', $mov['notas']);
+                    $textoSeguimiento = !empty($mov['detalles_pago'])
+                        ? $mov['detalles_pago'][0]
+                        : 'Movimiento registrado';
                 } elseif (!empty($mov['detalles_pago'])) {
                     $textoSeguimiento = $mov['detalles_pago'][0];
                 } else {
