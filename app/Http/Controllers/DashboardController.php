@@ -212,35 +212,82 @@ class DashboardController extends Controller
                 'estado' => ucfirst($c->estado_cita ?? 'pendiente')
             ];
 
-            // 2. Agregar los Seguimientos (notas) como filas totalmente individuales
+            // 2. Agrupar eventos por movimiento (mismo timestamp) para evitar filas separadas
+            $movimientos = [];
+            $claveMovimiento = static function (Carbon $fecha): string {
+                return $fecha->format('Y-m-d H:i:s');
+            };
+
             foreach ($seguimientos as $seg) {
                 $fechaSeg = $seg->created_at ? Carbon::parse($seg->created_at) : $fechaBaseCita;
-                
-                $filasTabla[] = [
-                    'timestamp' => $fechaSeg->timestamp,
-                    'id_cita' => $c->id_cita,
-                    'dia' => $fechaSeg->format('d/m/Y'), 
-                    'hora' => $fechaSeg->format('h:i A'), 
-                    'seguimiento' => 'Nota: ' . $seg->observaciones,
-                    'abono' => '0.00',
-                    'estado' => 'Actualización'
-                ];
+
+                $key = $claveMovimiento($fechaSeg);
+                if (!isset($movimientos[$key])) {
+                    $movimientos[$key] = [
+                        'fecha' => $fechaSeg,
+                        'timestamp' => $fechaSeg->timestamp,
+                        'notas' => [],
+                        'abono_total' => 0.0,
+                        'detalles_pago' => [],
+                    ];
+                }
+
+                $nota = trim((string) $seg->observaciones);
+                if ($nota !== '' && !in_array($nota, $movimientos[$key]['notas'], true)) {
+                    $movimientos[$key]['notas'][] = $nota;
+                }
             }
 
-            // 3. Agregar los Pagos como filas totalmente individuales
             foreach ($pagos as $pago) {
-                // Dar prioridad a created_at para tener la hora exacta de cada pago
                 $fechaPago = $pago->created_at ? \Carbon\Carbon::parse($pago->created_at) : 
                             ($pago->fecha_ingreso ? \Carbon\Carbon::parse($pago->fecha_ingreso) : $fechaBaseCita);
-                
+
+                $key = $claveMovimiento($fechaPago);
+                if (!isset($movimientos[$key])) {
+                    $movimientos[$key] = [
+                        'fecha' => $fechaPago,
+                        'timestamp' => $fechaPago->timestamp,
+                        'notas' => [],
+                        'abono_total' => 0.0,
+                        'detalles_pago' => [],
+                    ];
+                }
+
+                $movimientos[$key]['abono_total'] += (float) ($pago->monto ?? 0);
+                $movimientos[$key]['timestamp'] = max($movimientos[$key]['timestamp'], $fechaPago->timestamp);
+                $movimientos[$key]['fecha'] = $fechaPago;
+
+                $detallePago = trim((string) ($pago->descripcion ?? ''));
+                if ($detallePago !== '' && !in_array($detallePago, $movimientos[$key]['detalles_pago'], true)) {
+                    $movimientos[$key]['detalles_pago'][] = $detallePago;
+                }
+            }
+
+            foreach ($movimientos as $mov) {
+                $textoSeguimiento = '';
+
+                if (!empty($mov['notas'])) {
+                    $textoSeguimiento = count($mov['notas']) === 1
+                        ? 'Nota: ' . $mov['notas'][0]
+                        : 'Notas: ' . implode(' | ', $mov['notas']);
+                } elseif (!empty($mov['detalles_pago'])) {
+                    $textoSeguimiento = $mov['detalles_pago'][0];
+                } else {
+                    $textoSeguimiento = 'Movimiento registrado';
+                }
+
+                $tieneAbono = $mov['abono_total'] > 0;
+                $tieneNota = !empty($mov['notas']);
+                $estadoMovimiento = $tieneAbono && !$tieneNota ? 'Abono' : 'Actualización';
+
                 $filasTabla[] = [
-                    'timestamp' => $fechaPago->timestamp,
+                    'timestamp' => $mov['timestamp'],
                     'id_cita' => $c->id_cita,
-                    'dia' => $fechaPago->format('d/m/Y'), 
-                    'hora' => $fechaPago->format('h:i A'), 
-                    'seguimiento' => $pago->descripcion ?? 'Abono registrado',
-                    'abono' => number_format($pago->monto, 2),
-                    'estado' => 'Abono'
+                    'dia' => $mov['fecha']->format('d/m/Y'),
+                    'hora' => $mov['fecha']->format('h:i A'),
+                    'seguimiento' => $textoSeguimiento,
+                    'abono' => number_format($mov['abono_total'], 2),
+                    'estado' => $estadoMovimiento,
                 ];
             }
         }
