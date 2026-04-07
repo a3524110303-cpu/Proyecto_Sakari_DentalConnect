@@ -424,6 +424,19 @@ class DashboardController extends Controller
         $cita = Cita::where('id_clinica', $idClinica)->findOrFail($idCita);
         $motivoOriginal = (string) ($cita->motivo ?? '');
 
+        $montoAbonoSolicitado = floatval($request->input('monto_abono', 0));
+        if ($montoAbonoSolicitado > 0) {
+            $fechaCitaBase = Carbon::parse($cita->fecha_hora_inicio)->toDateString();
+            $hoy = now()->toDateString();
+
+            if ($fechaCitaBase !== $hoy) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se permiten abonos el dia de la cita. No se puede adelantar pagos.',
+                ], 422);
+            }
+        }
+
         $esReagendaMovilPendiente =
             $cita->reagenda_estatus === 'pendiente'
             && !empty($cita->reagenda_solicitada_at)
@@ -546,7 +559,7 @@ class DashboardController extends Controller
             }
         }
 
-        $montoAbono = floatval($request->input('monto_abono', 0));
+        $montoAbono = $montoAbonoSolicitado;
         if ($montoAbono > 0) {
             $metodoPago = $request->input('metodo_pago', 'efectivo');
             $metodosValidos = ['efectivo', 'tarjeta', 'transferencia', 'otro'];

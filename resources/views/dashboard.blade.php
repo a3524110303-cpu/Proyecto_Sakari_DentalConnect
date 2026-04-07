@@ -393,13 +393,13 @@ Resumen de secciones:
                                 <tr>
                                     <th
                                         style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
-                                        Día</th>
+                                        Procedimiento</th>
+                                    <th
+                                        style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
+                                        Fecha</th>
                                     <th
                                         style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
                                         Hora</th>
-                                    <th
-                                        style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
-                                        Seguimiento</th>
                                     <th
                                         style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
                                         Abono</th>
@@ -865,9 +865,9 @@ Resumen de secciones:
                 if(f.estado.toLowerCase() === 'abono') colorEstado = '#f59e0b';
 
                 tr.innerHTML = `
+                    <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.seguimiento}</td>
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.dia}</td>
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.hora}</td>
-                    <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.seguimiento}</td>
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600; color: #10b981;">+$${f.abono}</td>
                     <td style="padding: 15px; font-weight: 600; color: ${colorEstado};">${f.estado}</td>
                 `;
