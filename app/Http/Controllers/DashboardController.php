@@ -186,8 +186,21 @@ class DashboardController extends Controller
 
         $idsCitasCiclo = $citasCiclo->pluck('id_cita');
 
-        $costoTotal  = Cita::whereIn('id_cita', $idsCitasCiclo)->sum('costo_estimado');
-        $totalPagado = IngresoCaja::whereIn('id_cita', $idsCitasCiclo)->sum('monto');
+        // QA: no cargar costo de citas futuras en el saldo actual.
+        // Solo se considera "devengado" lo ya atendido o con fecha/hora vencida.
+        $ahora = now();
+        $idsCitasDevengadas = $citasCiclo
+            ->filter(function ($item) use ($ahora) {
+                if (!empty($item->fecha_hora_inicio) && Carbon::parse($item->fecha_hora_inicio)->lte($ahora)) {
+                    return true;
+                }
+
+                return in_array(strtolower((string) ($item->estado_cita ?? '')), ['completada'], true);
+            })
+            ->pluck('id_cita');
+
+        $costoTotal  = Cita::whereIn('id_cita', $idsCitasDevengadas)->sum('costo_estimado');
+        $totalPagado = IngresoCaja::whereIn('id_cita', $idsCitasDevengadas)->sum('monto');
         $saldo       = max(0, $costoTotal - $totalPagado);
 
         $pacienteData = null;
