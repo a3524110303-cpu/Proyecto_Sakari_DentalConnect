@@ -143,16 +143,59 @@ class DashboardController extends Controller
 
         $p = $cita->paciente;
 
-        // ── FINANZAS GLOBALES DEL PACIENTE ──
-        // Sumamos costos y pagos de TODAS las citas del paciente en esta clínica,
-        // así los pagos no "desaparecen" al crear citas de seguimiento.
-        $todasCitasIds = Cita::where('id_paciente', $p->id_paciente)
+        // ── FINANZAS POR CICLO DE CUENTA ──
+        // Regla de negocio: cuando una cuenta queda liquidada, la siguiente cita inicia un ciclo nuevo.
+        $citasOrdenadas = Cita::with(['servicio', 'ingresos'])
+            ->where('id_paciente', $p->id_paciente)
             ->where('id_clinica', $idClinica)
-            ->where('estado_cita', '!=', 'cancelada')
-            ->pluck('id_cita');
+            ->orderBy('fecha_hora_inicio', 'asc')
+            ->get();
 
-        $costoTotal  = Cita::whereIn('id_cita', $todasCitasIds)->sum('costo_estimado');
-        $totalPagado = IngresoCaja::whereIn('id_cita', $todasCitasIds)->sum('monto');
+        $pagosPorCita = IngresoCaja::whereIn('id_cita', $citasOrdenadas->pluck('id_cita'))
+            ->selectRaw('id_cita, SUM(monto) as total_pagado')
+            ->groupBy('id_cita')
+            ->pluck('total_pagado', 'id_cita');
+
+        $grupoPorCita = [];
+        $grupoActual = 1;
+        $saldoGrupo = 0.0;
+        $primeraCita = true;
+
+        foreach ($citasOrdenadas as $citaOrdenada) {
+            $esCitaSeguimiento = strtolower(trim((string) ($citaOrdenada->motivo ?? ''))) === 'cita de seguimiento';
+            $costoCita = $esCitaSeguimiento ? 0.0 : (float) ($citaOrdenada->costo_estimado ?? 0);
+
+            if (!$primeraCita && $saldoGrupo <= 0 && $costoCita > 0) {
+                $grupoActual++;
+                $saldoGrupo = 0.0;
+            }
+
+            $grupoPorCita[$citaOrdenada->id_cita] = $grupoActual;
+
+            $saldoGrupo += $costoCita;
+            $saldoGrupo -= (float) ($pagosPorCita[$citaOrdenada->id_cita] ?? 0);
+            if ($saldoGrupo < 0) {
+                $saldoGrupo = 0.0;
+            }
+
+            $primeraCita = false;
+        }
+
+        $grupoCitaActual = $grupoPorCita[$cita->id_cita] ?? $grupoActual;
+
+        $citasCiclo = $citasOrdenadas
+            ->filter(fn ($item) => ($grupoPorCita[$item->id_cita] ?? null) === $grupoCitaActual)
+            ->values();
+
+        $idsCitasCiclo = $citasCiclo->pluck('id_cita');
+
+        // El total/restante se calcula sobre toda la cuenta activa del ciclo.
+        // El bloqueo de pagos adelantados se valida en actualizarCita.
+        $costoTotal = $citasCiclo->sum(function ($item) {
+            $esCitaSeguimiento = strtolower(trim((string) ($item->motivo ?? ''))) === 'cita de seguimiento';
+            return $esCitaSeguimiento ? 0 : (float) ($item->costo_estimado ?? 0);
+        });
+        $totalPagado = IngresoCaja::whereIn('id_cita', $idsCitasCiclo)->sum('monto');
         $saldo       = max(0, $costoTotal - $totalPagado);
 
         $pacienteData = null;
@@ -186,12 +229,10 @@ class DashboardController extends Controller
 
         }
 
-        // Solo mostrar citas de la misma clínica (evitar filtración entre tenants)
-        $citasPaciente = Cita::with(['servicio', 'ingresos'])
-            ->where('id_paciente', $p->id_paciente)
-            ->where('id_clinica', $idClinica)
-            ->orderBy('fecha_hora_inicio', 'desc')
-            ->get();
+        // Solo mostrar citas del ciclo de cuenta de la cita actual
+        $citasPaciente = $citasCiclo
+            ->sortByDesc('fecha_hora_inicio')
+            ->values();
 
         $filasTabla = [];
         foreach ($citasPaciente as $c) {
@@ -204,45 +245,102 @@ class DashboardController extends Controller
             $abonoCita = $estadoCita === 'cancelada' ? '-' : '0.00';
 
             // 1. SIEMPRE agregar la Cita Original como punto de partida en el historial
+            $esCitaSeguimiento = strtolower(trim((string) ($c->motivo ?? ''))) === 'cita de seguimiento';
+            $procedimientoBase = $esCitaSeguimiento
+                ? 'Cita de seguimiento'
+                : ($c->servicio?->nombre_servicio ?? ($c->motivo ?? 'Consulta agendada'));
+
             $filasTabla[] = [
                 'timestamp' => $fechaBaseCita->timestamp,
                 'id_cita' => $c->id_cita,
                 'dia' => $fechaBaseCita->format('d/m/Y'),
                 'hora' => $fechaBaseCita->format('h:i A') . ' – ' . $horaFinFormateada,
-                'seguimiento' => $c->motivo ?? ($c->servicio?->nombre_servicio ?? 'Consulta agendada'),
+                'seguimiento' => $procedimientoBase,
                 'abono' => $abonoCita,
                 'estado' => ucfirst($estadoCita)
             ];
 
-            // 2. Agregar los Seguimientos (notas) como filas totalmente individuales
+            // 2. Agrupar eventos por movimiento (mismo timestamp) para evitar filas separadas
+            $movimientos = [];
+            $claveMovimiento = static function (Carbon $fecha): string {
+                return $fecha->format('Y-m-d H:i:s');
+            };
+
             foreach ($seguimientos as $seg) {
                 $fechaSeg = $seg->created_at ? Carbon::parse($seg->created_at) : $fechaBaseCita;
-                
-                $filasTabla[] = [
-                    'timestamp' => $fechaSeg->timestamp,
-                    'id_cita' => $c->id_cita,
-                    'dia' => $fechaSeg->format('d/m/Y'), 
-                    'hora' => $fechaSeg->format('h:i A'), 
-                    'seguimiento' => 'Nota: ' . $seg->observaciones,
-                    'abono' => '0.00',
-                    'estado' => 'Actualización'
-                ];
+
+                $key = $claveMovimiento($fechaSeg);
+                if (!isset($movimientos[$key])) {
+                    $movimientos[$key] = [
+                        'fecha' => $fechaSeg,
+                        'timestamp' => $fechaSeg->timestamp,
+                        'notas' => [],
+                        'abono_total' => 0.0,
+                        'detalles_pago' => [],
+                    ];
+                }
+
+                $nota = trim((string) $seg->observaciones);
+                if ($nota !== '' && !in_array($nota, $movimientos[$key]['notas'], true)) {
+                    $movimientos[$key]['notas'][] = $nota;
+                }
             }
 
-            // 3. Agregar los Pagos como filas totalmente individuales
             foreach ($pagos as $pago) {
-                // Dar prioridad a created_at para tener la hora exacta de cada pago
                 $fechaPago = $pago->created_at ? \Carbon\Carbon::parse($pago->created_at) : 
                             ($pago->fecha_ingreso ? \Carbon\Carbon::parse($pago->fecha_ingreso) : $fechaBaseCita);
-                
+
+                $key = $claveMovimiento($fechaPago);
+                if (!isset($movimientos[$key])) {
+                    $movimientos[$key] = [
+                        'fecha' => $fechaPago,
+                        'timestamp' => $fechaPago->timestamp,
+                        'notas' => [],
+                        'abono_total' => 0.0,
+                        'detalles_pago' => [],
+                    ];
+                }
+
+                $movimientos[$key]['abono_total'] += (float) ($pago->monto ?? 0);
+                $movimientos[$key]['timestamp'] = max($movimientos[$key]['timestamp'], $fechaPago->timestamp);
+                $movimientos[$key]['fecha'] = $fechaPago;
+
+                $detallePago = trim((string) ($pago->descripcion ?? ''));
+                if ($detallePago !== '' && !in_array($detallePago, $movimientos[$key]['detalles_pago'], true)) {
+                    $movimientos[$key]['detalles_pago'][] = $detallePago;
+                }
+            }
+
+            foreach ($movimientos as $mov) {
+                // UX/QA: no mostrar filas de "nota" aislada (sin abono) en el historial principal.
+                if ($mov['abono_total'] <= 0 && !empty($mov['notas'])) {
+                    continue;
+                }
+
+                $textoSeguimiento = '';
+
+                if (!empty($mov['notas'])) {
+                    $textoSeguimiento = !empty($mov['detalles_pago'])
+                        ? $mov['detalles_pago'][0]
+                        : 'Movimiento registrado';
+                } elseif (!empty($mov['detalles_pago'])) {
+                    $textoSeguimiento = $mov['detalles_pago'][0];
+                } else {
+                    $textoSeguimiento = 'Movimiento registrado';
+                }
+
+                $tieneAbono = $mov['abono_total'] > 0;
+                $tieneNota = !empty($mov['notas']);
+                $estadoMovimiento = $tieneAbono && !$tieneNota ? 'Abono' : 'Actualización';
+
                 $filasTabla[] = [
-                    'timestamp' => $fechaPago->timestamp,
+                    'timestamp' => $mov['timestamp'],
                     'id_cita' => $c->id_cita,
-                    'dia' => $fechaPago->format('d/m/Y'), 
-                    'hora' => $fechaPago->format('h:i A'), 
-                    'seguimiento' => $pago->descripcion ?? 'Abono registrado',
-                    'abono' => number_format($pago->monto, 2),
-                    'estado' => 'Abono'
+                    'dia' => $mov['fecha']->format('d/m/Y'),
+                    'hora' => $mov['fecha']->format('h:i A'),
+                    'seguimiento' => $textoSeguimiento,
+                    'abono' => number_format($mov['abono_total'], 2),
+                    'estado' => $estadoMovimiento,
                 ];
             }
         }
@@ -252,12 +350,37 @@ class DashboardController extends Controller
             return $b['timestamp'] <=> $a['timestamp'];
         });
 
+        // Evita duplicados visuales de notas idénticas generadas por doble submit.
+        $filasDepuradas = [];
+        $seenActualizaciones = [];
+        foreach ($filasTabla as $fila) {
+            $estado = strtolower((string) ($fila['estado'] ?? ''));
+            if ($estado === 'actualización' || $estado === 'actualizacion') {
+                $key = implode('|', [
+                    (string) ($fila['id_cita'] ?? ''),
+                    (string) ($fila['timestamp'] ?? ''),
+                    strtolower(trim((string) ($fila['seguimiento'] ?? ''))),
+                ]);
+
+                if (isset($seenActualizaciones[$key])) {
+                    continue;
+                }
+                $seenActualizaciones[$key] = true;
+            }
+
+            $filasDepuradas[] = $fila;
+        }
+
+        $filasTabla = $filasDepuradas;
+
 
         $finanzas = [
 
             'total'=>number_format($costoTotal,2),
             'pagado'=>number_format($totalPagado,2),
-            'restante'=>number_format($saldo,2)
+            'restante'=>number_format($saldo,2),
+            'cuenta_numero' => (int) $grupoCitaActual,
+            'citas_en_cuenta' => (int) $idsCitasCiclo->count()
 
         ];
 
@@ -298,6 +421,20 @@ class DashboardController extends Controller
     {
         $idClinica = Auth::user()->id_clinica;
         $cita = Cita::where('id_clinica', $idClinica)->findOrFail($idCita);
+        $motivoOriginal = (string) ($cita->motivo ?? '');
+
+        $montoAbonoSolicitado = floatval($request->input('monto_abono', 0));
+        if ($montoAbonoSolicitado > 0) {
+            $fechaCitaBase = Carbon::parse($cita->fecha_hora_inicio)->toDateString();
+            $hoy = now()->toDateString();
+
+            if ($fechaCitaBase !== $hoy) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se permiten abonos el dia de la cita. No se puede adelantar pagos.',
+                ], 422);
+            }
+        }
 
         $esReagendaMovilPendiente =
             $cita->reagenda_estatus === 'pendiente'
@@ -386,16 +523,29 @@ class DashboardController extends Controller
         $cita->save();
 
         // 🟢 EL PAGO Y EL SEGUIMIENTO SE REGISTRAN NORMALMENTE AQUÍ AFUERA
-        if($request->filled('notas_seguimiento')){
-            SeguimientoClinico::create([
-                'id_cita'=>$cita->id_cita,
-                'observaciones'=>$request->notas_seguimiento
-            ]);
-            $cita->motivo=$request->notas_seguimiento;
-            $cita->save();
+        $notaSeguimiento = trim((string) $request->input('notas_seguimiento', ''));
+        if($notaSeguimiento !== ''){
+            $ultimoSeguimiento = SeguimientoClinico::where('id_cita', $cita->id_cita)
+                ->orderByDesc('id_seguimiento')
+                ->first();
+
+            $esSeguimientoDuplicado = false;
+            if ($ultimoSeguimiento) {
+                $mismaNota = trim((string) $ultimoSeguimiento->observaciones) === $notaSeguimiento;
+                $ventanaDuplicado = $ultimoSeguimiento->created_at
+                    && Carbon::parse($ultimoSeguimiento->created_at)->gte(now()->subMinutes(2));
+                $esSeguimientoDuplicado = $mismaNota && $ventanaDuplicado;
+            }
+
+            if (!$esSeguimientoDuplicado) {
+                SeguimientoClinico::create([
+                    'id_cita'=>$cita->id_cita,
+                    'observaciones'=>$notaSeguimiento
+                ]);
+            }
         }
 
-        $montoAbono = floatval($request->input('monto_abono', 0));
+        $montoAbono = $montoAbonoSolicitado;
         if ($montoAbono > 0) {
             $metodoPago = $request->input('metodo_pago', 'efectivo');
             $metodosValidos = ['efectivo', 'tarjeta', 'transferencia', 'otro'];
@@ -409,11 +559,20 @@ class DashboardController extends Controller
                 'monto'        => $montoAbono,
                 'fecha_ingreso' => now(),
                 'metodo'       => $metodoPago,
-                'descripcion'  => 'Abono en cita: ' . ($cita->motivo ?? ''),
+                'descripcion'  => 'Abono en cita: ' . ((trim($motivoOriginal) !== '' ? $motivoOriginal : ($cita->servicio?->nombre_servicio ?? 'Consulta'))),
             ];
 
+            $abonoRecienteDuplicado = IngresoCaja::where('id_clinica', $idClinica)
+                ->where('id_cita', $cita->id_cita)
+                ->where('monto', $montoAbono)
+                ->where('metodo', $metodoPago)
+                ->where('created_at', '>=', now()->subMinutes(2))
+                ->exists();
+
             try {
-                IngresoCaja::create($payloadIngreso);
+                if (!$abonoRecienteDuplicado) {
+                    IngresoCaja::create($payloadIngreso);
+                }
             } catch (\Exception $e) {
                 $mensajeError = strtolower($e->getMessage());
                 $esBloqueoPorFecha = str_contains($mensajeError, 'solo se permiten abonos')
@@ -973,8 +1132,8 @@ class DashboardController extends Controller
                     'fecha_hora_inicio' => $nuevaFecha,
                     'fecha_hora_fin' => $nuevaFechaFin,
                     'estado_cita' => 'pendiente',
-                    'costo_estimado' => $cita->costo_estimado,
-                    'motivo' => $cita->motivo,
+                    'costo_estimado' => 0,
+                    'motivo' => 'Cita de seguimiento',
                     'notas' => "[NUEVA CITA POR REAGENDA DE PACIENTE]",
                     'reagenda_estatus' => 'aplicada',
                 ]);

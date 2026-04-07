@@ -333,9 +333,15 @@ Resumen de secciones:
                 <!-- TAB 1: RESUMEN (Visible por defecto) -->
                 <div id="tab-resumen" class="tab-content active"
                     style="min-height: 100%; display: flex; flex-direction: column; flex: 1 0 auto; padding-bottom: 20px;">
-                    <h1 style="font-size: 2.2rem; font-weight: 800; margin: 0 0 30px 0; color: #000; flex-shrink: 0;">
-                        Detalles del Paciente
-                    </h1>
+                    <div style="display: flex; align-items: center; gap: 12px; margin: 0 0 30px 0; flex-shrink: 0; flex-wrap: wrap;">
+                        <h1 style="font-size: 2.2rem; font-weight: 800; margin: 0; color: #000;">
+                            Detalles del Paciente
+                        </h1>
+                        <span id="lbl-cuenta-ciclo"
+                            style="display: none; background: #ECFEFF; color: #0369A1; border: 1px solid #7DD3FC; border-radius: 999px; padding: 6px 12px; font-weight: 800; font-size: 0.9rem;">
+                            Cuenta #1
+                        </span>
+                    </div>
 
                     <div
                         style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 30px; border: 1px solid #eee; flex-shrink: 0;">
@@ -387,13 +393,13 @@ Resumen de secciones:
                                 <tr>
                                     <th
                                         style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
-                                        Día</th>
+                                        Procedimiento</th>
+                                    <th
+                                        style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
+                                        Fecha</th>
                                     <th
                                         style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
                                         Hora</th>
-                                    <th
-                                        style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
-                                        Seguimiento</th>
                                     <th
                                         style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
                                         Abono</th>
@@ -798,6 +804,11 @@ Resumen de secciones:
     document.getElementById('lbl-telefono').innerText = '...';
     document.getElementById('lbl-alergias').innerText = '...';
     document.getElementById('lbl-enfermedades').innerText = '...';
+    const lblCuentaCiclo = document.getElementById('lbl-cuenta-ciclo');
+    if (lblCuentaCiclo) {
+        lblCuentaCiclo.style.display = 'none';
+        lblCuentaCiclo.innerText = 'Cuenta #...';
+    }
     document.getElementById('cita-tabla-body').innerHTML = '<tr><td colspan="5" style="padding: 20px;">Cargando historial...</td></tr>';
 
 
@@ -855,9 +866,9 @@ Resumen de secciones:
                 if(f.estado.toLowerCase() === 'abono') colorEstado = '#f59e0b';
 
                 tr.innerHTML = `
+                    <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.seguimiento}</td>
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.dia}</td>
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.hora}</td>
-                    <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.seguimiento}</td>
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600; color: #10b981;">${abonoTexto}</td>
                     <td style="padding: 15px; font-weight: 600; color: ${colorEstado};">${f.estado}</td>
                 `;
@@ -874,6 +885,14 @@ Resumen de secciones:
             document.getElementById('lbl-restante').innerText = data.finanzas.restante;
             document.getElementById('raw-costo-total').value = data.finanzas.total.replace(/,/g, '');
             document.getElementById('raw-total-abonado').value = data.finanzas.pagado.replace(/,/g, '');
+
+            const cuentaNumero = parseInt(data.finanzas.cuenta_numero || 0, 10);
+            if (lblCuentaCiclo && cuentaNumero > 0) {
+                const citasEnCuenta = parseInt(data.finanzas.citas_en_cuenta || 0, 10);
+                const extra = citasEnCuenta > 0 ? ` • ${citasEnCuenta} cita${citasEnCuenta === 1 ? '' : 's'}` : '';
+                lblCuentaCiclo.innerText = `Cuenta #${cuentaNumero}${extra}`;
+                lblCuentaCiclo.style.display = 'inline-flex';
+            }
         }
 
         // Odontograma
@@ -1125,8 +1144,10 @@ function generarHorariosDisponibles(
     const contenedor = document.getElementById('contenedor-horarios');
     const inputHora = document.getElementById('input-nueva-hora');
 
-    if(!contenedor) return;
+    if(!contenedor || !inputHora) return;
 
+    // Guardamos la hora que estaba seleccionada antes de renderizar de nuevo
+    const horaPreviaSeleccionada = inputHora.value;
     inputHora.value='';
 
     let horariosClinica=[];
@@ -1155,6 +1176,7 @@ function generarHorariosDisponibles(
     const bloquesNecesarios = Math.max(1, Math.ceil(duracionMinutos / intervaloMinutos));
 
     contenedor.innerHTML='';
+    let botonARestaurar = null; // Variable para recuperar el foco
 
     horariosClinica.forEach(hora=>{
 
@@ -1199,11 +1221,21 @@ function generarHorariosDisponibles(
 
             };
 
+            // Si el botón que estamos creando es el mismo que estaba seleccionado antes, lo recordamos
+            if (hora === horaPreviaSeleccionada) {
+                botonARestaurar = btn;
+            }
+
         }
 
         contenedor.appendChild(btn);
 
     });
+
+    // Auto-click al botón si la hora sigue estando libre con la nueva duración
+    if (botonARestaurar) {
+        botonARestaurar.click();
+    }
 
 }
 

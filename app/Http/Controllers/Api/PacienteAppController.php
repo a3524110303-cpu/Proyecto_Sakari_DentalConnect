@@ -15,6 +15,7 @@ use App\Models\Notificacion;
 use App\Models\Publicidad;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class PacienteAppController extends Controller
 {
@@ -293,43 +294,40 @@ class PacienteAppController extends Controller
             // 1. Buscamos la clínica del paciente.
             $user = \Illuminate\Support\Facades\Auth::user();
             $idClinica = $this->resolveClinicaId($user);
-            $authUserId = (int) ($user->id_usuario ?? $user->id ?? 0);
-
-            // 2. Traemos promociones activas por clínica (flujo principal)
-            $promociones = collect();
-            if ($idClinica) {
-                $usuariosClinicaIds = \App\Models\User::where('id_clinica', $idClinica)
-                    ->pluck('id_usuario')
-                    ->filter()
-                    ->map(fn ($id) => (int) $id)
-                    ->values()
-                    ->all();
-
-                if (!empty($usuariosClinicaIds)) {
-                    $promociones = \App\Models\Publicidad::whereIn('id_usuario', $usuariosClinicaIds)
-                        ->where('activo', 1)
-                        ->latest()
-                        ->get();
-                }
+            if (!$idClinica) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                ], 200);
             }
 
-            // 3. Fallback: mostrar las promociones del propio usuario autenticado.
-            if ($promociones->isEmpty() && $authUserId > 0) {
-                $promociones = \App\Models\Publicidad::where('id_usuario', $authUserId)
-                    ->where('activo', 1)
-                    ->latest()
-                    ->get();
+            // 2. Traemos IDs de usuarios de la clínica autenticada.
+            $usuariosClinicaIds = \App\Models\User::where('id_clinica', $idClinica)
+                ->pluck('id_usuario')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
+
+            // 3. Aislamiento multi-clínica estricto: nunca usar fallback global.
+            $promocionesQuery = \App\Models\Publicidad::where('activo', 1);
+
+            if (Schema::hasColumn('publicidad', 'id_clinica')) {
+                $promocionesQuery->where('id_clinica', $idClinica);
             }
 
-            // 4. Fallback final: no dejar la app vacía si hay promociones activas en el sistema.
-            if ($promociones->isEmpty()) {
-                $promociones = \App\Models\Publicidad::where('activo', 1)
-                    ->latest()
-                    ->limit(20)
-                    ->get();
+            if (!empty($usuariosClinicaIds)) {
+                $promocionesQuery->whereIn('id_usuario', $usuariosClinicaIds);
+            } else {
+                $promocionesQuery->whereRaw('1 = 0');
             }
 
-            // 5. Formatear la URL de la imagen asegurándonos que no devuelva valores nulos
+            $promociones = $promocionesQuery
+                ->latest()
+                ->limit(20)
+                ->get();
+
+            // 4. Formatear la URL de la imagen asegurándonos que no devuelva valores nulos
             $promociones->transform(function ($anuncio) {
                 if (!empty($anuncio->imagen_path)) {
                     $anuncio->imagen_url = url('/api/publicidad/foto/' . basename($anuncio->imagen_path));
