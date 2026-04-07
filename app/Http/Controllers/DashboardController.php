@@ -206,7 +206,8 @@ class DashboardController extends Controller
                 'id_cita' => $c->id_cita,
                 'dia' => $fechaBaseCita->format('d/m/Y'),
                 'hora' => $fechaBaseCita->format('h:i A') . ' – ' . $horaFinFormateada,
-                'seguimiento' => $c->motivo ?? ($c->servicio?->nombre_servicio ?? 'Consulta agendada'),
+                'seguimiento' => $c->servicio?->nombre_servicio
+                    ?? ($c->motivo ?? 'Consulta agendada'),
                 'abono' => '0.00',
                 'estado' => ucfirst($c->estado_cita ?? 'pendiente')
             ];
@@ -248,6 +249,29 @@ class DashboardController extends Controller
         usort($filasTabla, function($a, $b) {
             return $b['timestamp'] <=> $a['timestamp'];
         });
+
+        // Evita duplicados visuales de notas idénticas generadas por doble submit.
+        $filasDepuradas = [];
+        $seenActualizaciones = [];
+        foreach ($filasTabla as $fila) {
+            $estado = strtolower((string) ($fila['estado'] ?? ''));
+            if ($estado === 'actualización' || $estado === 'actualizacion') {
+                $key = implode('|', [
+                    (string) ($fila['id_cita'] ?? ''),
+                    (string) ($fila['timestamp'] ?? ''),
+                    strtolower(trim((string) ($fila['seguimiento'] ?? ''))),
+                ]);
+
+                if (isset($seenActualizaciones[$key])) {
+                    continue;
+                }
+                $seenActualizaciones[$key] = true;
+            }
+
+            $filasDepuradas[] = $fila;
+        }
+
+        $filasTabla = $filasDepuradas;
 
 
         $finanzas = [
@@ -295,6 +319,7 @@ class DashboardController extends Controller
     {
         $idClinica = Auth::user()->id_clinica;
         $cita = Cita::where('id_clinica', $idClinica)->findOrFail($idCita);
+        $motivoOriginal = (string) ($cita->motivo ?? '');
 
         $esReagendaMovilPendiente =
             $cita->reagenda_estatus === 'pendiente'
@@ -396,13 +421,26 @@ class DashboardController extends Controller
         $cita->save();
 
         // 🟢 EL PAGO Y EL SEGUIMIENTO SE REGISTRAN NORMALMENTE AQUÍ AFUERA
-        if($request->filled('notas_seguimiento')){
-            SeguimientoClinico::create([
-                'id_cita'=>$cita->id_cita,
-                'observaciones'=>$request->notas_seguimiento
-            ]);
-            $cita->motivo=$request->notas_seguimiento;
-            $cita->save();
+        $notaSeguimiento = trim((string) $request->input('notas_seguimiento', ''));
+        if($notaSeguimiento !== ''){
+            $ultimoSeguimiento = SeguimientoClinico::where('id_cita', $cita->id_cita)
+                ->orderByDesc('id_seguimiento')
+                ->first();
+
+            $esSeguimientoDuplicado = false;
+            if ($ultimoSeguimiento) {
+                $mismaNota = trim((string) $ultimoSeguimiento->observaciones) === $notaSeguimiento;
+                $ventanaDuplicado = $ultimoSeguimiento->created_at
+                    && Carbon::parse($ultimoSeguimiento->created_at)->gte(now()->subMinutes(2));
+                $esSeguimientoDuplicado = $mismaNota && $ventanaDuplicado;
+            }
+
+            if (!$esSeguimientoDuplicado) {
+                SeguimientoClinico::create([
+                    'id_cita'=>$cita->id_cita,
+                    'observaciones'=>$notaSeguimiento
+                ]);
+            }
         }
 
         $montoAbono = floatval($request->input('monto_abono', 0));
@@ -413,15 +451,28 @@ class DashboardController extends Controller
                 $metodoPago = 'efectivo';
             }
 
+            $abonoRecienteDuplicado = IngresoCaja::where('id_clinica', $idClinica)
+                ->where('id_cita', $cita->id_cita)
+                ->where('monto', $montoAbono)
+                ->where('metodo', $metodoPago)
+                ->where('created_at', '>=', now()->subMinutes(2))
+                ->exists();
+
             try {
-                IngresoCaja::create([
-                    'id_clinica'   => $idClinica,
-                    'id_cita'      => $cita->id_cita,
-                    'monto'        => $montoAbono,
-                    'fecha_ingreso' => now(),
-                    'metodo'       => $metodoPago,
-                    'descripcion'  => 'Abono en cita: ' . ($cita->motivo ?? ''),
-                ]);
+                if (!$abonoRecienteDuplicado) {
+                    $descripcionBase = trim($motivoOriginal) !== ''
+                        ? $motivoOriginal
+                        : ($cita->servicio?->nombre_servicio ?? 'Consulta');
+
+                    IngresoCaja::create([
+                        'id_clinica'   => $idClinica,
+                        'id_cita'      => $cita->id_cita,
+                        'monto'        => $montoAbono,
+                        'fecha_ingreso' => now(),
+                        'metodo'       => $metodoPago,
+                        'descripcion'  => 'Abono en cita: ' . $descripcionBase,
+                    ]);
+                }
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
