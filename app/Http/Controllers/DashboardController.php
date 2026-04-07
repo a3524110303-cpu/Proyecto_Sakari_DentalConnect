@@ -143,15 +143,51 @@ class DashboardController extends Controller
 
         $p = $cita->paciente;
 
-        // ── FINANZAS GLOBALES DEL PACIENTE ──
-        // Sumamos costos y pagos de TODAS las citas del paciente en esta clínica,
-        // así los pagos no "desaparecen" al crear citas de seguimiento.
-        $todasCitasIds = Cita::where('id_paciente', $p->id_paciente)
+        // ── FINANZAS POR CICLO DE CUENTA ──
+        // Regla de negocio: cuando una cuenta queda liquidada, la siguiente cita inicia un ciclo nuevo.
+        $citasOrdenadas = Cita::with(['servicio', 'ingresos'])
+            ->where('id_paciente', $p->id_paciente)
             ->where('id_clinica', $idClinica)
-            ->pluck('id_cita');
+            ->orderBy('fecha_hora_inicio', 'asc')
+            ->get();
 
-        $costoTotal  = Cita::whereIn('id_cita', $todasCitasIds)->sum('costo_estimado');
-        $totalPagado = IngresoCaja::whereIn('id_cita', $todasCitasIds)->sum('monto');
+        $pagosPorCita = IngresoCaja::whereIn('id_cita', $citasOrdenadas->pluck('id_cita'))
+            ->selectRaw('id_cita, SUM(monto) as total_pagado')
+            ->groupBy('id_cita')
+            ->pluck('total_pagado', 'id_cita');
+
+        $grupoPorCita = [];
+        $grupoActual = 1;
+        $saldoGrupo = 0.0;
+        $primeraCita = true;
+
+        foreach ($citasOrdenadas as $citaOrdenada) {
+            if (!$primeraCita && $saldoGrupo <= 0) {
+                $grupoActual++;
+                $saldoGrupo = 0.0;
+            }
+
+            $grupoPorCita[$citaOrdenada->id_cita] = $grupoActual;
+
+            $saldoGrupo += (float) ($citaOrdenada->costo_estimado ?? 0);
+            $saldoGrupo -= (float) ($pagosPorCita[$citaOrdenada->id_cita] ?? 0);
+            if ($saldoGrupo < 0) {
+                $saldoGrupo = 0.0;
+            }
+
+            $primeraCita = false;
+        }
+
+        $grupoCitaActual = $grupoPorCita[$cita->id_cita] ?? $grupoActual;
+
+        $citasCiclo = $citasOrdenadas
+            ->filter(fn ($item) => ($grupoPorCita[$item->id_cita] ?? null) === $grupoCitaActual)
+            ->values();
+
+        $idsCitasCiclo = $citasCiclo->pluck('id_cita');
+
+        $costoTotal  = Cita::whereIn('id_cita', $idsCitasCiclo)->sum('costo_estimado');
+        $totalPagado = IngresoCaja::whereIn('id_cita', $idsCitasCiclo)->sum('monto');
         $saldo       = max(0, $costoTotal - $totalPagado);
 
         $pacienteData = null;
@@ -185,12 +221,10 @@ class DashboardController extends Controller
 
         }
 
-        // Solo mostrar citas de la misma clínica (evitar filtración entre tenants)
-        $citasPaciente = Cita::with(['servicio', 'ingresos'])
-            ->where('id_paciente', $p->id_paciente)
-            ->where('id_clinica', $idClinica)
-            ->orderBy('fecha_hora_inicio', 'desc')
-            ->get();
+        // Solo mostrar citas del ciclo de cuenta de la cita actual
+        $citasPaciente = $citasCiclo
+            ->sortByDesc('fecha_hora_inicio')
+            ->values();
 
         $filasTabla = [];
         foreach ($citasPaciente as $c) {
@@ -325,7 +359,9 @@ class DashboardController extends Controller
 
             'total'=>number_format($costoTotal,2),
             'pagado'=>number_format($totalPagado,2),
-            'restante'=>number_format($saldo,2)
+            'restante'=>number_format($saldo,2),
+            'cuenta_numero' => (int) $grupoCitaActual,
+            'citas_en_cuenta' => (int) $idsCitasCiclo->count()
 
         ];
 
