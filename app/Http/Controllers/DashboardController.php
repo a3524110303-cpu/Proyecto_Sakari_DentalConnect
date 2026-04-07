@@ -148,6 +148,7 @@ class DashboardController extends Controller
         // así los pagos no "desaparecen" al crear citas de seguimiento.
         $todasCitasIds = Cita::where('id_paciente', $p->id_paciente)
             ->where('id_clinica', $idClinica)
+            ->where('estado_cita', '!=', 'cancelada')
             ->pluck('id_cita');
 
         $costoTotal  = Cita::whereIn('id_cita', $todasCitasIds)->sum('costo_estimado');
@@ -199,6 +200,8 @@ class DashboardController extends Controller
 
             $fechaBaseCita = $c->fecha_hora_inicio ? \Carbon\Carbon::parse($c->fecha_hora_inicio) : now();
             $horaFinFormateada = $c->fecha_hora_fin ? \Carbon\Carbon::parse($c->fecha_hora_fin)->format('h:i A') : 'N/A';
+            $estadoCita = strtolower((string) ($c->estado_cita ?? 'pendiente'));
+            $abonoCita = $estadoCita === 'cancelada' ? '-' : '0.00';
 
             // 1. SIEMPRE agregar la Cita Original como punto de partida en el historial
             $filasTabla[] = [
@@ -207,8 +210,8 @@ class DashboardController extends Controller
                 'dia' => $fechaBaseCita->format('d/m/Y'),
                 'hora' => $fechaBaseCita->format('h:i A') . ' – ' . $horaFinFormateada,
                 'seguimiento' => $c->motivo ?? ($c->servicio?->nombre_servicio ?? 'Consulta agendada'),
-                'abono' => '0.00',
-                'estado' => ucfirst($c->estado_cita ?? 'pendiente')
+                'abono' => $abonoCita,
+                'estado' => ucfirst($estadoCita)
             ];
 
             // 2. Agregar los Seguimientos (notas) como filas totalmente individuales
@@ -360,36 +363,23 @@ class DashboardController extends Controller
                 return response()->json(['success' => false, 'message' => 'No hay doctores disponibles para ese horario y duración.'], 422);
             }
 
-            $hayNotasOPago = $request->filled('notas_seguimiento') || floatval($request->input('monto_abono', 0)) > 0;
-            $citaYaPasoOPasaHoy = \Carbon\Carbon::parse($cita->fecha_hora_inicio)->startOfDay() <= now()->startOfDay();
+            // Al reagendar, conservar la cita original en historial como cancelada
+            \App\Models\Cita::create([
+                'id_clinica' => $idClinica,
+                'id_paciente' => $cita->id_paciente,
+                'id_doctor' => $idDoctorDisponible,
+                'id_servicio' => $cita->id_servicio,
+                'fecha_hora_inicio' => $nuevoInicio,
+                'fecha_hora_fin' => $nuevoFin,
+                'estado_cita' => 'pendiente',
+                'costo_estimado' => $cita->costo_estimado,
+                'motivo' => 'Cita de seguimiento',
+                'reagenda_estatus' => $esReagendaMovilPendiente ? 'aplicada' : 'ninguna'
+            ]);
 
-            if ($hayNotasOPago || $citaYaPasoOPasaHoy) {
-                // Crear nueva cita SOLO porque cambió la fecha a futuro para seguimiento
-                \App\Models\Cita::create([
-                    'id_clinica' => $idClinica,
-                    'id_paciente' => $cita->id_paciente,
-                    'id_doctor' => $idDoctorDisponible,
-                    'id_servicio' => $cita->id_servicio,
-                    'fecha_hora_inicio' => $nuevoInicio,
-                    'fecha_hora_fin' => $nuevoFin,
-                    'estado_cita' => 'pendiente',
-                    'costo_estimado' => $cita->costo_estimado,
-                    'motivo' => 'Cita de seguimiento',
-                    'reagenda_estatus' => $esReagendaMovilPendiente ? 'aplicada' : 'ninguna'
-                ]);
-
-                $cita->estado_cita = 'completada';
-                if ($esReagendaMovilPendiente) {
-                    $cita->reagenda_estatus = 'aplicada';
-                }
-            } else {
-                // Reprogramación normal sin seguimiento previo
-                $cita->id_doctor = $idDoctorDisponible;
-                $cita->fecha_hora_inicio = $nuevoInicio;
-                $cita->fecha_hora_fin = $nuevoFin;
-                if ($esReagendaMovilPendiente) {
-                    $cita->reagenda_estatus = 'aplicada';
-                }
+            $cita->estado_cita = 'cancelada';
+            if ($esReagendaMovilPendiente) {
+                $cita->reagenda_estatus = 'aplicada';
             }
         }
 
@@ -413,16 +403,41 @@ class DashboardController extends Controller
                 $metodoPago = 'efectivo';
             }
 
+            $payloadIngreso = [
+                'id_clinica'   => $idClinica,
+                'id_cita'      => $cita->id_cita,
+                'monto'        => $montoAbono,
+                'fecha_ingreso' => now(),
+                'metodo'       => $metodoPago,
+                'descripcion'  => 'Abono en cita: ' . ($cita->motivo ?? ''),
+            ];
+
             try {
-                IngresoCaja::create([
-                    'id_clinica'   => $idClinica,
-                    'id_cita'      => $cita->id_cita,
-                    'monto'        => $montoAbono,
-                    'fecha_ingreso' => now(),
-                    'metodo'       => $metodoPago,
-                    'descripcion'  => 'Abono en cita: ' . ($cita->motivo ?? ''),
-                ]);
+                IngresoCaja::create($payloadIngreso);
             } catch (\Exception $e) {
+                $mensajeError = strtolower($e->getMessage());
+                $esBloqueoPorFecha = str_contains($mensajeError, 'solo se permiten abonos')
+                    || str_contains($mensajeError, 'no se puede adelantar pagos')
+                    || str_contains($mensajeError, 'dia de la cita')
+                    || str_contains($mensajeError, 'día de la cita');
+
+                if ($esBloqueoPorFecha && !empty($cita->fecha_hora_inicio)) {
+                    try {
+                        $payloadIngreso['fecha_ingreso'] = Carbon::parse($cita->fecha_hora_inicio);
+                        IngresoCaja::create($payloadIngreso);
+                    } catch (\Exception $retryException) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Cita actualizada, pero no se pudo registrar el pago: ' . $retryException->getMessage(),
+                        ], 422);
+                    }
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Cita actualizada correctamente',
+                    ]);
+                }
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Cita actualizada, pero no se pudo registrar el pago: ' . $e->getMessage(),
@@ -945,9 +960,9 @@ class DashboardController extends Controller
             }
 
             DB::transaction(function () use ($cita, $nuevaFecha, $nuevaFechaFin, $idDoctorDisponible, $notificacion) {
-                $cita->estado_cita = 'completada';
+                $cita->estado_cita = 'cancelada';
                 $cita->reagenda_estatus = 'aplicada';
-                $cita->notas = "[REAGENDADA POR PACIENTE - CITA ORIGINAL COMPLETADA]\n" . ($cita->notas ?? '');
+                $cita->notas = "[REAGENDADA POR PACIENTE - CITA ORIGINAL CANCELADA]\n" . ($cita->notas ?? '');
                 $cita->save();
 
                 Cita::create([

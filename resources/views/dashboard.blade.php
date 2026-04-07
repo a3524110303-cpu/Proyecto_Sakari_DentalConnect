@@ -843,6 +843,7 @@ Resumen de secciones:
             data.filas_tabla.forEach(f => {
                 const tr = document.createElement('tr');
                 tr.dataset.citaId = f.id_cita;
+                const abonoTexto = (f.abono === '-' || f.abono === null || typeof f.abono === 'undefined') ? '-' : `+$${f.abono}`;
                 
                 // Color según estado
                 let colorEstado = '#f59e0b'; // Pendiente/En Proceso
@@ -857,7 +858,7 @@ Resumen de secciones:
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.dia}</td>
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.hora}</td>
                     <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600;">${f.seguimiento}</td>
-                    <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600; color: #10b981;">+$${f.abono}</td>
+                    <td style="padding: 15px; border-right: 2px solid #eee; font-weight: 600; color: #10b981;">${abonoTexto}</td>
                     <td style="padding: 15px; font-weight: 600; color: ${colorEstado};">${f.estado}</td>
                 `;
                 window.todasLasFilas.push(tr);
@@ -1588,14 +1589,6 @@ function confirmarHorario(){
         // ==========================================
         // Trigger submit when clicking the external button
         document.getElementById('btn-actualizar-cita').addEventListener('click', function () {
-            // VERIFICACIÓN DE FECHA (Petición del usuario)
-            if (window.fechaCitaActual) {
-                const hoyStr = new Date().toISOString().split('T')[0];
-                if (window.fechaCitaActual !== hoyStr) {
-                    const confirmacion = confirm("Estás a punto de modificar datos de una cita días previos a la fecha programada o diferente al día de hoy. ¿Estás seguro de continuar?");
-                    if (!confirmacion) return;
-                }
-            }
             document.getElementById('form-actualizar-cita').requestSubmit();
         });
 
