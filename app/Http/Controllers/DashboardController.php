@@ -422,6 +422,7 @@ class DashboardController extends Controller
         $idClinica = Auth::user()->id_clinica;
         $cita = Cita::where('id_clinica', $idClinica)->findOrFail($idCita);
         $motivoOriginal = (string) ($cita->motivo ?? '');
+        $notaSeguimiento = trim((string) $request->input('notas_seguimiento', ''));
 
         $montoAbonoSolicitado = floatval($request->input('monto_abono', 0));
 
@@ -489,7 +490,10 @@ class DashboardController extends Controller
                 return response()->json(['success' => false, 'message' => 'No hay doctores disponibles para ese horario y duración.'], 422);
             }
 
-            // Al reagendar, conservar la cita original en historial como cancelada
+            $motivoNuevaCita = $notaSeguimiento !== ''
+                ? $notaSeguimiento
+                : 'Cita de seguimiento';
+
             \App\Models\Cita::create([
                 'id_clinica' => $idClinica,
                 'id_paciente' => $cita->id_paciente,
@@ -499,12 +503,13 @@ class DashboardController extends Controller
                 'fecha_hora_fin' => $nuevoFin,
                 'estado_cita' => 'pendiente',
                 'costo_estimado' => $cita->costo_estimado,
-                'motivo' => 'Cita de seguimiento',
+                'motivo' => $motivoNuevaCita,
                 'reagenda_estatus' => $esReagendaMovilPendiente ? 'aplicada' : 'ninguna'
             ]);
 
-            $cita->estado_cita = 'cancelada';
             if ($esReagendaMovilPendiente) {
+                // Solo en re-agenda móvil pendiente se conserva la cita original como cancelada.
+                $cita->estado_cita = 'cancelada';
                 $cita->reagenda_estatus = 'aplicada';
             }
         }
@@ -512,7 +517,6 @@ class DashboardController extends Controller
         $cita->save();
 
         // 🟢 EL PAGO Y EL SEGUIMIENTO SE REGISTRAN NORMALMENTE AQUÍ AFUERA
-        $notaSeguimiento = trim((string) $request->input('notas_seguimiento', ''));
         if($notaSeguimiento !== ''){
             $ultimoSeguimiento = SeguimientoClinico::where('id_cita', $cita->id_cita)
                 ->orderByDesc('id_seguimiento')
