@@ -521,6 +521,17 @@ class DashboardController extends Controller
                 $notaCitaId = $nuevaCita->id_cita;
             }
 
+            // Si es reagenda móvil, copiar seguimientos de la cita original a la nueva
+            if ($esReagendaMovilPendiente && $notaSeguimiento === '') {
+                $seguimientosOriginales = SeguimientoClinico::where('id_cita', $cita->id_cita)->get();
+                foreach ($seguimientosOriginales as $segOriginal) {
+                    SeguimientoClinico::create([
+                        'id_cita' => $nuevaCita->id_cita,
+                        'observaciones' => $segOriginal->observaciones
+                    ]);
+                }
+            }
+
             if ($esReagendaMovilPendiente) {
                 // Solo en re-agenda móvil pendiente se conserva la cita original como cancelada.
                 $cita->estado_cita = 'cancelada';
