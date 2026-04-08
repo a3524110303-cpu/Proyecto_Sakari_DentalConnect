@@ -31,6 +31,7 @@ class PacienteAppController extends Controller
         $usuario = clone $request->user();
 
         $paciente = Paciente::where('id_usuario', $usuario->id_usuario)
+            ->where('id_clinica', $usuario->id_clinica)
             ->where('is_active', true)
             ->first();
 
