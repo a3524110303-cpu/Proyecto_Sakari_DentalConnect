@@ -82,8 +82,14 @@ class CitaController extends Controller
                     ->withInput();
             }
 
+<<<<<<< HEAD
             $timezone = config('app.timezone', 'America/Mexico_City');
             $fechaHoraStr = $request->fecha . ' ' . $request->hora . ':00';
+=======
+            // 🔥 FIX: Forzar timezone local para evitar corrimiento de fecha por UTC
+            $fechaHoraStr = $request->fecha . ' ' . $request->hora . ':00';
+            $timezone = config('app.timezone', 'America/Mexico_City');
+>>>>>>> 6c411411bf1fba0a5852953e466d59a7f523d3fa
             $fechaHora = Carbon::createFromFormat('Y-m-d H:i:s', $fechaHoraStr, $timezone);
 
             $duracionMinutos = (int) $request->input('duracion_minutos', 30);
