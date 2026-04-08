@@ -620,7 +620,9 @@ class DashboardController extends Controller
 
                 if ($esBloqueoPorFecha && !empty($cita->fecha_hora_inicio)) {
                     try {
-                        $payloadIngreso['fecha_ingreso'] = Carbon::parse($cita->fecha_hora_inicio);
+                        // 🔥 FIX: Especificar timezone explícitamente para evitar desplazo de fecha por UTC
+                        $timezone = config('app.timezone', 'America/Mexico_City');
+                        $payloadIngreso['fecha_ingreso'] = Carbon::parse($cita->fecha_hora_inicio, $timezone);
                         IngresoCaja::create($payloadIngreso);
                     } catch (\Exception $retryException) {
                         return response()->json([
@@ -990,7 +992,9 @@ class DashboardController extends Controller
 
                 if (!empty($fechaHoraRaw)) {
                     try {
-                        $fecha = Carbon::parse($fechaHoraRaw);
+                        // 🔥 FIX: Especificar timezone explícitamente para evitar desplazo de fecha por UTC
+                        $timezone = config('app.timezone', 'America/Mexico_City');
+                        $fecha = Carbon::parse($fechaHoraRaw, $timezone);
                         $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? $fecha->format('Y-m-d');
                         $datos['nueva_hora'] = $datos['nueva_hora'] ?? $fecha->format('H:i');
                     } catch (\Throwable $e) {
