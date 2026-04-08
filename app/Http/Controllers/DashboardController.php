@@ -325,6 +325,11 @@ class DashboardController extends Controller
                     continue;
                 }
 
+                // Evitar entradas adicionales que solo reflejen un abono y no una cita real.
+                if ($mov['abono_total'] > 0 && empty($mov['notas'])) {
+                    continue;
+                }
+
                 $textoSeguimiento = '';
 
                 if (!empty($mov['notas'])) {

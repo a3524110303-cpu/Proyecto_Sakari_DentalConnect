@@ -82,15 +82,14 @@ class CitaController extends Controller
                     ->withInput();
             }
 
-            // 🔥 FIX: Forzar formato crudo para evitar que Laravel cambie la hora a UTC
+            $timezone = config('app.timezone', 'America/Mexico_City');
             $fechaHoraStr = $request->fecha . ' ' . $request->hora . ':00';
-            $fechaHora = Carbon::parse($fechaHoraStr);
+            $fechaHora = Carbon::createFromFormat('Y-m-d H:i:s', $fechaHoraStr, $timezone);
 
             $duracionMinutos = (int) $request->input('duracion_minutos', 30);
             $finHora = $fechaHora->copy()->addMinutes($duracionMinutos);
 
             // 🚫 VALIDACIÓN 1: Bloquear día actual y anteriores (1 día de anticipación mínimo)
-            $timezone = config('app.timezone', 'America/Mexico_City');
             $hoy = Carbon::now($timezone)->startOfDay();
 
             if ($fechaHora->copy()->startOfDay() <= $hoy) {
@@ -270,8 +269,8 @@ class CitaController extends Controller
         // Retornamos un bloqueo total de horas para que no pueda seleccionar nada.
         if ($fechaSeleccionada <= $hoy) {
             $bloqueoTotal = [];
-            $inicioDia = Carbon::parse($fecha . ' 00:00');
-            $finDia = Carbon::parse($fecha . ' 23:45');
+            $inicioDia = Carbon::createFromFormat('Y-m-d H:i:s', $fecha . ' 00:00:00', $timezone);
+            $finDia = Carbon::createFromFormat('Y-m-d H:i:s', $fecha . ' 23:45:00', $timezone);
             
             while ($inicioDia <= $finDia) {
                 $bloqueoTotal[] = $inicioDia->format('H:i');

@@ -1434,11 +1434,11 @@
                 // IDENTIFICAR LA PRÓXIMA CITA
                 const ahora = new Date();
                 let proximaCita = null;
-                const citasPendientes = json.data.filter(c => new Date(c.fecha_hora_inicio) >= ahora && (c.estado_cita === 'pendiente' || c.estado_cita === 'confirmada'));
+                const citasPendientes = json.data.filter(c => parseLocalDateTime(c.fecha_hora_inicio) >= ahora && (c.estado_cita === 'pendiente' || c.estado_cita === 'confirmada'));
                 
                 if (citasPendientes.length > 0) {
                     // Ordenar para obtener la más próxima
-                    proximaCita = citasPendientes.sort((a,b) => new Date(a.fecha_hora_inicio) - new Date(b.fecha_hora_inicio))[0];
+                    proximaCita = citasPendientes.sort((a,b) => parseLocalDateTime(a.fecha_hora_inicio) - parseLocalDateTime(b.fecha_hora_inicio))[0];
                 }
 
                 let htmlContent = '';
@@ -1449,7 +1449,7 @@
                     <div style="background: #e0fbfc; border-left: 4px solid #00b4d8; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                         <h5 style="margin: 0 0 5px 0; color: #0077b6;"><i class="fa-solid fa-calendar-check"></i> Próxima Consulta Programada</h5>
                         <p style="margin: 0; font-size: 0.95rem; color: #023e8a;">
-                            <strong>${new Date(proximaCita.fecha_hora_inicio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</strong> 
+                            <strong>${parseLocalDateTime(proximaCita.fecha_hora_inicio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</strong> 
                             - ${proximaCita.servicio ? proximaCita.servicio.nombre_servicio : 'Consulta'}
                         </p>
                     </div>`;
@@ -1470,7 +1470,7 @@
                     return `<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <div>
                                     <h5 style="margin:0 0 5px 0; font-size: 1rem; color: #2b2d42;">${cita.servicio ? cita.servicio.nombre_servicio : 'Consulta General'}</h5>
-                                    <span style="font-size: 0.85rem; color: #6c757d;"><i class="fa-solid fa-calendar-day"></i> ${new Date(cita.fecha_hora_inicio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</span>
+                                    <span style="font-size: 0.85rem; color: #6c757d;"><i class="fa-solid fa-calendar-day"></i> ${parseLocalDateTime(cita.fecha_hora_inicio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</span>
                                     ${cita.notas ? `<p style="margin:5px 0 0 0; font-size:0.85rem; color:#555;"><i>"${cita.notas}"</i></p>` : ''}
                                     <br>${pagosHtml}
                                 </div>
@@ -1503,7 +1503,7 @@
                 }
 
                 list.innerHTML = json.data.map(ev => {
-                    const fecha = new Date(ev.fecha_evolucion).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+                    const fecha = parseLocalDateTime(ev.fecha_evolucion).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 
                     let imageHtml = '';
                     if (ev.imagenes && ev.imagenes.length > 0) {
@@ -1683,6 +1683,22 @@
          */
         function eliminarEmojis(str) {
             return str.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{10000}-\u{10FFFF}]/gu, '');
+        }
+
+        /**
+         * Convierte una fecha/hora del backend en un objeto Date local sin depender de la parseación del navegador.
+         */
+        function parseLocalDateTime(dateTimeString) {
+            if (!dateTimeString) {
+                return null;
+            }
+
+            const normalized = dateTimeString.replace('T', ' ').trim();
+            const [datePart, timePart = '00:00:00'] = normalized.split(' ');
+            const [year, month, day] = datePart.split('-').map(Number);
+            const [hour = 0, minute = 0, second = 0] = timePart.split(':').map(Number);
+
+            return new Date(year, month - 1, day, hour, minute, second);
         }
 
         /**
@@ -2000,7 +2016,9 @@ async function generarHorasReserva(fecha, horaInicioStr, horaFinStr) {
         btn.className = 'reserva-hora-btn';
         btn.innerText = hora;
 
-        const fechaHora = new Date(`${fecha}T${hora}`);
+        const [selectedYear, selectedMonth, selectedDay] = fecha.split('-').map(Number);
+        const [selectedHour, selectedMin] = hora.split(':').map(Number);
+        const fechaHora = new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour, selectedMin);
 
         const esPasado = fechaHora < ahora;
 
