@@ -242,7 +242,9 @@ class DashboardController extends Controller
             $fechaBaseCita = $c->fecha_hora_inicio ? \Carbon\Carbon::parse($c->fecha_hora_inicio) : now();
             $horaFinFormateada = $c->fecha_hora_fin ? \Carbon\Carbon::parse($c->fecha_hora_fin)->format('h:i A') : 'N/A';
             $estadoCita = strtolower((string) ($c->estado_cita ?? 'pendiente'));
-            $abonoCita = $estadoCita === 'cancelada' ? '-' : '0.00';
+            $abonoCita = $estadoCita === 'cancelada'
+                ? '-'
+                : number_format((float) ($pagosPorCita[$c->id_cita] ?? 0), 2);
 
             // 1. SIEMPRE agregar la Cita Original como punto de partida en el historial
             $motivoCita = trim((string) ($c->motivo ?? ''));
@@ -432,6 +434,8 @@ class DashboardController extends Controller
 
         $montoAbonoSolicitado = floatval($request->input('monto_abono', 0));
 
+        $notaCitaId = $cita->id_cita;
+
         $esReagendaMovilPendiente =
             $cita->reagenda_estatus === 'pendiente'
             && !empty($cita->reagenda_solicitada_at)
@@ -500,7 +504,7 @@ class DashboardController extends Controller
                 ? $notaSeguimiento
                 : 'Cita de seguimiento';
 
-            \App\Models\Cita::create([
+            $nuevaCita = \App\Models\Cita::create([
                 'id_clinica' => $idClinica,
                 'id_paciente' => $cita->id_paciente,
                 'id_doctor' => $idDoctorDisponible,
@@ -513,6 +517,10 @@ class DashboardController extends Controller
                 'reagenda_estatus' => $esReagendaMovilPendiente ? 'aplicada' : 'ninguna'
             ]);
 
+            if ($notaSeguimiento !== '') {
+                $notaCitaId = $nuevaCita->id_cita;
+            }
+
             if ($esReagendaMovilPendiente) {
                 // Solo en re-agenda móvil pendiente se conserva la cita original como cancelada.
                 $cita->estado_cita = 'cancelada';
@@ -524,7 +532,7 @@ class DashboardController extends Controller
 
         // 🟢 EL PAGO Y EL SEGUIMIENTO SE REGISTRAN NORMALMENTE AQUÍ AFUERA
         if($notaSeguimiento !== ''){
-            $ultimoSeguimiento = SeguimientoClinico::where('id_cita', $cita->id_cita)
+            $ultimoSeguimiento = SeguimientoClinico::where('id_cita', $notaCitaId)
                 ->orderByDesc('id_seguimiento')
                 ->first();
 
@@ -538,7 +546,7 @@ class DashboardController extends Controller
 
             if (!$esSeguimientoDuplicado) {
                 SeguimientoClinico::create([
-                    'id_cita'=>$cita->id_cita,
+                    'id_cita'=>$notaCitaId,
                     'observaciones'=>$notaSeguimiento
                 ]);
             }
