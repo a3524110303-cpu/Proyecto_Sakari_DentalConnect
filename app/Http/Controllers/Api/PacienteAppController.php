@@ -413,8 +413,9 @@ class PacienteAppController extends Controller
                 ], 400);
             }
 
-            // 4. Preparamos fechas
-            $fechaHora = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora);
+            // 4. Preparamos fechas en timezone local para evitar corrimientos UTC (ej. dia 08 -> 07)
+            $timezone = config('app.timezone', 'America/Mexico_City');
+            $fechaHora = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora, $timezone);
             $finHora = $fechaHora->copy()->addMinutes(30);
 
             // Asegurarnos de que no esté agendando en el pasado (por si alguien es muy rápido con los dedos)

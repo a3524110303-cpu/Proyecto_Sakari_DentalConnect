@@ -82,15 +82,15 @@ class CitaController extends Controller
                     ->withInput();
             }
 
-            // 🔥 FIX: Forzar formato crudo para evitar que Laravel cambie la hora a UTC
+            // 🔥 FIX: Forzar timezone local para evitar corrimiento de fecha por UTC
             $fechaHoraStr = $request->fecha . ' ' . $request->hora . ':00';
-            $fechaHora = Carbon::parse($fechaHoraStr);
+            $timezone = config('app.timezone', 'America/Mexico_City');
+            $fechaHora = Carbon::createFromFormat('Y-m-d H:i:s', $fechaHoraStr, $timezone);
 
             $duracionMinutos = (int) $request->input('duracion_minutos', 30);
             $finHora = $fechaHora->copy()->addMinutes($duracionMinutos);
 
             // 🚫 VALIDACIÓN 1: Bloquear día actual y anteriores (1 día de anticipación mínimo)
-            $timezone = config('app.timezone', 'America/Mexico_City');
             $hoy = Carbon::now($timezone)->startOfDay();
 
             if ($fechaHora->copy()->startOfDay() <= $hoy) {
