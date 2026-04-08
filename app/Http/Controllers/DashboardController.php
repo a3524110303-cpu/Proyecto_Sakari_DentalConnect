@@ -499,6 +499,21 @@ class DashboardController extends Controller
             $nuevoInicio = Carbon::createFromFormat('Y-m-d H:i', $nuevaFecha.' '.$nuevaHora);
             $nuevoFin = $nuevoInicio->copy()->addMinutes($duracionMinutos);
 
+            // 🔒 VALIDACIÓN: Evitar crear cita duplicada en el mismo horario
+            $citaDuplicada = Cita::where('id_paciente', $cita->id_paciente)
+                ->where('id_clinica', $idClinica)
+                ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+                ->where('fecha_hora_inicio', $nuevoInicio)
+                ->where('id_cita', '!=', $cita->id_cita)
+                ->exists();
+
+            if ($citaDuplicada) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya existe una cita pendiente para ese paciente en el mismo horario.',
+                ], 422);
+            }
+
             $idDoctorDisponible = $this->buscarDoctorDisponible($idClinica, $nuevoInicio, $nuevoFin, (int) $cita->id_cita);
 
             if (!$idDoctorDisponible) {
@@ -1106,7 +1121,9 @@ class DashboardController extends Controller
             }
 
             try {
-                $nuevaFecha = Carbon::parse($fechaHoraRaw);
+                // 🔥 FIX: Especificar timezone explícitamente para evitar desplazo de fecha por UTC
+                $timezone = config('app.timezone', 'America/Mexico_City');
+                $nuevaFecha = Carbon::parse($fechaHoraRaw, $timezone);
             } catch (\Throwable $e) {
                 return response()->json([
                     'success' => false,
@@ -1127,6 +1144,20 @@ class DashboardController extends Controller
             }
 
             $nuevaFechaFin = $nuevaFecha->copy()->addMinutes($duracionMinutos);
+
+            // 🔒 VALIDACIÓN: Evitar crear cita duplicada en el mismo horario
+            $citaDuplicada = Cita::where('id_paciente', $cita->id_paciente)
+                ->where('id_clinica', $cita->id_clinica)
+                ->whereIn('estado_cita', ['pendiente', 'confirmada', 'actualización'])
+                ->where('fecha_hora_inicio', $nuevaFecha)
+                ->exists();
+
+            if ($citaDuplicada) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya existe una cita pendiente para ese paciente en la misma fecha y hora.',
+                ], 422);
+            }
 
             $idDoctorDisponible = $this->buscarDoctorDisponible(
                 (int) $cita->id_clinica,
