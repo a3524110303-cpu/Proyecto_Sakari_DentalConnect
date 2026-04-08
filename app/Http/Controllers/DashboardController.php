@@ -512,7 +512,7 @@ class DashboardController extends Controller
                 'fecha_hora_inicio' => $nuevoInicio,
                 'fecha_hora_fin' => $nuevoFin,
                 'estado_cita' => 'pendiente',
-                'costo_estimado' => $cita->costo_estimado,
+                'costo_estimado' => 0,
                 'motivo' => $motivoNuevaCita,
                 'reagenda_estatus' => $esReagendaMovilPendiente ? 'aplicada' : 'ninguna'
             ]);
