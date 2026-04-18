@@ -105,6 +105,8 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
 
         Route::get('/api/citas/{id}/modal-detalles', [DashboardController::class, 'obtenerDatosModal'])->name('api.cita.detalles');
         Route::post('/api/citas/{id}/completar', [DashboardController::class, 'completarCita'])->name('api.cita.completar');
+        Route::post('/api/onboarding/completar', [DashboardController::class, 'completarOnboarding'])->name('api.onboarding.completar');
+        Route::post('/api/onboarding/tratamiento', [DashboardController::class, 'registrarTratamientoRapido'])->name('api.onboarding.tratamiento');
 
         Route::get('/api/calendario/disponibilidad', [DashboardController::class, 'obtenerDisponibilidadMes'])->name('api.calendario');
 

@@ -15,6 +15,291 @@ Resumen de secciones:
 
 @section('contenido')
     {{-- IDX-01 | Encabezado y métricas rápidas --}}
+    @if(isset($primerIngreso) && $primerIngreso)
+    {{-- =====================================================================
+         ONBOARDING SCREEN (Primer Ingreso)
+         ====================================================================== --}}
+    <style>
+        .onboarding-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(135deg, rgba(248, 253, 255, 0.98) 0%, rgba(224, 251, 252, 0.98) 100%);
+            backdrop-filter: blur(8px);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: opacity 0.5s ease;
+        }
+        .onboarding-card {
+            background: white;
+            padding: 50px;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            transform: translateY(0);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .onboarding-title {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+        .onboarding-subtitle {
+            color: #4B5563;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .plan-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #0369A1 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        .onboarding-form {
+            background: #F9FAFB;
+            padding: 25px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            border: 1px solid #E5E7EB;
+        }
+        .onboarding-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #D1D5DB;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .onboarding-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 209, 255, 0.3);
+        }
+        .onboarding-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 209, 255, 0.4);
+        }
+        /* Animación del paciente fantasma */
+        .ghost-simulation {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            width: 500px;
+            display: none;
+            text-align: left;
+            z-index: 10;
+        }
+        .ghost-cursor {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 320 512" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path d="M16 288c-7.6 0-14.7-3.9-18.7-10.4s-4.3-14.2-1.1-21.3l128-288c3.6-8.1 11.5-13.4 20.4-13.4s16.8 5.3 20.4 13.4l128 288c3.2 7.1 2.9 14.8-1.1 21.3s-11.1 10.4-18.7 10.4l-117.4 0-38 152c-2.3 9.2-10.6 15.6-20.1 15.6s-17.8-6.4-20.1-15.6l-38-152L16 288z" fill="%23333"/></svg>') no-repeat;
+            z-index: 20;
+            pointer-events: none;
+            transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .fake-input {
+            width: 100%; height: 45px; background: #f3f4f6; border-radius: 8px; margin-bottom: 20px;
+            border: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 15px; color: #333; font-weight: 600;
+        }
+        .typing::after {
+            content: '|';
+            animation: blink 0.7s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+
+    <div class="onboarding-overlay" id="onboardingOverlay">
+        <div class="onboarding-card" id="onboardingCard1">
+            <div class="plan-badge">Plan Actual: {{ $planNombre ?? 'Básico' }}</div>
+            <h1 class="onboarding-title">¡Bienvenido a DentalConnect!</h1>
+            <p class="onboarding-subtitle">
+                Tu cuenta ha sido activada y estás listo para transformar la gestión de tu clínica.
+                <br><br>
+                @if(($planNombre ?? '') === 'Premium' || ($planNombre ?? '') === 'Ultra')
+                    <strong>Con tu plan {{ $planNombre }}, tienes acceso a las mejores herramientas de captación y seguimiento.</strong><br>
+                @else
+                    El siguiente paso es configurar tu entorno de trabajo.
+                @endif
+            </p>
+
+            @if(!isset($totalServicios) || $totalServicios == 0)
+                <div class="onboarding-form">
+                    <h3 style="margin-top:0; color:#1F2937; margin-bottom: 10px;">Paso 1: Registra tu primer tratamiento</h3>
+                    <p style="font-size: 0.9rem; color: #6B7280; margin-bottom: 20px;">
+                        Para poder agendar citas, es obligatorio tener al menos un tratamiento o servicio configurado en la clínica.
+                    </p>
+                    <input type="text" id="ob-tratamiento-nombre" class="onboarding-input" placeholder="Ej. Consulta General">
+                    <input type="number" id="ob-tratamiento-precio" class="onboarding-input" placeholder="Precio Base (Ej. 500)">
+                    <button class="onboarding-btn" onclick="guardarPrimerTratamiento()">Registrar y Continuar</button>
+                </div>
+            @else
+                <button class="onboarding-btn" onclick="iniciarSimulacion()">¡Empezar mi recorrido!</button>
+            @endif
+        </div>
+
+        <!-- Pantalla 2: Simulador de paciente -->
+        <div class="ghost-simulation" id="ghostSimulation">
+            <h2 style="color: var(--primary-color); font-weight: 800; margin-top:0;">Paso 2: Agregando un Paciente</h2>
+            <p style="color: #6B7280; margin-bottom: 30px;">Observa cómo de fácil es registrar un nuevo paciente en DentalConnect.</p>
+            
+            <label style="font-weight: 700; color: #374151; display: block; margin-bottom: 5px;">Nombre Completo</label>
+            <div class="fake-input" id="sim-nombre"></div>
+            
+            <label style="font-weight: 700; color: #374151; display: block; margin-bottom: 5px;">Teléfono</label>
+            <div class="fake-input" id="sim-telefono"></div>
+
+            <button class="onboarding-btn" id="sim-btn" style="background:#E5E7EB; color:#9CA3AF; margin-top:10px;">Guardar Paciente</button>
+            
+            <div class="ghost-cursor" id="ghostCursor" style="left: 10%; top: 80%;"></div>
+        </div>
+    </div>
+
+    <script>
+        function guardarPrimerTratamiento() {
+            const nombre = document.getElementById('ob-tratamiento-nombre').value;
+            const precio = document.getElementById('ob-tratamiento-precio').value;
+
+            if(!nombre || !precio) {
+                alert("Por favor, ingresa el nombre y el precio.");
+                return;
+            }
+
+            const btn = document.querySelector('.onboarding-btn');
+            btn.innerHTML = 'Guardando... <i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            fetch('{{ route("api.onboarding.tratamiento") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ nombre_servicio: nombre, precio_base: precio })
+            }).then(r => r.json()).then(res => {
+                if(res.success) {
+                    iniciarSimulacion();
+                } else {
+                    alert("Error al guardar el tratamiento");
+                    btn.innerHTML = 'Registrar y Continuar';
+                    btn.disabled = false;
+                }
+            }).catch(e => {
+                alert("Error de conexión");
+                btn.innerHTML = 'Registrar y Continuar';
+                btn.disabled = false;
+            });
+        }
+
+        async function typeText(elementId, text, speed = 80) {
+            const el = document.getElementById(elementId);
+            el.classList.add('typing');
+            for(let i = 0; i < text.length; i++) {
+                el.innerHTML += text.charAt(i);
+                await new Promise(r => setTimeout(r, speed));
+            }
+            el.classList.remove('typing');
+        }
+
+        function iniciarSimulacion() {
+            document.getElementById('onboardingCard1').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('onboardingCard1').style.display = 'none';
+                document.getElementById('ghostSimulation').style.display = 'block';
+                
+                // Secuencia de animación
+                const cursor = document.getElementById('ghostCursor');
+                
+                setTimeout(() => {
+                    // Mover al primer input
+                    cursor.style.left = '50%';
+                    cursor.style.top = '140px';
+                }, 500);
+
+                setTimeout(async () => {
+                    // Simular escritura nombre
+                    cursor.style.transform = 'scale(0.8)';
+                    setTimeout(() => cursor.style.transform = 'scale(1)', 150);
+                    await typeText('sim-nombre', 'Juan Pérez Garza', 60);
+                    
+                    // Mover al segundo input
+                    cursor.style.left = '50%';
+                    cursor.style.top = '250px';
+                }, 1500);
+
+                setTimeout(async () => {
+                    // Simular escritura telefono
+                    cursor.style.transform = 'scale(0.8)';
+                    setTimeout(() => cursor.style.transform = 'scale(1)', 150);
+                    await typeText('sim-telefono', '555-123-4567', 60);
+
+                    // Mover al boton
+                    cursor.style.left = '50%';
+                    cursor.style.top = '350px';
+                }, 3500);
+
+                setTimeout(() => {
+                    // Click boton
+                    cursor.style.transform = 'scale(0.8)';
+                    const btn = document.getElementById('sim-btn');
+                    btn.style.background = 'var(--primary-color)';
+                    btn.style.color = 'white';
+                    btn.innerHTML = '¡Paciente Guardado!';
+                }, 5500);
+
+                setTimeout(() => {
+                    finalizarOnboarding();
+                }, 7500);
+
+            }, 500);
+        }
+
+        function finalizarOnboarding() {
+            fetch('{{ route("api.onboarding.completar") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            }).then(() => {
+                const overlay = document.getElementById('onboardingOverlay');
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.remove();
+                    // Refrescar para que pueda ver los cambios (tratamiento) y pueda operar.
+                    window.location.reload(); 
+                }, 500);
+            });
+        }
+    </script>
+    @endif
+
     <h2 class="page-title">Panel Principal</h2>
 
     {{-- Panel de Notificaciones de Reagendado --}}

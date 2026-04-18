@@ -113,6 +113,12 @@ class DashboardController extends Controller
             ->orderBy('nombre_servicio')
             ->get();
 
+        $clinica = \App\Models\Clinica::find($idClinica);
+        $suscripcion = $clinica ? $clinica->suscripcionActiva : null;
+        $planNombre = $suscripcion && $suscripcion->plan ? $suscripcion->plan->nombre : 'Prueba';
+        $primerIngreso = $clinica ? $clinica->primer_ingreso : false;
+        $totalServicios = $servicios->count();
+
         return view('dashboard',compact(
             'proximasCitas',
             'citasPendientesCount',
@@ -120,7 +126,10 @@ class DashboardController extends Controller
             'ingresosMes',
             'itemsBajoStock',
             'notificacionesPendientes',
-            'servicios'
+            'servicios',
+            'primerIngreso',
+            'planNombre',
+            'totalServicios'
         ));
     }
 
@@ -1175,6 +1184,37 @@ class DashboardController extends Controller
         $notificacion->save();
 
         return response()->json(['success' => true, 'message' => 'Notificación marcada como leída.']);
+    }
+
+    public function completarOnboarding(Request $request)
+    {
+        $clinica = \App\Models\Clinica::find(Auth::user()->id_clinica);
+        if ($clinica) {
+            $clinica->primer_ingreso = false;
+            $clinica->save();
+        }
+        return response()->json(['success' => true]);
+    }
+
+    public function registrarTratamientoRapido(Request $request)
+    {
+        $request->validate([
+            'nombre_servicio' => 'required|string|max:100',
+            'precio_base' => 'required|numeric|min:0'
+        ]);
+
+        $servicio = new \App\Models\Servicio();
+        $servicio->id_clinica = Auth::user()->id_clinica;
+        $servicio->nombre_servicio = $request->nombre_servicio;
+        $servicio->precio_base = $request->precio_base;
+        $servicio->categoria = 'General';
+        
+        $slug = strtolower(preg_replace('/[^a-zA-Z0-9\-]/', '', str_replace(' ', '-', $request->nombre_servicio)));
+        $servicio->slug = $slug;
+        
+        $servicio->save();
+
+        return response()->json(['success' => true]);
     }
 
 }
