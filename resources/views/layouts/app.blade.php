@@ -23,18 +23,54 @@ Incluye:
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    @php
+        $temaVisual = 'claro';
+        $colorPrimario = '#00b4d8';
+        if (auth()->check() && auth()->user()->clinica) {
+            $temaVisual = auth()->user()->clinica->tema_visual ?? 'claro';
+            $colorPrimario = auth()->user()->clinica->color_primario ?? '#00b4d8';
+        }
+        
+        // Helper to generate shades
+        function adjustBrightness($hex, $steps) {
+            $steps = max(-255, min(255, $steps));
+            $hex = str_replace('#', '', $hex);
+            if (strlen($hex) == 3) {
+                $hex = str_repeat(substr($hex,0,1), 2).str_repeat(substr($hex,1,1), 2).str_repeat(substr($hex,2,1), 2);
+            }
+            $r = hexdec(substr($hex,0,2));
+            $g = hexdec(substr($hex,2,2));
+            $b = hexdec(substr($hex,4,2));
+            $r = max(0,min(255,$r + $steps));
+            $g = max(0,min(255,$g + $steps));
+            $b = max(0,min(255,$b + $steps));
+            return '#'.str_pad(dechex($r), 2, '0', STR_PAD_LEFT).str_pad(dechex($g), 2, '0', STR_PAD_LEFT).str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
+        }
+        $secondaryColor = adjustBrightness($colorPrimario, -40);
+        $accentColor = adjustBrightness($colorPrimario, 40);
+        $lightBg = adjustBrightness($colorPrimario, 230); // Tinted super light background for light mode
+    @endphp
     <style>
         :root {
-            --primary-color: #00b4d8;
-            --secondary-color: #0077b6;
-            --accent-color: #90e0ef;
-            --light-bg: #e0fbfc;
-            --white: #ffffff;
-            --text-dark: #333;
-            --text-light: #555;
-            --shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            --input-bg: #f0f0f0;
+            --primary-color: {{ $colorPrimario }};
+            --secondary-color: {{ $secondaryColor }};
+            --accent-color: {{ $accentColor }};
+            --light-bg: {{ $temaVisual === 'oscuro' ? '#0f172a' : $lightBg }};
+            --white: {{ $temaVisual === 'oscuro' ? '#1e293b' : '#ffffff' }};
+            --text-dark: {{ $temaVisual === 'oscuro' ? '#f8fafc' : '#333333' }};
+            --text-light: {{ $temaVisual === 'oscuro' ? '#94a3b8' : '#555555' }};
+            --shadow: 0 4px 15px rgba(0, 0, 0, {{ $temaVisual === 'oscuro' ? '0.4' : '0.05' }});
+            --input-bg: {{ $temaVisual === 'oscuro' ? '#334155' : '#f0f0f0' }};
             --border-radius: 8px;
+        }
+
+        body.theme-invertido {
+            filter: invert(1) hue-rotate(180deg);
+            background-color: var(--light-bg);
+        }
+        
+        body.theme-invertido .dashboard-sidebar {
+            background: rgba(255,255,255,0.9);
         }
 
         body {
@@ -152,7 +188,7 @@ Incluye:
         }
 
         h2.page-title {
-            color: #000;
+            color: var(--text-dark);
             margin-bottom: 30px;
             font-weight: 700;
             font-size: 2rem;
@@ -181,12 +217,12 @@ Incluye:
 
         /* --- Tables & Cards --- */
         .dashboard-table {
-            background: rgba(255, 255, 255, 0.8);
+            background: var(--white);
             backdrop-filter: blur(10px);
             border-radius: 15px;
             padding: 20px;
             box-shadow: var(--shadow);
-            border: 1px solid white;
+            border: 1px solid var(--white);
         }
 
         table {
@@ -214,7 +250,7 @@ Incluye:
         }
 
         .appointment-card {
-            background: white;
+            background: var(--white);
             border-radius: 8px;
             padding: 15px 30px;
             display: flex;
@@ -231,18 +267,18 @@ Incluye:
 
         .app-time {
             font-weight: 600;
-            color: #444;
+            color: var(--text-light);
             width: 100px;
         }
 
         .app-patient {
             font-weight: 500;
-            color: #000;
+            color: var(--text-dark);
             flex: 2;
         }
 
         .app-treatment {
-            color: #666;
+            color: var(--text-light);
             flex: 2;
         }
 
@@ -310,7 +346,7 @@ Incluye:
 
         /* --- Cards & Config --- */
         .config-card {
-            background: white;
+            background: var(--white);
             padding: 30px;
             border-radius: 15px;
             box-shadow: var(--shadow);
@@ -771,7 +807,7 @@ Incluye:
     </style>
 </head>
 
-<body>
+<body class="theme-{{ $temaVisual }}">
 
     <nav class="dashboard-sidebar">
         <ul class="navbar">

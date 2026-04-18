@@ -354,6 +354,60 @@
             </div>
         @endif
 
+        {{-- ═══════════════ ACCESIBILIDAD Y PERSONALIZACIÓN ═══════════════ --}}
+        <div class="premium-card" style="width: 100%;">
+            <div class="card-header clinica-header" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-bottom: 1px solid #f1f5f9; padding: 24px 30px;">
+                <h3 style="color: #92400e; margin: 0; font-size: 1.3rem; font-weight: 800;">
+                    <i class="fa-solid fa-palette"></i> Accesibilidad y Personalización Visual
+                </h3>
+                <p style="color: #b45309; margin: 6px 0 0 0; font-size: 0.85rem;">
+                    Configura el modo de visualización de tu sistema.
+                </p>
+            </div>
+            <div class="card-body">
+                <form action="{{ route('configuracion.updateApariencia') }}" method="POST">
+                    @csrf
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                        {{-- Modo Claro --}}
+                        <label style="cursor:pointer; display:flex; flex-direction:column; align-items:center; padding:20px; border: 2px solid {{ ($clinica->tema_visual ?? 'claro') == 'claro' ? 'var(--primary-color)' : '#e2e8f0' }}; border-radius: 12px; background: #f8fafc; transition: all 0.3s;" onmouseover="this.style.borderColor='var(--primary-color)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='#e2e8f0'">
+                            <input type="radio" name="tema_visual" value="claro" {{ ($clinica->tema_visual ?? 'claro') == 'claro' ? 'checked' : '' }} style="margin-bottom: 15px;">
+                            <i class="fa-solid fa-sun" style="font-size: 2rem; color: #f59e0b; margin-bottom: 10px;"></i>
+                            <span style="font-weight: 600; color: #334155;">Modo Claro</span>
+                            <span style="font-size: 0.8rem; color: #64748b; text-align:center;">Apariencia Original</span>
+                        </label>
+
+                        {{-- Modo Noche --}}
+                        <label style="cursor:pointer; display:flex; flex-direction:column; align-items:center; padding:20px; border: 2px solid {{ ($clinica->tema_visual ?? 'claro') == 'oscuro' ? 'var(--primary-color)' : '#e2e8f0' }}; border-radius: 12px; background: #1e293b; transition: all 0.3s;" onmouseover="this.style.borderColor='var(--primary-color)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='#e2e8f0'">
+                            <input type="radio" name="tema_visual" value="oscuro" {{ ($clinica->tema_visual ?? 'claro') == 'oscuro' ? 'checked' : '' }} style="margin-bottom: 15px;">
+                            <i class="fa-solid fa-moon" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 10px;"></i>
+                            <span style="font-weight: 600; color: #f8fafc;">Modo Noche</span>
+                            <span style="font-size: 0.8rem; color: #94a3b8; text-align:center;">Reduce fatiga visual</span>
+                        </label>
+
+                        {{-- Modo Invertido --}}
+                        <label style="cursor:pointer; display:flex; flex-direction:column; align-items:center; padding:20px; border: 2px solid {{ ($clinica->tema_visual ?? 'claro') == 'invertido' ? 'var(--primary-color)' : '#e2e8f0' }}; border-radius: 12px; background: #000; transition: all 0.3s;" onmouseover="this.style.borderColor='var(--primary-color)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='#e2e8f0'">
+                            <input type="radio" name="tema_visual" value="invertido" {{ ($clinica->tema_visual ?? 'claro') == 'invertido' ? 'checked' : '' }} style="margin-bottom: 15px; accent-color: yellow;">
+                            <i class="fa-solid fa-circle-half-stroke" style="font-size: 2rem; color: #eab308; margin-bottom: 10px;"></i>
+                            <span style="font-weight: 600; color: #fff;">Alto Contraste</span>
+                            <span style="font-size: 0.8rem; color: #ccc; text-align:center;">Colores invertidos y brillantes</span>
+                        </label>
+                    </div>
+
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display:flex; align-items:center; gap: 20px;">
+                        <div>
+                            <label style="font-weight:600; color:#334155; display:block; margin-bottom:5px;">Color Principal de la Interfaz</label>
+                            <p style="font-size:0.85rem; color:#64748b; margin:0;">Elige un color que represente a tu clínica.</p>
+                        </div>
+                        <input type="color" name="color_primario" value="{{ $clinica->color_primario ?? '#00b4d8' }}" style="width: 60px; height: 60px; padding: 0; border: none; border-radius: 8px; cursor: pointer; margin-left: auto;">
+                    </div>
+
+                    <button type="submit" class="ghost-btn-premium" style="width: 100%; margin-top: 30px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        Guardar Preferencias Visuales
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 
     {{-- ═══════════════ MODAL: Nueva Recepcionista ═══════════════ --}}

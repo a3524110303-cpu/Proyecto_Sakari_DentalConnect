@@ -98,6 +98,7 @@ Route::middleware(['auth', \App\Http\Middleware\PreventBackHistory::class])->gro
         Route::post('/configuracion/horarios', [ConfiguracionController::class, 'updateHorarios'])->name('configuracion.updateHorarios');
         Route::delete('/configuracion/recepcionista/{id}', [ConfiguracionController::class, 'destroyRecepcionista'])->name('configuracion.destroyRecepcionista');
         Route::post('/configuracion/foto-doctor', [ConfiguracionController::class, 'subirFotoDoctor'])->name('configuracion.fotoDoctor');
+        Route::post('/configuracion/apariencia', [ConfiguracionController::class, 'updateApariencia'])->name('configuracion.updateApariencia');
 
         // ============================
         // 🔥 API INTERNA (AJAX)

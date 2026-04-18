@@ -266,4 +266,24 @@ class ConfiguracionController extends Controller
 
         return back()->with('success', 'Foto de perfil actualizada correctamente.');
     }
+
+    /**
+     * Actualiza las preferencias de accesibilidad y tema visual para la clínica.
+     */
+    public function updateApariencia(Request $request)
+    {
+        $clinica = Clinica::find(Auth::user()->id_clinica);
+        abort_if(! $clinica, 403, 'No tienes permiso para modificar esta clínica.');
+
+        $request->validate([
+            'tema_visual'    => 'required|in:claro,oscuro,invertido',
+            'color_primario' => 'required|string|max:7',
+        ]);
+
+        $clinica->tema_visual    = $request->tema_visual;
+        $clinica->color_primario = $request->color_primario;
+        $clinica->save();
+
+        return back()->with('success', 'Ajustes de apariencia guardados correctamente.');
+    }
 }
