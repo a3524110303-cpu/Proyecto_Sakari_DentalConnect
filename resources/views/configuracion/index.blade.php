@@ -27,10 +27,13 @@
         </div>
     @endif
 
-    <div style="display: grid; grid-template-columns: 1fr; gap: 50px; max-width: 1400px;">
+    <div style="display: flex; flex-direction: column; gap: 40px; max-width: 1500px; margin: 0 auto;">
 
-        {{-- ═══════════════ DATOS DE LA CLÍNICA ═══════════════ --}}
-        <div class="premium-card">
+        {{-- Contenedor superior para lado a lado --}}
+        <div style="display: flex; flex-wrap: wrap; gap: 40px;">
+
+            {{-- ═══════════════ DATOS DE LA CLÍNICA ═══════════════ --}}
+            <div class="premium-card" style="flex: 1 1 500px;">
             <div class="card-header clinica-header">
                 <h3><i class="fa-solid fa-hospital"></i> Datos de la Clínica</h3>
                 <p>Información pública y ubicación de tu sucursal</p>
@@ -113,7 +116,7 @@
 
         {{-- ═══════════════ PERFIL DEL DOCTOR ═══════════════ --}}
         @if($doctorUser)
-            <div class="premium-card">
+            <div class="premium-card" style="flex: 1 1 500px;">
                 <div class="card-header doctor-header">
                     <h3><i class="fa-solid fa-user-doctor"></i> Perfil del Doctor</h3>
                     <p>Detalles personales y credenciales</p>
@@ -210,10 +213,19 @@
             </div>
         @endif
 
+        </div> {{-- Fin del contenedor superior lado a lado --}}
+
         {{-- ═══════════════ HORARIOS DE ATENCIÓN ═══════════════ --}}
-        <div class="config-card"
-            style="grid-column: 1 / -1; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-            <h3 style="color: #0077b6; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-top: 0;">
+        <div class="premium-card" style="width: 100%;">
+            <div class="card-header clinica-header" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-bottom: 1px solid #f1f5f9; padding: 24px 30px;">
+                <h3 style="color: #166534; margin: 0; font-size: 1.3rem; font-weight: 800;">
+                    <i class="fa-solid fa-clock"></i> Horarios de Atención
+                </h3>
+                <p style="color: #15803d; margin: 6px 0 0 0; font-size: 0.85rem;">
+                    Define los días y horas en que la clínica está abierta. Los días desactivados aparecerán como cerrados en el calendario.
+                </p>
+            </div>
+            <div class="card-body">
                 <i class="fa-solid fa-clock"></i> Horarios de Atención
             </h3>
             <p style="color: #888; font-size: 0.85rem; margin-top: 0;">
@@ -287,22 +299,26 @@
                     </button>
                 </div>
             </form>
+            </div>
         </div>
 
         {{-- ═══════════════ EQUIPO DE RECEPCIÓN ═══════════════ --}}
         @if(Auth::user()->rol == 'doctor' || Auth::user()->rol == 'admin')
-            <div class="config-card"
-                style="grid-column: 1 / -1; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 20px;">
-                    <h3 style="color: #0077b6; margin: 0;">
-                        <i class="fa-solid fa-users"></i> Equipo de Recepción
-                    </h3>
-                    <button onclick="document.getElementById('modal-recep').style.display='flex'" class="ghost-btn"
-                        style="padding: 5px 15px; font-size: 0.8rem;">
+            <div class="premium-card" style="width: 100%;">
+                <div class="card-header clinica-header" style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-bottom: 1px solid #f1f5f9; padding: 24px 30px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="color: #5b21b6; margin: 0; font-size: 1.3rem; font-weight: 800;">
+                            <i class="fa-solid fa-users"></i> Equipo de Recepción
+                        </h3>
+                        <p style="color: #6d28d9; margin: 6px 0 0 0; font-size: 0.85rem;">
+                            Gestiona los accesos administrativos
+                        </p>
+                    </div>
+                    <button onclick="document.getElementById('modal-recep').style.display='flex'" class="ghost-btn-premium" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3); padding: 10px 20px; font-size: 0.9rem;">
                         + Agregar Recepcionista
                     </button>
                 </div>
+                <div class="card-body">
 
                 @if($recepcionistas->count() > 0)
                     <div style="display: grid; gap: 15px;">
@@ -316,14 +332,14 @@
                                 <div style="display: flex; gap: 10px;">
                                     <button
                                         onclick="editarRecep('{{ $recep->id_usuario }}', '{{ $recep->nombre_completo }}', '{{ $recep->email }}')"
-                                        class="ghost-btn" style="background: #e0e0e0; color: #333; padding: 5px 10px;">
+                                        class="ghost-btn" style="background: #e2e8f0; color: #334155; padding: 6px 12px; border:none; border-radius:6px; cursor:pointer;">
                                         <i class="fa-solid fa-pen"></i> Editar
                                     </button>
                                     
                                     <form action="{{ route('configuracion.destroyRecepcionista', $recep->id_usuario) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que deseas dar de baja a esta recepcionista?');" style="margin: 0;">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="ghost-btn" style="background: #ff4d4d; color: white; padding: 5px 10px;">
+                                        <button type="submit" class="ghost-btn" style="background: #ef4444; color: white; padding: 6px 12px; border:none; border-radius:6px; cursor:pointer;">
                                             <i class="fa-solid fa-user-minus"></i> Baja
                                         </button>
                                     </form>
@@ -334,6 +350,7 @@
                 @else
                     <p style="text-align: center; color: #999;">No hay recepcionistas registradas.</p>
                 @endif
+                </div>
             </div>
         @endif
 
