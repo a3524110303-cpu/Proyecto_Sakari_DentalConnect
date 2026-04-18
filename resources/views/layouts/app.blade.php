@@ -68,10 +68,6 @@ Incluye:
             filter: invert(1) hue-rotate(180deg);
             background-color: var(--light-bg);
         }
-        
-        body.theme-invertido .dashboard-sidebar {
-            background: rgba(255,255,255,0.9);
-        }
 
         body {
             margin: 0;
@@ -92,12 +88,11 @@ Incluye:
             padding: 20px 10px;
             display: flex;
             justify-content: center;
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border-right: 1px solid rgba(255, 255, 255, 0.5);
+            background: var(--white);
+            border-right: 1px solid var(--light-bg);
             z-index: 1000;
             transition: width 0.4s ease;
+            box-shadow: var(--shadow);
         }
 
         .dashboard-sidebar:hover {
