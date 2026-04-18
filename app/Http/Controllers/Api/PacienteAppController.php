@@ -31,6 +31,7 @@ class PacienteAppController extends Controller
         $usuario = clone $request->user();
 
         $paciente = Paciente::where('id_usuario', $usuario->id_usuario)
+            ->where('id_clinica', $usuario->id_clinica)
             ->where('is_active', true)
             ->first();
 
@@ -201,7 +202,8 @@ class PacienteAppController extends Controller
      */
     public function horariosDisponibles(Request $request)
     {
-        $fecha = Carbon::parse($request->input('fecha', now()));
+        $timezone = config('app.timezone', 'America/Mexico_City');
+        $fecha = Carbon::parse($request->input('fecha', now()), $timezone);
 
         $idClinica = $this->resolveClinicaId(Auth::user());
         if (!$idClinica) {
@@ -398,22 +400,13 @@ class PacienteAppController extends Controller
                     'message' => 'Error: El paciente no tiene una clínica asociada válida.'
                 ], 400);
             }
+        
+        // 🔥 FIX: Especificar timezone explícitamente para evitar desplazo de fecha por UTC
+        $timezone = config('app.timezone', 'America/Mexico_City');
 
-            // 3. Comprobar si ya tiene una cita ese mismo día
-            $tieneCitaHoy = \App\Models\Cita::where('id_paciente', $paciente->id_paciente)
-                ->whereDate('fecha_hora_inicio', $request->fecha)
-                ->whereIn('estado_cita', ['pendiente', 'confirmada'])
-                ->exists();
-
-            if ($tieneCitaHoy) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Solo puedes agendar una cita por día. Por favor elige otra fecha.'
-                ], 400);
-            }
-
-            // 4. Preparamos fechas
-            $fechaHora = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora);
+            // 4. Preparamos fechas en timezone local para evitar corrimientos UTC (ej. dia 08 -> 07)
+            $timezone = config('app.timezone', 'America/Mexico_City');
+            $fechaHora = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->fecha . ' ' . $request->hora, $timezone);
             $finHora = $fechaHora->copy()->addMinutes(30);
 
             // Asegurarnos de que no esté agendando en el pasado (por si alguien es muy rápido con los dedos)
@@ -478,7 +471,9 @@ class PacienteAppController extends Controller
         }
 
         try {
-            $fechaCarbon = \Carbon\Carbon::parse($fecha);
+            // 🔥 FIX: Especificar timezone explícitamente para evitar desplazo de fecha por UTC
+            $timezone = config('app.timezone', 'America/Mexico_City');
+            $fechaCarbon = \Carbon\Carbon::parse($fecha, $timezone);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => 'Parametro fecha invalido.'], 422);
         }
@@ -536,8 +531,8 @@ class PacienteAppController extends Controller
 
         // 🔥 AHORA SÍ: Usamos las horas dinámicas que vienen de tu SaaS 🔥
         $horariosLibres = [];
-        $inicio = \Carbon\Carbon::parse($fecha . ' ' . $horaInicioBd);
-        $finDia = \Carbon\Carbon::parse($fecha . ' ' . $horaFinBd);
+        $inicio = \Carbon\Carbon::parse($fecha . ' ' . $horaInicioBd, $timezone);
+        $finDia = \Carbon\Carbon::parse($fecha . ' ' . $horaFinBd, $timezone);
 
         $citaController = new \App\Http\Controllers\CitaController();
         $reflection = new \ReflectionMethod($citaController, 'buscarDoctorDisponible');

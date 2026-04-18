@@ -251,7 +251,9 @@ class DashboardController extends Controller
             $fechaBaseCita = $c->fecha_hora_inicio ? \Carbon\Carbon::parse($c->fecha_hora_inicio) : now();
             $horaFinFormateada = $c->fecha_hora_fin ? \Carbon\Carbon::parse($c->fecha_hora_fin)->format('h:i A') : 'N/A';
             $estadoCita = strtolower((string) ($c->estado_cita ?? 'pendiente'));
-            $abonoCita = $estadoCita === 'cancelada' ? '-' : '0.00';
+            $abonoCita = $estadoCita === 'cancelada'
+                ? '-'
+                : number_format((float) ($pagosPorCita[$c->id_cita] ?? 0), 2);
 
             // 1. SIEMPRE agregar la Cita Original como punto de partida en el historial
             $motivoCita = trim((string) ($c->motivo ?? ''));
@@ -329,6 +331,11 @@ class DashboardController extends Controller
             foreach ($movimientos as $mov) {
                 // UX/QA: no mostrar filas de "nota" aislada (sin abono) en el historial principal.
                 if ($mov['abono_total'] <= 0 && !empty($mov['notas'])) {
+                    continue;
+                }
+
+                // Evitar entradas adicionales que solo reflejen un abono y no una cita real.
+                if ($mov['abono_total'] > 0 && empty($mov['notas'])) {
                     continue;
                 }
 
@@ -441,6 +448,8 @@ class DashboardController extends Controller
 
         $montoAbonoSolicitado = floatval($request->input('monto_abono', 0));
 
+        $notaCitaId = $cita->id_cita;
+
         $esReagendaMovilPendiente =
             $cita->reagenda_estatus === 'pendiente'
             && !empty($cita->reagenda_solicitada_at)
@@ -499,6 +508,21 @@ class DashboardController extends Controller
             $nuevoInicio = Carbon::createFromFormat('Y-m-d H:i', $nuevaFecha.' '.$nuevaHora);
             $nuevoFin = $nuevoInicio->copy()->addMinutes($duracionMinutos);
 
+            // 🔒 VALIDACIÓN: Evitar crear cita duplicada en el mismo horario
+            $citaDuplicada = Cita::where('id_paciente', $cita->id_paciente)
+                ->where('id_clinica', $idClinica)
+                ->whereIn('estado_cita', ['pendiente', 'confirmada'])
+                ->where('fecha_hora_inicio', $nuevoInicio)
+                ->where('id_cita', '!=', $cita->id_cita)
+                ->exists();
+
+            if ($citaDuplicada) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya existe una cita pendiente para ese paciente en el mismo horario.',
+                ], 422);
+            }
+
             $idDoctorDisponible = $this->buscarDoctorDisponible($idClinica, $nuevoInicio, $nuevoFin, (int) $cita->id_cita);
 
             if (!$idDoctorDisponible) {
@@ -509,7 +533,7 @@ class DashboardController extends Controller
                 ? $notaSeguimiento
                 : 'Cita de seguimiento';
 
-            \App\Models\Cita::create([
+            $nuevaCita = \App\Models\Cita::create([
                 'id_clinica' => $idClinica,
                 'id_paciente' => $cita->id_paciente,
                 'id_doctor' => $idDoctorDisponible,
@@ -517,10 +541,25 @@ class DashboardController extends Controller
                 'fecha_hora_inicio' => $nuevoInicio,
                 'fecha_hora_fin' => $nuevoFin,
                 'estado_cita' => 'pendiente',
-                'costo_estimado' => $cita->costo_estimado,
+                'costo_estimado' => 0,
                 'motivo' => $motivoNuevaCita,
                 'reagenda_estatus' => $esReagendaMovilPendiente ? 'aplicada' : 'ninguna'
             ]);
+
+            if ($notaSeguimiento !== '') {
+                $notaCitaId = $nuevaCita->id_cita;
+            }
+
+            // Si es reagenda móvil, copiar seguimientos de la cita original a la nueva
+            if ($esReagendaMovilPendiente && $notaSeguimiento === '') {
+                $seguimientosOriginales = SeguimientoClinico::where('id_cita', $cita->id_cita)->get();
+                foreach ($seguimientosOriginales as $segOriginal) {
+                    SeguimientoClinico::create([
+                        'id_cita' => $nuevaCita->id_cita,
+                        'observaciones' => $segOriginal->observaciones
+                    ]);
+                }
+            }
 
             if ($esReagendaMovilPendiente) {
                 // Solo en re-agenda móvil pendiente se conserva la cita original como cancelada.
@@ -533,7 +572,7 @@ class DashboardController extends Controller
 
         // 🟢 EL PAGO Y EL SEGUIMIENTO SE REGISTRAN NORMALMENTE AQUÍ AFUERA
         if($notaSeguimiento !== ''){
-            $ultimoSeguimiento = SeguimientoClinico::where('id_cita', $cita->id_cita)
+            $ultimoSeguimiento = SeguimientoClinico::where('id_cita', $notaCitaId)
                 ->orderByDesc('id_seguimiento')
                 ->first();
 
@@ -547,7 +586,7 @@ class DashboardController extends Controller
 
             if (!$esSeguimientoDuplicado) {
                 SeguimientoClinico::create([
-                    'id_cita'=>$cita->id_cita,
+                    'id_cita'=>$notaCitaId,
                     'observaciones'=>$notaSeguimiento
                 ]);
             }
@@ -590,7 +629,9 @@ class DashboardController extends Controller
 
                 if ($esBloqueoPorFecha && !empty($cita->fecha_hora_inicio)) {
                     try {
-                        $payloadIngreso['fecha_ingreso'] = Carbon::parse($cita->fecha_hora_inicio);
+                        // 🔥 FIX: Especificar timezone explícitamente para evitar desplazo de fecha por UTC
+                        $timezone = config('app.timezone', 'America/Mexico_City');
+                        $payloadIngreso['fecha_ingreso'] = Carbon::parse($cita->fecha_hora_inicio, $timezone);
                         IngresoCaja::create($payloadIngreso);
                     } catch (\Exception $retryException) {
                         return response()->json([
@@ -960,7 +1001,9 @@ class DashboardController extends Controller
 
                 if (!empty($fechaHoraRaw)) {
                     try {
-                        $fecha = Carbon::parse($fechaHoraRaw);
+                        // 🔥 FIX: Especificar timezone explícitamente para evitar desplazo de fecha por UTC
+                        $timezone = config('app.timezone', 'America/Mexico_City');
+                        $fecha = Carbon::parse($fechaHoraRaw, $timezone);
                         $datos['nueva_fecha'] = $datos['nueva_fecha'] ?? $fecha->format('Y-m-d');
                         $datos['nueva_hora'] = $datos['nueva_hora'] ?? $fecha->format('H:i');
                     } catch (\Throwable $e) {
@@ -1091,7 +1134,9 @@ class DashboardController extends Controller
             }
 
             try {
-                $nuevaFecha = Carbon::parse($fechaHoraRaw);
+                // 🔥 FIX: Especificar timezone explícitamente para evitar desplazo de fecha por UTC
+                $timezone = config('app.timezone', 'America/Mexico_City');
+                $nuevaFecha = Carbon::parse($fechaHoraRaw, $timezone);
             } catch (\Throwable $e) {
                 return response()->json([
                     'success' => false,
@@ -1112,6 +1157,20 @@ class DashboardController extends Controller
             }
 
             $nuevaFechaFin = $nuevaFecha->copy()->addMinutes($duracionMinutos);
+
+            // 🔒 VALIDACIÓN: Evitar crear cita duplicada en el mismo horario
+            $citaDuplicada = Cita::where('id_paciente', $cita->id_paciente)
+                ->where('id_clinica', $cita->id_clinica)
+                ->whereIn('estado_cita', ['pendiente', 'confirmada', 'actualización'])
+                ->where('fecha_hora_inicio', $nuevaFecha)
+                ->exists();
+
+            if ($citaDuplicada) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya existe una cita pendiente para ese paciente en la misma fecha y hora.',
+                ], 422);
+            }
 
             $idDoctorDisponible = $this->buscarDoctorDisponible(
                 (int) $cita->id_clinica,

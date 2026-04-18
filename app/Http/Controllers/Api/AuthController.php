@@ -146,55 +146,83 @@ class AuthController extends Controller
     // NUEVA FUNCIÓN PARA ACTIVAR CUENTA MÓVIL
     // ==========================================
     public function activarCuenta(Request $request)
-{
+    {
+        $request->merge([
+            'email' => trim((string) $request->email),
+            'telefono' => trim((string) $request->telefono),
+        ]);
 
-    $request->merge([
-        'email' => trim($request->email),
-        'telefono' => trim($request->telefono),
-    ]);
+        $request->validate([
+            'email' => 'required|email',
+            'telefono' => 'required|string',
+            'password' => 'required|string|min:6',
+        ]);
 
-    $request->validate([
-        'email' => 'required|email',
-        'telefono' => 'required|string',
-        'password' => 'required|string|min:6',
-    ]);
+        $email = strtolower((string) $request->email);
+        $telefonoNormalizado = $this->normalizarTelefono((string) $request->telefono);
 
-    // 1. Buscar al usuario ignorando cualquier filtro oculto de clínica (Global Scopes)
-    $user = User::withoutGlobalScopes()
-                ->where('email', $request->email)
-                //->where('rol', 'paciente')
-                ->first();
+        // Buscar paciente por sus propios datos (correo + telefono), nunca por contacto de emergencia.
+        $candidatos = Paciente::withoutGlobalScopes()
+            ->whereNotNull('id_usuario')
+            ->whereRaw('LOWER(correo_electronico) = ?', [$email])
+            ->get();
 
-    if (!$user) {
-    return response()->json([
-        'success' => false,
-        'message' => 'No encontré: "' . $request->email . '" en la BD. Revisa mayúsculas, espacios o si la base de datos remota es la correcta.'
-    ], 404);
-}
+        $paciente = $candidatos->first(function ($p) use ($telefonoNormalizado) {
+            return $this->normalizarTelefono((string) ($p->telefono ?? '')) === $telefonoNormalizado;
+        });
 
-    // 2. Verificar que el teléfono ingresado coincida con el registrado en la tabla pacientes,
-    // también ignorando filtros globales.
-    $paciente = Paciente::withoutGlobalScopes()
-                        ->where('id_usuario', $user->id_usuario)
-                        ->where('telefono', $request->telefono)
-                        ->first();
+        if (!$paciente) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró un paciente con ese correo y teléfono.',
+            ], 404);
+        }
 
-    if (!$paciente) {
+        // Si hay más de una coincidencia exacta, se bloquea por seguridad para evitar sobrescrituras cruzadas.
+        $coincidenciasExactas = $candidatos->filter(function ($p) use ($telefonoNormalizado) {
+            return $this->normalizarTelefono((string) ($p->telefono ?? '')) === $telefonoNormalizado;
+        });
+
+        if ($coincidenciasExactas->count() > 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Se detectaron múltiples pacientes con esos datos. Contacta a la clínica para validar tu cuenta.',
+            ], 409);
+        }
+
+        $user = User::withoutGlobalScopes()
+            ->where('id_usuario', $paciente->id_usuario)
+            ->where('rol', 'paciente')
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El paciente no tiene una cuenta de paciente asociada.',
+            ], 422);
+        }
+
+        // Blindaje adicional: evitar actualizar un usuario cuyo email no coincide con el del paciente.
+        if (strtolower((string) $user->email) !== $email) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Los datos no corresponden a la misma cuenta. Verifica correo y teléfono.',
+            ], 409);
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
         return response()->json([
-            'success' => false,
-            'message' => 'El número de teléfono no coincide con nuestros registros para este correo.'
-        ], 404);
+            'success' => true,
+            'message' => 'Cuenta activada exitosamente. Ya puedes iniciar sesión en la aplicación.',
+        ], 200);
     }
 
-    // 3. Si todo es correcto, actualizar la contraseña
-    $user->password = Hash::make($request->password);
-    $user->save();
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Cuenta activada exitosamente. Ya puedes iniciar sesión en la aplicación.'
-    ], 200);
-}
+    private function normalizarTelefono(string $telefono): string
+    {
+        return preg_replace('/\D+/', '', $telefono) ?? '';
+    }
 
     /**
      * Enviar correo de recuperación de contraseña desde la App Móvil

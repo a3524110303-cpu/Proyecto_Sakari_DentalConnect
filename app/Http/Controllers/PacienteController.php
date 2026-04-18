@@ -116,6 +116,16 @@ class PacienteController extends Controller
             }
 
             // ── 2. Crear el usuario del sistema ──
+            // Verificar que no exista un usuario con este email en esta clínica
+            $usuarioExistente = User::where('email', $request->email)
+                ->where('id_clinica', $idClinica)
+                ->first();
+
+            if ($usuarioExistente) {
+                return redirect()->back()
+                    ->with('error', 'Ya existe un usuario con este correo electrónico en la clínica.');
+            }
+
             $nombreCompleto = trim(
                 $request->nombre . ' ' .
                 $request->apellido_paterno . ' ' .
@@ -126,10 +136,17 @@ class PacienteController extends Controller
                 'id_clinica' => $idClinica,
                 'nombre_completo' => $nombreCompleto,
                 'email' => $request->email,
-                'password' => Hash::make('dental123'), // <--- CORREGIDO: Se usa Hash para que no de error al loguear
+                'password' => Hash::make('dental123'),
                 'rol' => 'paciente',
                 'is_active' => true,
             ]);
+
+            // Verificar que el usuario se creó correctamente
+            if (!$user || !$user->id_usuario) {
+                DB::rollBack();
+                return redirect()->back()
+                    ->with('error', 'Error al crear el usuario. Intente nuevamente.');
+            }
 
             // ── 3. Crear el perfil del paciente ──
             $direccionCompuesta = $this->construirDireccionCompuesta($request);
