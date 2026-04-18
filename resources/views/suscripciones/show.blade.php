@@ -11,9 +11,10 @@
 
 <style>
     .sus-card {
-        background: #fff;
+        background: var(--white);
         border-radius: 18px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+        border: 1px solid var(--light-bg);
+        box-shadow: var(--shadow);
         max-width: 820px;
         overflow: hidden;
     }
@@ -68,12 +69,12 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.8px;
-        color: #94a3b8;
+        color: var(--text-light);
     }
     .sus-field .value {
         font-size: 1rem;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--text-dark);
     }
     .sus-field .value.date {
         font-size: 0.95rem;
@@ -82,9 +83,9 @@
         gap: 8px;
         flex-wrap: wrap;
     }
-    .sus-field .value.date i { color: #0096c7; }
+    .sus-field .value.date i { color: var(--primary-color); }
     .date-na {
-        color: #94a3b8;
+        color: var(--text-light);
         font-size: 0.88rem;
         font-style: italic;
         font-weight: 500;
@@ -93,14 +94,14 @@
     .sus-divider {
         grid-column: 1 / -1;
         border: none;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--light-bg);
         margin: 4px 0;
     }
 
     .sus-renovar-panel {
         grid-column: 1 / -1;
-        background: #fffbeb;
-        border: 1px solid #fde68a;
+        background: var(--input-bg);
+        border: 1px dashed #fde68a;
         border-radius: 12px;
         padding: 18px 22px;
         display: flex;
@@ -112,12 +113,12 @@
 
     .sus-sync-notice {
         grid-column: 1 / -1;
-        background: #eff6ff;
-        border: 1px solid #bfdbfe;
+        background: rgba(59, 130, 246, 0.05);
+        border: 1px dashed rgba(59, 130, 246, 0.4);
         border-radius: 12px;
         padding: 14px 20px;
         font-size: 0.85rem;
-        color: #1e40af;
+        color: var(--text-dark);
         display: flex;
         align-items: center;
         gap: 10px;
@@ -249,8 +250,8 @@
             @if(!$esActiva)
                 <div class="sus-renovar-panel">
                     <div>
-                        <strong style="color:#92400e;"><i class="fa-solid fa-triangle-exclamation"></i> Tu suscripción ha expirado</strong>
-                        <p style="margin:4px 0 0; color:#78350f; font-size:0.85rem;">Renueva tu plan para seguir usando todas las funciones de DentalConnect.</p>
+                        <strong style="color:var(--text-dark);"><i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b;"></i> Tu suscripción ha expirado</strong>
+                        <p style="margin:4px 0 0; color:var(--text-light); font-size:0.85rem;">Renueva tu plan para seguir usando todas las funciones de DentalConnect.</p>
                     </div>
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
                         @if(isset($suscripcion->plan) && $suscripcion->plan->slug)
@@ -272,10 +273,10 @@
     </div>
 
 @else
-    <div style="background:#fff;border-radius:18px;box-shadow:0 4px 24px rgba(0,0,0,0.07);max-width:820px;padding:48px;text-align:center;">
-        <i class="fa-solid fa-crown" style="font-size:3rem;color:#e2e8f0;margin-bottom:16px;display:block;"></i>
-        <h3 style="color:#334155;margin-bottom:8px;">Sin suscripción activa</h3>
-        <p style="color:#64748b;margin-bottom:24px;">Aún no tienes una suscripción activa. Elige un plan para acceder a todas las funciones.</p>
+    <div style="background:var(--white);border:1px solid var(--light-bg);border-radius:18px;box-shadow:var(--shadow);max-width:820px;padding:48px;text-align:center;">
+        <i class="fa-solid fa-crown" style="font-size:3rem;color:var(--light-bg);margin-bottom:16px;display:block;"></i>
+        <h3 style="color:var(--text-dark);margin-bottom:8px;">Sin suscripción activa</h3>
+        <p style="color:var(--text-light);margin-bottom:24px;">Aún no tienes una suscripción activa. Elige un plan para acceder a todas las funciones.</p>
         <a href="{{ route('landing') }}" class="ghost-btn">Ver planes disponibles</a>
     </div>
 @endif

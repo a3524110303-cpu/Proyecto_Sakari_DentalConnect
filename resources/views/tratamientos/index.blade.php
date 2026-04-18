@@ -23,28 +23,28 @@
 
 {{-- BARRA SUPERIOR (SIN BÚSQUEDA) --}}
 <div style="display:flex; justify-content: flex-end; align-items:center; margin-bottom:25px;">
-    <button onclick="openModal('modal-new-treatment')" class="ghost-btn" style="border-radius:50px; background:#00D1FF; color:white; border:none; padding:12px 25px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,209,255,0.2);">
+    <button onclick="openModal('modal-new-treatment')" class="ghost-btn" style="border-radius:50px; background:var(--primary-color); color:white; border:none; padding:12px 25px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; box-shadow: var(--shadow);">
         <i class="fa-solid fa-plus"></i> Nuevo Tratamiento
     </button>
 </div>
 
 {{-- TABLA DE TRATAMIENTOS --}}
-<div class="dashboard-table" style="background:white; border-radius:15px; padding:20px; box-shadow:0 4px 15px rgba(0,0,0,0.03);">
-    <table style="width:100%; border-collapse:collapse;">
+<div class="dashboard-table" style="background:var(--white); border-radius:15px; padding:20px; box-shadow:var(--shadow); border: 1px solid var(--light-bg);">
+    <table style="width:100%; border-collapse:collapse; color: var(--text-dark);">
         <thead>
-            <tr style="border-bottom:2px solid #f0f0f0;">
-                <th style="text-align:left; padding:15px; color:#666;">Nombre</th>
-                <th style="text-align:left; padding:15px; color:#666;">Categoría</th>
-                <th style="text-align:left; padding:15px; color:#666;">Costo</th>
-                <th style="text-align:right; padding:15px; color:#666;">Acciones</th>
+            <tr style="border-bottom:2px solid var(--light-bg);">
+                <th style="text-align:left; padding:15px; color:var(--text-light);">Nombre</th>
+                <th style="text-align:left; padding:15px; color:var(--text-light);">Categoría</th>
+                <th style="text-align:left; padding:15px; color:var(--text-light);">Costo</th>
+                <th style="text-align:right; padding:15px; color:var(--text-light);">Acciones</th>
             </tr>
         </thead>
         <tbody>
             @forelse($tratamientos as $servicio)
-            <tr style="border-bottom:1px solid #eee;">
+            <tr style="border-bottom:1px solid var(--light-bg);">
                 <td style="padding:15px; font-weight:600;">{{ $servicio->nombre_servicio }}</td>
-                <td style="padding:15px; color:#888; font-size:0.9em;">
-                    <span style="background:#f3f4f6; padding:4px 10px; border-radius:10px;">
+                <td style="padding:15px; color:var(--text-light); font-size:0.9em;">
+                    <span style="background:var(--input-bg); padding:4px 10px; border-radius:10px;">
                         {{ $servicio->categoria ?? 'General' }}
                     </span>
                 </td>
@@ -69,7 +69,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="4" style="text-align:center; padding:30px; color:#999;">No hay tratamientos registrados</td>
+                <td colspan="4" style="text-align:center; padding:30px; color:var(--text-light);">No hay tratamientos registrados</td>
             </tr>
             @endforelse
         </tbody>
@@ -80,7 +80,7 @@
 <div id="modal-new-treatment" class="modal-overlay">
     <div class="modal-glass" style="max-width:500px;">
         <button class="close-modal" onclick="closeModal('modal-new-treatment')">&times;</button>
-        <h3 style="margin-bottom: 20px; color: #333;">Nuevo Tratamiento</h3>
+        <h3 style="margin-bottom: 20px; color: var(--text-dark);">Nuevo Tratamiento</h3>
         
         <form action="{{ route('tratamientos.store') }}" method="POST">
             @csrf
@@ -114,15 +114,15 @@
             @csrf
             @method('PUT')
             <div style="margin-bottom:15px;">
-                <label style="display:block; margin-bottom:5px; color:#666; font-size: 0.9em;">Nombre</label>
+                <label style="display:block; margin-bottom:5px; color:var(--text-dark); font-size: 0.9em;">Nombre</label>
                 <input type="text" id="edit-nombre" name="nombre" class="modern-input" required style="width:100%;">
             </div>
             <div style="margin-bottom:15px;">
-                <label style="display:block; margin-bottom:5px; color:#666; font-size: 0.9em;">Precio</label>
+                <label style="display:block; margin-bottom:5px; color:var(--text-dark); font-size: 0.9em;">Precio</label>
                 <input type="number" id="edit-precio" name="precio" step="0.01" class="modern-input" required style="width:100%;">
             </div>
             <div style="margin-bottom:15px;">
-                <label style="display:block; margin-bottom:5px; color:#666; font-size: 0.9em;">Categoría</label>
+                <label style="display:block; margin-bottom:5px; color:var(--text-dark); font-size: 0.9em;">Categoría</label>
                 <select id="edit-categoria" name="categoria" class="modern-input" style="width:100%;">
                     <option value="General">General</option>
                     <option value="Ortodoncia">Ortodoncia</option>

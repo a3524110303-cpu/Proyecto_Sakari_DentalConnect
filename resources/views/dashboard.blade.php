@@ -33,7 +33,7 @@ Resumen de secciones:
             transition: opacity 0.5s ease;
         }
         .onboarding-card {
-            background: white;
+            background: var(--white);
             padding: 50px;
             border-radius: 24px;
             box-shadow: 0 25px 50px rgba(0,0,0,0.1);
@@ -51,7 +51,7 @@ Resumen de secciones:
             margin-bottom: 20px;
         }
         .onboarding-subtitle {
-            color: #4B5563;
+            color: var(--text-light);
             font-size: 1.1rem;
             margin-bottom: 30px;
             line-height: 1.6;
@@ -67,16 +67,18 @@ Resumen de secciones:
             margin-bottom: 20px;
         }
         .onboarding-form {
-            background: #F9FAFB;
+            background: var(--input-bg);
             padding: 25px;
             border-radius: 16px;
             margin-bottom: 30px;
-            border: 1px solid #E5E7EB;
+            border: 1px solid var(--white);
         }
         .onboarding-input {
             width: 100%;
             padding: 12px 15px;
-            border: 1px solid #D1D5DB;
+            border: 1px solid var(--white);
+            background: var(--white);
+            color: var(--text-dark);
             border-radius: 10px;
             margin-bottom: 15px;
             font-size: 1rem;
@@ -104,7 +106,7 @@ Resumen de secciones:
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
+            background: var(--white);
             padding: 40px;
             border-radius: 20px;
             box-shadow: 0 25px 50px rgba(0,0,0,0.15);
@@ -123,8 +125,8 @@ Resumen de secciones:
             transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
         }
         .fake-input {
-            width: 100%; height: 45px; background: #f3f4f6; border-radius: 8px; margin-bottom: 20px;
-            border: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 15px; color: #333; font-weight: 600;
+            width: 100%; height: 45px; background: var(--input-bg); border-radius: 8px; margin-bottom: 20px;
+            border: 1px solid var(--white); display: flex; align-items: center; padding: 0 15px; color: var(--text-dark); font-weight: 600;
         }
         .typing::after {
             content: '|';
@@ -303,9 +305,9 @@ Resumen de secciones:
     <h2 class="page-title">Panel Principal</h2>
 
     {{-- Panel de Notificaciones de Reagendado --}}
-    <div id="panel-notificaciones-reagenda" style="display: none; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 12px; padding: 18px 22px; margin-bottom: 25px;">
+    <div id="panel-notificaciones-reagenda" style="display: none; background: rgba(234, 88, 12, 0.1); border: 1px solid rgba(234, 88, 12, 0.3); border-radius: 12px; padding: 18px 22px; margin-bottom: 25px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h4 style="margin: 0; color: #9A3412; font-weight: 800; font-size: 1rem;">
+            <h4 style="margin: 0; color: #ea580c; font-weight: 800; font-size: 1rem;">
                 <i class="fa-solid fa-bell" style="margin-right: 6px;"></i>
                 Solicitudes de Reagendado
                 <span id="badge-reagenda-count" style="background: #EA580C; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; margin-left: 6px;">0</span>
@@ -345,11 +347,11 @@ Resumen de secciones:
                     payload.data.forEach(n => {
                         const div = document.createElement('div');
                         div.id = 'notif-' + n.id_notificacion;
-                        div.style.cssText = 'background: white; border: 1px solid #FDE68A; border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px;';
+                        div.style.cssText = 'background: var(--white); border: 1px solid rgba(234, 88, 12, 0.3); border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px;';
                         div.innerHTML = `
                             <div style="flex: 1;">
-                                <p style="margin: 0; color: #78350F; font-size: 0.9rem; line-height: 1.4;">${n.mensaje}</p>
-                                <small style="color: #A3A3A3; font-size: 0.75rem;">${new Date(n.created_at).toLocaleString('es-MX')}</small>
+                                <p style="margin: 0; color: var(--text-dark); font-size: 0.9rem; line-height: 1.4;">${n.mensaje}</p>
+                                <small style="color: var(--text-light); font-size: 0.75rem;">${new Date(n.created_at).toLocaleString('es-MX')}</small>
                             </div>
                             <button onclick="marcarLeida(${n.id_notificacion})"
                                 style="background: #16A34A; color: white; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 700; cursor: pointer; font-size: 0.8rem; white-space: nowrap;">
@@ -420,29 +422,29 @@ Resumen de secciones:
 
         {{-- Tarjeta: Pacientes totales (Acceso Rápido a Pacientes) --}}
         <div onclick="window.location.href='{{ route('pacientes.index') }}'"
-            style="cursor: pointer; background: white; border-radius: 15px; padding: 22px 25px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 18px; border-left: 5px solid var(--primary-color); transition: transform 0.2s;"
+            style="cursor: pointer; background: var(--white); border-radius: 15px; padding: 22px 25px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 18px; border-left: 5px solid var(--primary-color); transition: transform 0.2s;"
             onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'">
             <div
-                style="background: #e0fbfc; border-radius: 12px; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                style="background: rgba(0,180,216,0.1); border-radius: 12px; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                 <i class="fa-solid fa-users" style="color: var(--primary-color); font-size: 1.4em;"></i>
             </div>
             <div>
-                <div style="font-size: 1.8em; font-weight: 800; color: #333; line-height: 1;">{{ $totalPacientes }}</div>
-                <div style="color: #888; font-size: 0.85em; margin-top: 3px;">Pacientes activos</div>
+                <div style="font-size: 1.8em; font-weight: 800; color: var(--text-dark); line-height: 1;">{{ $totalPacientes }}</div>
+                <div style="color: var(--text-light); font-size: 0.85em; margin-top: 3px;">Pacientes activos</div>
             </div>
         </div>
 
         {{-- Tarjeta: Citas de hoy (Generar Citas) --}}
         <div onclick="window.location.href='{{ route('pacientes.index') }}'"
-            style="cursor: pointer; background: white; border-radius: 15px; padding: 22px 25px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 18px; border-left: 5px solid #4CAF50; transition: transform 0.2s;"
+            style="cursor: pointer; background: var(--white); border-radius: 15px; padding: 22px 25px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 18px; border-left: 5px solid #4CAF50; transition: transform 0.2s;"
             onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'">
             <div
-                style="background: #e8f5e9; border-radius: 12px; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                style="background: rgba(76,175,80,0.1); border-radius: 12px; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                 <i class="fa-solid fa-calendar-plus" style="color: #4CAF50; font-size: 1.4em;"></i>
             </div>
             <div>
-                <div style="font-size: 1.8em; font-weight: 800; color: #333; line-height: 1;">{{ $citasPendientesCount }}</div>
-                <div style="color: #888; font-size: 0.85em; margin-top: 3px;">Citas Pendientes</div>
+                <div style="font-size: 1.8em; font-weight: 800; color: var(--text-dark); line-height: 1;">{{ $citasPendientesCount }}</div>
+                <div style="color: var(--text-light); font-size: 0.85em; margin-top: 3px;">Citas Pendientes</div>
             </div>
         </div>
 
@@ -450,24 +452,24 @@ Resumen de secciones:
 
         {{-- Tarjeta: Ingresos del mes --}}
        <div
-    style="background: white; border-radius: 15px; padding: 22px 25px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 18px; border-left: 5px solid #FF9800;">
+    style="background: var(--white); border-radius: 15px; padding: 22px 25px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 18px; border-left: 5px solid #FF9800;">
     <div
-        style="background: #fff3e0; border-radius: 12px; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        style="background: rgba(255,152,0,0.1); border-radius: 12px; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
         <i class="fa-solid fa-dollar-sign" style="color: #FF9800; font-size: 1.4em;"></i>
     </div>
     <div>
-        <div id="lbl-ingresos-mes" style="font-size: 1.8em; font-weight: 800; color: #333; line-height: 1;">
+        <div id="lbl-ingresos-mes" style="font-size: 1.8em; font-weight: 800; color: var(--text-dark); line-height: 1;">
             ${{ number_format($ingresosMes, 0) }}
         </div>
-        <div style="color: #888; font-size: 0.85em; margin-top: 3px;">Ingresos del mes</div>
+        <div style="color: var(--text-light); font-size: 0.85em; margin-top: 3px;">Ingresos del mes</div>
     </div>
 </div>
 
 </div>
     {{-- IDX-02 | Tarjeta principal de citas pendientes --}}
     {{-- Tarjeta Principal: Citas --}}
-<div style="background: white; padding: 25px; border-radius: 15px; box-shadow: var(--shadow);">
-    <h3 style="margin-bottom: 20px; color: #333; font-weight: 700;">Próximas Citas Pendientes</h3>
+<div style="background: var(--white); padding: 25px; border-radius: 15px; box-shadow: var(--shadow);">
+    <h3 style="margin-bottom: 20px; color: var(--text-dark); font-weight: 700;">Próximas Citas Pendientes</h3>
     
     <div class="appointment-list" id="appointment-list" style="display: flex; flex-direction: column; gap: 15px;">
         @forelse($proximasCitas as $cita)
@@ -476,8 +478,8 @@ Resumen de secciones:
                 $esVencida = $fechaCita->isPast();
 
                 // Colores neutros y profesionales
-                $borderColor = $esVencida ? '#FCD34D' : '#E5E7EB';
-                $bgColor = $esVencida ? '#FFFBEB' : '#FFFFFF';
+                $borderColor = $esVencida ? 'rgba(245,158,11,0.5)' : 'var(--light-bg)';
+                $bgColor = $esVencida ? 'rgba(252,211,77,0.1)' : 'var(--white)';
                 $hoverColor = $esVencida ? '#F59E0B' : 'var(--primary-color)';
             @endphp
 
@@ -509,17 +511,17 @@ Resumen de secciones:
                     {{-- Información del Paciente --}}
                     <div style="overflow: hidden;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                            <h4 style="margin: 0; font-size: 1.15em; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <h4 style="margin: 0; font-size: 1.15em; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                 {{ $cita->paciente->nombre }} {{ $cita->paciente->apellido_paterno }}
                             </h4>
                             @if($esVencida)
-                                <span style="background: #FEF3C7; color: #B45309; font-size: 0.65em; font-weight: 800; padding: 2px 8px; border-radius: 10px; border: 1px solid #FCD34D;">VENCIDA</span>
+                                <span style="background: rgba(245,158,11,0.2); color: #ea580c; font-size: 0.65em; font-weight: 800; padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(245,158,11,0.5);">VENCIDA</span>
                             @endif
                         </div>
-                        <div style="display: flex; align-items: center; gap: 12px; color: #6b7280; font-size: 0.9em;">
+                        <div style="display: flex; align-items: center; gap: 12px; color: var(--text-light); font-size: 0.9em;">
                             <span><i class="fa-regular fa-clock"></i> {{ $fechaCita->format('h:i A') }}</span>
-                            <span style="color: #d1d5db;">|</span>
-                            <span style="font-weight: 600; color: #4b5563;">{{ $cita->servicio->nombre_servicio ?? 'Consulta General' }}</span>
+                            <span style="color: var(--light-bg);">|</span>
+                            <span style="font-weight: 600; color: var(--text-light);">{{ $cita->servicio->nombre_servicio ?? 'Consulta General' }}</span>
                         </div>
                     </div>
                 </div>
@@ -544,17 +546,17 @@ Resumen de secciones:
     {{-- IDX-03 | Modal principal de detalle de cita --}}
     <div class="modal-overlay" id="modal-detalle-cita">
         <div class="modal-glass modal-xl"
-            style="background: #F8FDFF; padding: 0; max-width: 1750px; width: 98vw; height: 95vh; display: flex; overflow: hidden; border-radius: 20px; border: 1px solid #dceeef;">
+            style="background: var(--white); padding: 0; max-width: 1750px; width: 98vw; height: 95vh; display: flex; overflow: hidden; border-radius: 20px; border: 1px solid var(--light-bg);">
 
             <div
-                style="width: 30%; background: #E0FBFC; padding: 30px; display: flex; flex-direction: column; border-right: 2px solid #bcebf5; overflow-y: auto;">
+                style="width: 30%; background: var(--light-bg); padding: 30px; display: flex; flex-direction: column; border-right: 2px solid var(--white); overflow-y: auto;">
 
-                <h2 style="margin-top: 0; color: #000; margin-bottom: 20px; font-weight: 800;">Calendario</h2>
+                <h2 style="margin-top: 0; color: var(--text-dark); margin-bottom: 20px; font-weight: 800;">Calendario</h2>
 
-                <div style="background: white; padding: 20px; border-radius: 16px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: auto; box-sizing: border-box;">
+                <div style="background: var(--white); padding: 20px; border-radius: 16px; width: 100%; box-shadow: var(--shadow); margin-bottom: auto; box-sizing: border-box;">
     
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #F8F9FA; padding: 8px; border-radius: 10px;">
-        <button class="ghost-btn" style="padding: 5px 10px; background: transparent; color: #666; min-width: 30px; cursor: pointer;" onclick="cambiarMes(-1)">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--input-bg); padding: 8px; border-radius: 10px;">
+        <button class="ghost-btn" style="padding: 5px 10px; background: transparent; color: var(--text-light); min-width: 30px; cursor: pointer;" onclick="cambiarMes(-1)">
             <i class="fa-solid fa-chevron-left"></i>
         </button>
         <span id="cal-mes-anio" style="font-weight: 700; color: #00D1FF; font-size: 0.95em;">Cargando...</span>
@@ -583,13 +585,13 @@ Resumen de secciones:
 </div>
                 <div style="width: 100%; display: flex; flex-direction: column; gap: 12px; margin-top: 25px;">
                     <button class="ghost-btn" onclick="openWidget('widget-seguimiento')"
-                        style="background: white; color: black; border: 2px solid #00D1FF; justify-content: center; font-weight: 700; border-radius: 10px; padding: 12px; cursor: pointer;">Seguimiento</button>
+                        style="background: var(--input-bg); color: var(--text-dark); border: 2px solid var(--primary-color); justify-content: center; font-weight: 700; border-radius: 10px; padding: 12px; cursor: pointer;">Seguimiento</button>
                     <button type="button" class="ghost-btn" onclick="openWidget('widget-pago')"
-                        style="background: white; color: black; border: 2px solid #00D1FF; justify-content: center; font-weight: 700; border-radius: 10px; padding: 12px; cursor: pointer;">Pago
+                        style="background: var(--input-bg); color: var(--text-dark); border: 2px solid var(--primary-color); justify-content: center; font-weight: 700; border-radius: 10px; padding: 12px; cursor: pointer;">Pago
                         de hoy</button>
 
                     <button type="button" class="ghost-btn" onclick="switchTab('tab-odontograma')"
-                        style="background: white; color: black; border: 2px solid #00D1FF; justify-content: center; font-weight: 700; border-radius: 10px; padding: 12px; cursor: pointer;">
+                        style="background: var(--input-bg); color: var(--text-dark); border: 2px solid var(--primary-color); justify-content: center; font-weight: 700; border-radius: 10px; padding: 12px; cursor: pointer;">
                         Odontograma
                     </button>
 
@@ -608,7 +610,7 @@ Resumen de secciones:
                 @csrf
 
                 <button type="button" class="close-modal" onclick="closeModal('modal-detalle-cita')"
-                    style="position: absolute; top: 25px; right: 25px; font-size: 1.5rem; background: #f0f0f0; width: 40px; height: 40px; border-radius: 50%; color: #555; border: none; cursor: pointer; z-index: 5;">&times;</button>
+                    style="position: absolute; top: 25px; right: 25px; font-size: 1.5rem; background: var(--input-bg); width: 40px; height: 40px; border-radius: 50%; color: var(--text-light); border: none; cursor: pointer; z-index: 5;">&times;</button>
 
                 <!-- OVERLAY PARA WIDGETS INTERNOS -->
                 <div id="internal-widget-overlay"
@@ -619,7 +621,7 @@ Resumen de secciones:
                 <div id="tab-resumen" class="tab-content active"
                     style="min-height: 100%; display: flex; flex-direction: column; flex: 1 0 auto; padding-bottom: 20px;">
                     <div style="display: flex; align-items: center; gap: 12px; margin: 0 0 30px 0; flex-shrink: 0; flex-wrap: wrap;">
-                        <h1 style="font-size: 2.2rem; font-weight: 800; margin: 0; color: #000;">
+                        <h1 style="font-size: 2.2rem; font-weight: 800; margin: 0; color: var(--text-dark);">
                             Detalles del Paciente
                         </h1>
                         <span id="lbl-cuenta-ciclo"
@@ -629,32 +631,32 @@ Resumen de secciones:
                     </div>
 
                     <div
-                        style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 30px; border: 1px solid #eee; flex-shrink: 0;">
+                        style="background: var(--white); padding: 25px; border-radius: 15px; box-shadow: var(--shadow); margin-bottom: 30px; border: 1px solid var(--light-bg); flex-shrink: 0;">
                         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
-                            <div><small style="font-weight:700; color:#555;">Nombre(s):</small>
-                                <div id="lbl-nombre" style="font-size:1.1em;">...</div>
+                            <div><small style="font-weight:700; color:var(--text-light);">Nombre(s):</small>
+                                <div id="lbl-nombre" style="font-size:1.1em; color:var(--text-dark);">...</div>
                             </div>
-                            <div><small style="font-weight:700; color:#555;">Apellido Paterno:</small>
-                                <div id="lbl-paterno" style="font-size:1.1em;">...</div>
+                            <div><small style="font-weight:700; color:var(--text-light);">Apellido Paterno:</small>
+                                <div id="lbl-paterno" style="font-size:1.1em; color:var(--text-dark);">...</div>
                             </div>
-                            <div><small style="font-weight:700; color:#555;">Apellido Materno:</small>
-                                <div id="lbl-materno" style="font-size:1.1em;">...</div>
+                            <div><small style="font-weight:700; color:var(--text-light);">Apellido Materno:</small>
+                                <div id="lbl-materno" style="font-size:1.1em; color:var(--text-dark);">...</div>
                             </div>
-                            <div><small style="font-weight:700; color:#555;">Edad:</small>
-                                <div id="lbl-edad" style="font-size:1.1em;">...</div>
+                            <div><small style="font-weight:700; color:var(--text-light);">Edad:</small>
+                                <div id="lbl-edad" style="font-size:1.1em; color:var(--text-dark);">...</div>
                             </div>
 
-                            <div><small style="font-weight:700; color:#555;">Sexo:</small>
-                                <div id="lbl-sexo" style="font-size:1.1em;">...</div>
+                            <div><small style="font-weight:700; color:var(--text-light);">Sexo:</small>
+                                <div id="lbl-sexo" style="font-size:1.1em; color:var(--text-dark);">...</div>
                             </div>
-                            <div><small style="font-weight:700; color:#555;">Teléfono:</small>
-                                <div id="lbl-telefono" style="font-size:1.1em;">...</div>
+                            <div><small style="font-weight:700; color:var(--text-light);">Teléfono:</small>
+                                <div id="lbl-telefono" style="font-size:1.1em; color:var(--text-dark);">...</div>
                             </div>
-                            <div><small style="font-weight:700; color:#555;">Tipo Sangre:</small>
+                            <div><small style="font-weight:700; color:var(--text-light);">Tipo Sangre:</small>
                                 <div id="lbl-sangre" style="font-weight:800; color: var(--primary-color);">...</div>
                             </div>
-                            <div><small style="font-weight:700; color:#555;">Peso:</small>
-                                <div id="lbl-peso">...</div>
+                            <div><small style="font-weight:700; color:var(--text-light);">Peso:</small>
+                                <div id="lbl-peso" style="color:var(--text-dark);">...</div>
                             </div>
 
                             <div style="grid-column: span 2;">
@@ -672,38 +674,38 @@ Resumen de secciones:
                     </div>
 
                     <div
-                        style="border: 2px solid #00D1FF; border-radius: 8px; overflow: hidden; margin-bottom: auto; flex-shrink: 0;">
+                        style="border: 2px solid var(--primary-color); border-radius: 8px; overflow: hidden; margin-bottom: auto; flex-shrink: 0;">
                         <table style="width: 100%; border-collapse: collapse; text-align: center;">
-                            <thead style="background: #CCFBFD;">
+                            <thead style="background: var(--light-bg);">
                                 <tr>
                                     <th
-                                        style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
+                                        style="padding: 15px; border-right: 2px solid var(--primary-color); color:var(--text-dark); font-weight: 700;">
                                         Procedimiento</th>
                                     <th
-                                        style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
+                                        style="padding: 15px; border-right: 2px solid var(--primary-color); color:var(--text-dark); font-weight: 700;">
                                         Fecha</th>
                                     <th
-                                        style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
+                                        style="padding: 15px; border-right: 2px solid var(--primary-color); color:var(--text-dark); font-weight: 700;">
                                         Hora</th>
                                     <th
-                                        style="padding: 15px; border-right: 2px solid #00D1FF; color:#000; font-weight: 700;">
+                                        style="padding: 15px; border-right: 2px solid var(--primary-color); color:var(--text-dark); font-weight: 700;">
                                         Abono</th>
-                                    <th style="padding: 15px; color:#000; font-weight: 700;">Estado</th>
+                                    <th style="padding: 15px; color:var(--text-dark); font-weight: 700;">Estado</th>
                                 </tr>
                             </thead>
-                            <tbody id="cita-tabla-body" style="background: white;">
+                            <tbody id="cita-tabla-body" style="background: var(--white);">
                                 {{-- JS renderiza aquí todas las filas del historial --}}
                             </tbody>
                         </table>
 
                         <!-- Controles de paginación -->
                         <div id="paginacion-controles"
-                            style="display: flex; justify-content: center; align-items: center; gap: 15px; padding: 15px; background: #f8f9fa; border-top: 2px solid #00D1FF;">
+                            style="display: flex; justify-content: center; align-items: center; gap: 15px; padding: 15px; background: var(--input-bg); border-top: 2px solid var(--primary-color);">
                             <button type="button" id="btn-pag-anterior" onclick="cambiarPagina(-1)"
                                 style="background: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
                                 <i class="fa-solid fa-chevron-left"></i> Anterior
                             </button>
-                            <span id="info-paginacion" style="font-weight: 600; color: #333;">Página 1 de 1</span>
+                            <span id="info-paginacion" style="font-weight: 600; color: var(--text-dark);">Página 1 de 1</span>
                             <button type="button" id="btn-pag-siguiente" onclick="cambiarPagina(1)"
                                 style="background: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
                                 Siguiente <i class="fa-solid fa-chevron-right"></i>
@@ -716,16 +718,16 @@ Resumen de secciones:
 
                         {{-- TOTAL DE LA CITA COMO ETIQUETA ESTATICA --}}
                         <div
-                            style="font-size: 1.5rem; font-weight: 700; color: #000; display: flex; align-items: center; white-space: nowrap;">
+                            style="font-size: 1.5rem; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; white-space: nowrap;">
                             Total:
                             <span
-                                style="background: #FFFFFF; padding: 8px 20px; border-radius: 8px; border: 2px solid #00D1FF; margin-left: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 120px; text-align: center;">
+                                style="background: var(--input-bg); padding: 8px 20px; border-radius: 8px; border: 2px solid var(--primary-color); margin-left: 10px; box-shadow: var(--shadow); min-width: 120px; text-align: center;">
                                 <span id="lbl-total">0.00</span>
                             </span>
                         </div>
 
                         <div
-                            style="font-size: 1.5rem; font-weight: 700; color: #000; display: flex; align-items: center; white-space: nowrap;">
+                            style="font-size: 1.5rem; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; white-space: nowrap;">
                             <span style="font-weight: 700; font-size: 1em;">Restante:</span>
                             <span style="margin-left: 10px; font-weight: 700;">
                                 $<span id="lbl-restante">0.00</span>
@@ -742,8 +744,8 @@ Resumen de secciones:
                 <!-- WIDGET 2: HORARIO (Aparece sobre Resumen/Odontograma) -->
                 <div id="widget-horario" class="inner-widget"
                     style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                                                                   background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); 
-                                                                   border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 25px 50px rgba(0,0,0,0.15); 
+                                                                   background: var(--white); box-shadow: var(--shadow); 
+                                                                   border: 1px solid var(--light-bg); 
                                                                    padding: 40px; border-radius: 24px; z-index: 100; width: 90%; max-width: 550px;">
 
                     <h2 style="color: var(--primary-color); font-weight: 800; font-size: 2rem; margin-bottom: 5px;">
@@ -802,43 +804,43 @@ Resumen de secciones:
                 <!-- IDX-04B | Widget de seguimiento clinico -->
                 <!-- WIDGET 3: SEGUIMIENTO -->
                 <div id="widget-seguimiento" class="inner-widget"
-                    style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 100; width: 80%; max-width: 600px;">
+                    style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--white); padding: 40px; border-radius: 16px; box-shadow: var(--shadow); z-index: 100; width: 80%; max-width: 600px;">
                     <h2 style="color: var(--primary-color); font-weight: 800; font-size: 2rem; margin-bottom: 10px;">
                         Seguimiento Clínico</h2>
-                    <p style="color: #666; margin-bottom: 30px; font-size: 1.1rem;">Tratamiento que se realizara la proxima
+                    <p style="color: var(--text-light); margin-bottom: 30px; font-size: 1.1rem;">Tratamiento que se realizara la proxima
                         cita.</p>
 
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <label style="font-weight: 700; color: #444;">Notas / Observaciones</label>
+                        <label style="font-weight: 700; color: var(--text-dark);">Notas / Observaciones</label>
                         <textarea name="notas_seguimiento"
-                            style="padding: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; resize: none; min-height: 150px;"
+                            style="padding: 15px; border: 1px solid var(--light-bg); background: var(--input-bg); color: var(--text-dark); border-radius: 8px; font-size: 1rem; resize: none; min-height: 150px;"
                             placeholder="Escribe aquí los detalles del tratamiento..."></textarea>
                     </div>
                     <button type="button"
-                        style="background: #eee; color: #555; margin-top: 30px; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; text-align: center;"
+                        style="background: var(--input-bg); color: var(--text-dark); margin-top: 30px; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; text-align: center;"
                         onclick="closeWidgets()">Confirmar / Volver</button>
                 </div>
 
                 <!-- IDX-04C | Widget de pago del dia -->
                 <!-- WIDGET 4: PAGO -->
                 <div id="widget-pago" class="inner-widget"
-                    style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 100; width: 80%; max-width: 400px;">
+                    style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--white); padding: 40px; border-radius: 16px; box-shadow: var(--shadow); z-index: 100; width: 80%; max-width: 400px;">
                     <h2 style="color: var(--primary-color); font-weight: 800; font-size: 2rem; margin-bottom: 10px;">
                         Registrar Pago</h2>
-                    <p style="color: #666; margin-bottom: 30px; font-size: 1.1rem;">Ingresa el monto abonado hoy por el
+                    <p style="color: var(--text-light); margin-bottom: 30px; font-size: 1.1rem;">Ingresa el monto abonado hoy por el
                         paciente.</p>
 
                     <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
-                        <label style="font-weight: 700; color: #444;">Monto a Abonar en esta Cita ($)</label>
+                        <label style="font-weight: 700; color: var(--text-dark);">Monto a Abonar en esta Cita ($)</label>
                         <input type="number" name="monto_abono" id="input-monto-abono"
-                            style="padding: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1.5rem; font-weight: bold;"
+                            style="padding: 15px; border: 1px solid var(--light-bg); background: var(--input-bg); color: var(--text-dark); border-radius: 8px; font-size: 1.5rem; font-weight: bold;"
                             step="0.01" min="0" placeholder="0.00"
                             oninput="if(this.value < 0) { this.value = 0; } calcularVueltoReal();">
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <label style="font-weight: 700; color: #444;">Método de Pago</label>
+                        <label style="font-weight: 700; color: var(--text-dark);">Método de Pago</label>
                         <select name="metodo_pago" id="input-metodo-pago"
-                            style="padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; color: #333;">
+                            style="padding: 12px; border: 1px solid var(--light-bg); background: var(--input-bg); color: var(--text-dark); border-radius: 8px; font-size: 1rem;">
                             <option value="efectivo">Efectivo</option>
                             <option value="tarjeta">Tarjeta</option>
                             <option value="transferencia">Transferencia</option>
@@ -846,7 +848,7 @@ Resumen de secciones:
                         </select>
                     </div>
                     <button type="button"
-                        style="background: #eee; color: #555; margin-top: 30px; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; text-align: center;"
+                        style="background: var(--input-bg); color: var(--text-dark); margin-top: 30px; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; text-align: center;"
                         onclick="closeWidgets()">Confirmar / Volver</button>
                 </div>
 
@@ -858,11 +860,11 @@ Resumen de secciones:
                         <div>
                             <h2 style="color: var(--primary-color); font-weight: 800; font-size: 2rem; margin: 0;">
                                 Odontograma Digital</h2>
-                            <p style="color: #666; margin-top: 5px; font-size: 1.1rem;">Selecciona una herramienta y haz
+                            <p style="color: var(--text-light); margin-top: 5px; font-size: 1.1rem;">Selecciona una herramienta y haz
                                 clic en las piezas dentales.</p>
                         </div>
                         <button type="button" class="ghost-btn" onclick="switchTab('tab-resumen')"
-                            style="background: #f0f0f0; border: 1px solid #ccc; color: #333; font-weight: 700; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                            style="background: var(--input-bg); border: 1px solid var(--light-bg); color: var(--text-dark); font-weight: 700; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
                             <i class="fa-solid fa-arrow-left"></i> Volver a Detalles
                         </button>
                     </div>
@@ -901,12 +903,12 @@ Resumen de secciones:
                     </svg>
 
                     <div
-                        style="background: #f8f9fa; padding: 15px; border-radius: 12px; display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px; border: 1px solid #ddd;">
+                        style="background: var(--input-bg); padding: 15px; border-radius: 12px; display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px; border: 1px solid var(--white);">
                         <div style="flex: 1;">
-                            <label style="font-weight: 700; color: #444; display: block; margin-bottom: 5px;">Tratamiento a
+                            <label style="font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 5px;">Tratamiento a
                                 aplicar:</label>
                             <select id="select-servicio"
-                                style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                                style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--light-bg); background: var(--white); color: var(--text-dark);">
                                 <option value="">-- Seleccionar --</option>
                                 @foreach($servicios as $srv)
                                     <option value="{{ $srv->id_servicio }}">{{ $srv->nombre_servicio }}</option>
@@ -925,7 +927,7 @@ Resumen de secciones:
                             </label>
                             <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
                                 <input type="radio" name="tipo_registro" value="borrar" id="tipo-borrar">
-                                <span style="color: #444; font-weight: 700;">Borrar marca</span>
+                                <span style="color: var(--text-dark); font-weight: 700;">Borrar marca</span>
                             </label>
                         </div>
                     </div>
@@ -936,9 +938,9 @@ Resumen de secciones:
                             flex-direction: column;
                             gap: 30px;
                             padding: 20px;
-                            background: #fff;
+                            background: var(--white);
                             border-radius: 12px;
-                            border: 2px dashed #ccc;
+                            border: 2px dashed var(--light-bg);
                             flex: 1;
                             overflow-x: auto;
                             min-height: 400px;

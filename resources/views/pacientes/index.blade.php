@@ -36,8 +36,9 @@
 
         .search-pill:focus {
             box-shadow: 0 4px 20px rgba(0, 180, 216, 0.2);
-            background: #fff;
+            background: var(--white);
             transform: scale(1.02);
+            color: var(--text-dark);
         }
 
         .search-icon {
@@ -81,7 +82,7 @@
         }
 
         .patient-card {
-            background: white;
+            background: var(--white);
             border-radius: 22px;
             padding: 22px;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.04);
@@ -126,7 +127,7 @@
         .card-details .name {
             font-size: 1.15rem;
             font-weight: 800;
-            color: #2b2d42;
+            color: var(--text-dark);
             margin-bottom: 4px;
             white-space: nowrap;
             overflow: hidden;
@@ -137,7 +138,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #6c757d;
+            color: var(--text-light);
             font-size: 0.88rem;
             margin-bottom: 3px;
         }
@@ -581,7 +582,7 @@
                         style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 15px rgba(0,180,216,0.25); display: none; cursor: pointer;"
                         onclick="document.getElementById('foto-upload').click()">
                     <div id="p-foto-placeholder"
-                        style="background: white; border-radius: 50%; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,180,216,0.25); cursor: pointer;"
+                        style="background: var(--white); border-radius: 50%; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,180,216,0.25); cursor: pointer;"
                         onclick="document.getElementById('foto-upload').click()">
                         <i class="fa-solid fa-camera" style="font-size: 2.5rem; color: var(--primary-color);"></i>
                     </div>
@@ -589,18 +590,18 @@
                         onchange="uploadFoto(this)">
                 </div>
                 <div>
-                    <h2 id="p-name" style="color: #2b2d42; margin: 0; font-size: 1.8em; font-weight: 800;">Nombre</h2>
+                    <h2 id="p-name" style="color: var(--text-dark); margin: 0; font-size: 1.8em; font-weight: 800;">Nombre</h2>
                     <div style="display: flex; gap: 15px; margin-top: 8px;">
-                        <span id="p-email" style="color: #6c757d; font-size: 0.95em;"><i class="fa-solid fa-envelope"></i>
+                        <span id="p-email" style="color: var(--text-light); font-size: 0.95em;"><i class="fa-solid fa-envelope"></i>
                             email</span>
-                        <span id="p-tel" style="color: #6c757d; font-size: 0.95em;"><i class="fa-solid fa-phone"></i>
+                        <span id="p-tel" style="color: var(--text-light); font-size: 0.95em;"><i class="fa-solid fa-phone"></i>
                             tel</span>
                     </div>
                 </div>
             </div>
 
             <div class="profile-tabs-container" style="flex-shrink: 0;
-                display: flex; border-bottom: 2px solid #eee; padding: 0 30px; background: white;">
+                display: flex; border-bottom: 2px solid var(--light-bg); padding: 0 30px; background: var(--white);">
                 <button onclick="showTab('tab-general')" id="btn-tab-general" class="tab-btn tab-active">
                     <i class="fa-solid fa-user"></i> Resumen General
                 </button>
@@ -637,7 +638,7 @@
                 }
 
                 .profile-info-card {
-                    background: #f8f9fa;
+                    background: var(--input-bg);
                     padding: 22px;
                     border-radius: 18px;
                     margin-bottom: 15px;
@@ -645,7 +646,7 @@
 
                 .profile-info-card h4 {
                     margin: 0 0 15px 0;
-                    color: #495057;
+                    color: var(--text-dark);
                     font-size: 0.85em;
                     text-transform: uppercase;
                     letter-spacing: 1.2px;
@@ -660,11 +661,11 @@
                 }
 
                 .info-item .label {
-                    color: #6c757d;
+                    color: var(--text-light);
                 }
 
                 .info-item .value {
-                    color: #212529;
+                    color: var(--text-dark);
                     font-weight: 600;
                 }
             </style>
@@ -689,11 +690,11 @@
                                         id="view-ocupacion">...</span></div>
                             </div>
 
-                            <div class="profile-info-card" style="background: #fff5f5; border: 1px solid #fed7d7;">
-                                <h4 style="color: #c53030;"><i class="fa-solid fa-phone-volume"></i> En Caso de Emergencia
+                            <div class="profile-info-card" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+                                <h4 style="color: #ef4444;"><i class="fa-solid fa-phone-volume"></i> En Caso de Emergencia
                                 </h4>
                                 <div class="info-item"><span class="label">Contacto:</span> <span class="value"
-                                        id="view-emergencia-nombre" style="color: #c53030;">...</span></div>
+                                        id="view-emergencia-nombre" style="color: #ef4444;">...</span></div>
                                 <div class="info-item"><span class="label">Teléfono:</span> <span class="value"
                                         id="view-emergencia-tel" style="font-weight: 800;">...</span></div>
                             </div>
@@ -702,21 +703,21 @@
                         <div>
                             @if(Auth::user()->rol !== 'recepcionista')
                             <div id="card-alergias"
-                                style="background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 18px; padding: 22px; margin-bottom: 15px;">
-                                <h4 id="title-alergias" style="color: #6b7280; margin-bottom:15px;"><i
+                                style="background: var(--input-bg); border: 1px solid var(--white); border-radius: 18px; padding: 22px; margin-bottom: 15px;">
+                                <h4 id="title-alergias" style="color: var(--text-light); margin-bottom:15px;"><i
                                         class="fa-solid fa-triangle-exclamation"></i>
                                     Alergias</h4>
                                 <div id="view-alergias-badges">
-                                    <span style="color: #888; font-size: 0.9em;">Sin alergias registradas</span>
+                                    <span style="color: var(--text-light); font-size: 0.9em;">Sin alergias registradas</span>
                                 </div>
                             </div>
 
                             <div id="card-enfermedades"
-                                style="background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 18px; padding: 22px; margin-bottom: 25px;">
-                                <h4 id="title-enfermedades" style="color: #6b7280; margin-bottom:12px;"><i class="fa-solid fa-notes-medical"></i>
+                                style="background: var(--input-bg); border: 1px solid var(--white); border-radius: 18px; padding: 22px; margin-bottom: 25px;">
+                                <h4 id="title-enfermedades" style="color: var(--text-light); margin-bottom:12px;"><i class="fa-solid fa-notes-medical"></i>
                                     Enfermedades Crónicas</h4>
                                 <p id="view-enfermedades"
-                                    style="margin: 0; color: #555; font-size: 0.95rem; line-height: 1.5;">
+                                    style="margin: 0; color: var(--text-dark); font-size: 0.95rem; line-height: 1.5;">
                                     Ninguna</p>
                             </div>
                             @endif
@@ -734,9 +735,9 @@
                                 </button>
                             </div>
                             <div
-                                style="margin-top: 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; display: flex; align-items: flex-start; gap: 8px;">
-                                <i class="fa-solid fa-scale-balanced" style="color: #b45309; margin-top: 2px;"></i>
-                                <span style="font-size: 0.72rem; color: #92400e; line-height: 1.4;">
+                                style="margin-top: 12px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 10px 14px; display: flex; align-items: flex-start; gap: 8px;">
+                                <i class="fa-solid fa-scale-balanced" style="color: #ea580c; margin-top: 2px;"></i>
+                                <span style="font-size: 0.72rem; color: #ea580c; line-height: 1.4;">
                                     <strong>NOM-004-SSA3-2012:</strong> Los expedientes clínicos deben conservarse un mínimo
                                     de 5 años. La eliminación de registros médicos no está permitida.
                                 </span>
@@ -748,7 +749,7 @@
                 <div id="tab-evolucion" style="display: none;">
                     {{-- Formulario nueva evolución --}}
                     <div
-                        style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 14px; padding: 20px; margin-bottom: 20px;">
+                        style="background: rgba(0, 180, 216, 0.1); border: 1px solid rgba(0, 180, 216, 0.3); border-radius: 14px; padding: 20px; margin-bottom: 20px;">
                         <h4
                             style="margin: 0 0 12px 0; color: var(--secondary-color); font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">
                             <i class="fa-solid fa-pen-to-square"></i> Nueva Nota de Evolución
@@ -871,12 +872,12 @@
             {{-- 🔹 Paciente + Servicio + Duración --}}
             <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
                 <div style="flex: 1; min-width: 200px;">
-                    <label style="font-weight: 700;">Paciente:</label>
-                    <input type="text" id="form-cita-paciente-nombre" class="modern-input" readonly style="background: #f8f9fa;">
+                    <label style="font-weight: 700; color: var(--text-dark);">Paciente:</label>
+                    <input type="text" id="form-cita-paciente-nombre" class="modern-input" readonly style="background: var(--input-bg); color: var(--text-dark);">
                 </div>
 
                 <div style="flex: 1; min-width: 200px;">
-                    <label style="font-weight: 700;">Servicio:</label>
+                    <label style="font-weight: 700; color: var(--text-dark);">Servicio:</label>
                     <select name="id_servicio" class="modern-input" required>
                         @foreach($servicios as $srv)
                             <option value="{{ $srv->id_servicio }}">
@@ -887,7 +888,7 @@
                 </div>
 
                 <div style="flex: 1; min-width: 150px;">
-                    <label style="font-weight: 700;">Duración:</label>
+                    <label style="font-weight: 700; color: var(--text-dark);">Duración:</label>
                     <select name="duracion_minutos" class="modern-input">
                         <option value="15">15 min</option>
                         <option value="30" selected>30 min</option>
@@ -896,26 +897,26 @@
             </div>
 
             {{-- CONTENEDOR PRINCIPAL --}}
-            <div style="display: flex; flex-wrap: wrap; gap: 30px; background: #ffffff; border-radius: 20px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 30px; background: var(--white); border-radius: 20px;">
 
                 {{-- CALENDARIO --}}
-                <div style="flex: 1; min-width: 320px; background: #F8FDFF; padding: 25px; border-radius: 16px; border: 1px solid #dceeef;">
+                <div style="flex: 1; min-width: 320px; background: var(--input-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--white);">
                     
-                    <h4 style="font-weight: 800;">
+                    <h4 style="font-weight: 800; color: var(--text-dark);">
                         <i class="fa-regular fa-calendar-days"></i> 1. Elige el Día
                     </h4>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; margin-top: 15px;">
-                        <button type="button" onclick="cambiarMesReserva(-1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">❮</button>
+                        <button type="button" onclick="cambiarMesReserva(-1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem; color: var(--text-dark);">❮</button>
 
-                        <span id="reserva-mes-anio" style="font-weight:800; color: #06b6d4; text-transform: capitalize; font-size: 1.1rem;">
+                        <span id="reserva-mes-anio" style="font-weight:800; color: var(--primary-color); text-transform: capitalize; font-size: 1.1rem;">
                             Cargando...
                         </span>
 
-                        <button type="button" onclick="cambiarMesReserva(1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">❯</button>
+                        <button type="button" onclick="cambiarMesReserva(1)" style="border:none; background:none; cursor:pointer; font-size:1.2rem; color: var(--text-dark);">❯</button>
                     </div>
 
-                    <div class="calendar-labels">
+                    <div class="calendar-labels" style="color: var(--text-dark);">
                         <div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div>
                     </div>
 
@@ -930,10 +931,10 @@
 
                 {{-- HORARIOS --}}
                 <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
-                    <h4 style="font-weight: 800;">
+                    <h4 style="font-weight: 800; color: var(--text-dark);">
                         <i class="fa-regular fa-clock"></i> 2. Elige la Hora
                     </h4>
-                    <p id="lbl-fecha-seleccionada" style="color: #888; margin-top: 10px; margin-bottom: 15px;">
+                    <p id="lbl-fecha-seleccionada" style="color: var(--text-light); margin-top: 10px; margin-bottom: 15px;">
                         Selecciona un día en el calendario primero.
                     </p>
                     <input type="hidden" name="fecha" id="input-reserva-fecha" required>
@@ -941,7 +942,7 @@
 
 
                     <div id="reserva-contenedor-horarios" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; min-height: 200px;">
-                        <div style="grid-column: 1 / -1; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px; color: #aaa;">
+                        <div style="grid-column: 1 / -1; background: var(--white); border: 2px dashed var(--light-bg); border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text-light);">
                             <p>Esperando selección de fecha...</p>
                         </div>
                     </div>
@@ -950,32 +951,32 @@
 
             {{-- 📄 CUIDADOS --}}
             <div style="margin-top: 25px;">
-                <label style="font-weight: 700;">📄 Subir cuidados post-tratamiento (Máx. 2MB)</label>
-                <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 18px; background: #f9fafb; text-align: center; margin-top: 8px; transition: 0.2s;"
-                     onmouseover="this.style.borderColor='#06b6d4'; this.style.background='#ecfeff'"
-                     onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
+                <label style="font-weight: 700; color: var(--text-dark);">📄 Subir cuidados post-tratamiento (Máx. 2MB)</label>
+                <div style="border: 2px dashed var(--light-bg); border-radius: 12px; padding: 18px; background: var(--input-bg); text-align: center; margin-top: 8px; transition: 0.2s;"
+                     onmouseover="this.style.borderColor='var(--primary-color)'; this.style.background='var(--white)'"
+                     onmouseout="this.style.borderColor='var(--light-bg)'; this.style.background='var(--input-bg)'">
                     <input type="file" name="cuidados_pdf" accept="application/pdf" id="input-cuidados" style="display:none;"
                            onchange="validarTamanoArchivo(this, 'nombre-cuidados')">
                     <label for="input-cuidados" style="cursor:pointer;">
                         <i class="fa-solid fa-file-pdf" style="font-size: 1.8rem; color:#ef4444;"></i>
-                        <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
-                        <span id="nombre-cuidados" style="font-size: 0.85rem; color:#666;">Ningún archivo seleccionado</span>
+                        <p style="margin:8px 0 4px; font-weight:600; color: var(--text-dark);">Seleccionar PDF</p>
+                        <span id="nombre-cuidados" style="font-size: 0.85rem; color:var(--text-light);">Ningún archivo seleccionado</span>
                     </label>
                 </div>
             </div>
 
             {{-- 🪥 TIPS --}}
             <div style="margin-top: 20px;">
-                <label style="font-weight: 700;">🪥 Subir tips de higiene (Máx. 2MB)</label>
-                <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 18px; background: #f9fafb; text-align: center; margin-top: 8px; transition: 0.2s;"
-                     onmouseover="this.style.borderColor='#22c55e'; this.style.background='#f0fdf4'"
-                     onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f9fafb'">
+                <label style="font-weight: 700; color: var(--text-dark);">🪥 Subir tips de higiene (Máx. 2MB)</label>
+                <div style="border: 2px dashed var(--light-bg); border-radius: 12px; padding: 18px; background: var(--input-bg); text-align: center; margin-top: 8px; transition: 0.2s;"
+                     onmouseover="this.style.borderColor='#22c55e'; this.style.background='var(--white)'"
+                     onmouseout="this.style.borderColor='var(--light-bg)'; this.style.background='var(--input-bg)'">
                     <input type="file" name="tips_pdf" accept="application/pdf" id="input-tips" style="display:none;"
                            onchange="validarTamanoArchivo(this, 'nombre-tips')">
                     <label for="input-tips" style="cursor:pointer;">
                         <i class="fa-solid fa-tooth" style="font-size: 1.8rem; color:#22c55e;"></i>
-                        <p style="margin:8px 0 4px; font-weight:600;">Seleccionar PDF</p>
-                        <span id="nombre-tips" style="font-size: 0.85rem; color:#666;">Ningún archivo seleccionado</span>
+                        <p style="margin:8px 0 4px; font-weight:600; color: var(--text-dark);">Seleccionar PDF</p>
+                        <span id="nombre-tips" style="font-size: 0.85rem; color:var(--text-light);">Ningún archivo seleccionado</span>
                     </label>
                 </div>
             </div>
@@ -1013,12 +1014,10 @@
     {{-- Modal de Edición (Readonly: Nombre, Apellidos, Fecha Nac, Tipo Sangre) --}}
     <style>
         #modal-edit-patient .modal-glass {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: var(--white);
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--light-bg);
+            box-shadow: var(--shadow);
             padding: 30px;
         }
 
@@ -1036,18 +1035,18 @@
         #modal-edit-patient .modern-input {
             width: 100%;
             padding: 12px 15px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--light-bg);
             border-radius: 8px;
-            background: #f0f0f0;
+            background: var(--input-bg);
             font-size: 0.95rem;
             outline: none;
             box-sizing: border-box;
-            color: #555;
+            color: var(--text-dark);
         }
 
         #modal-edit-patient .modern-input:focus {
-            background: #fff;
-            border-color: #00b4d8;
+            background: var(--white);
+            border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.1);
         }
 
@@ -1078,11 +1077,11 @@
                     </div>
 
                     <input type="text" id="edit-nombre" class="modern-input" placeholder="Nombre(s)" readonly
-                        style="background: #f3f4f6; color: #6b7280; cursor: not-allowed;">
+                        style="background: var(--light-bg); color: var(--text-light); cursor: not-allowed;">
                     <input type="text" id="edit-apellidos" class="modern-input" placeholder="Apellidos" readonly
-                        style="background: #f3f4f6; color: #6b7280; cursor: not-allowed;">
+                        style="background: var(--light-bg); color: var(--text-light); cursor: not-allowed;">
                     <input type="text" id="edit-fecha-nac" class="modern-input" placeholder="Fecha Nacimiento" readonly
-                        style="background: #f3f4f6; color: #6b7280; cursor: not-allowed;">
+                        style="background: var(--light-bg); color: var(--text-light); cursor: not-allowed;">
                     <select name="tipo_sangre" id="edit-tipo-sangre" class="modern-input" required>
                         <option value="">Tipo de Sangre*</option>
                         <option value="A+">A+</option>
@@ -1467,11 +1466,11 @@
                                      </span>`;
                     }
 
-                    return `<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    return `<div style="background:var(--white); border:1px solid var(--light-bg); border-radius:12px; padding:16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <div>
-                                    <h5 style="margin:0 0 5px 0; font-size: 1rem; color: #2b2d42;">${cita.servicio ? cita.servicio.nombre_servicio : 'Consulta General'}</h5>
-                                    <span style="font-size: 0.85rem; color: #6c757d;"><i class="fa-solid fa-calendar-day"></i> ${parseLocalDateTime(cita.fecha_hora_inicio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</span>
-                                    ${cita.notas ? `<p style="margin:5px 0 0 0; font-size:0.85rem; color:#555;"><i>"${cita.notas}"</i></p>` : ''}
+                                    <h5 style="margin:0 0 5px 0; font-size: 1rem; color: var(--text-dark);">${cita.servicio ? cita.servicio.nombre_servicio : 'Consulta General'}</h5>
+                                    <span style="font-size: 0.85rem; color: var(--text-light);"><i class="fa-solid fa-calendar-day"></i> ${parseLocalDateTime(cita.fecha_hora_inicio).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</span>
+                                    ${cita.notas ? `<p style="margin:5px 0 0 0; font-size:0.85rem; color:var(--text-light);"><i>"${cita.notas}"</i></p>` : ''}
                                     <br>${pagosHtml}
                                 </div>
                                 <div style="text-align: right;">
@@ -1515,12 +1514,12 @@
                                                                                                              </div>`;
                     }
 
-                    return `<div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:18px;border-left:4px solid var(--primary-color);">
+                    return `<div style="background:var(--white);border:1px solid var(--light-bg);border-radius:14px;padding:18px;border-left:4px solid var(--primary-color);">
                                                                                                                         <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
                                                                                                                             <span style="font-size:0.8em;font-weight:700;color:var(--primary-color);text-transform:uppercase;"><i class="fa-solid fa-calendar-days"></i> ${fecha}</span>
                                                                                                                         </div>
-                                                                                                                        <p style="margin:0;color:#333;line-height:1.6;">${ev.descripcion_avance || 'Sin descripción.'}</p>
-                                                                                                                        ${ev.plan_tratamiento ? `<p style="margin:8px 0 0;font-size:0.88em;color:#666;"><strong>Plan:</strong> ${ev.plan_tratamiento}</p>` : ''}
+                                                                                                                        <p style="margin:0;color:var(--text-dark);line-height:1.6;">${ev.descripcion_avance || 'Sin descripción.'}</p>
+                                                                                                                        ${ev.plan_tratamiento ? `<p style="margin:8px 0 0;font-size:0.88em;color:var(--text-light);"><strong>Plan:</strong> ${ev.plan_tratamiento}</p>` : ''}
                                                                                                                         ${imageHtml}
                                                                                                                     </div>`;
                 }).join('');
