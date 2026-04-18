@@ -27,170 +27,186 @@
         </div>
     @endif
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 40px;">
 
         {{-- ═══════════════ DATOS DE LA CLÍNICA ═══════════════ --}}
-        <div class="config-card"
-            style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-            <h3 style="color: #0077b6; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-top: 0;">
-                <i class="fa-solid fa-hospital"></i> Datos de la Clínica
-            </h3>
-            <form action="{{ route('configuracion.updateClinica') }}" method="POST">
-                @csrf
-                <div style="margin-bottom: 15px;">
-                    <label>Nombre Comercial</label>
-                    <input type="text" name="nombre_comercial" value="{{ $clinica->nombre_comercial }}" class="modern-input"
-                        required oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                    <div>
-                        <label>Teléfono</label>
-                        <input type="text" name="numero_telefono" value="{{ $clinica->numero_telefono }}"
-                            class="modern-input" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        <div class="premium-card">
+            <div class="card-header clinica-header">
+                <h3><i class="fa-solid fa-hospital"></i> Datos de la Clínica</h3>
+                <p>Información pública y ubicación de tu sucursal</p>
+            </div>
+            <div class="card-body">
+                <form action="{{ route('configuracion.updateClinica') }}" method="POST">
+                    @csrf
+                    <div style="margin-bottom: 20px;">
+                        <label>Nombre Comercial</label>
+                        <input type="text" name="nombre_comercial" value="{{ $clinica->nombre_comercial }}" class="modern-input"
+                            required oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
                     </div>
-                    <div>
-                        <label>Código Postal</label>
-                        <input type="text" name="codigo_postal" value="{{ $clinica->codigo_postal }}"
-                            class="modern-input" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div>
+                            <label>Teléfono</label>
+                            <input type="text" name="numero_telefono" value="{{ $clinica->numero_telefono }}"
+                                class="modern-input" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                        </div>
+                        <div>
+                            <label>Código Postal</label>
+                            <input type="text" name="codigo_postal" value="{{ $clinica->codigo_postal }}"
+                                class="modern-input" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                        </div>
                     </div>
-                </div>
 
-                <div style="margin-bottom: 15px;">
-                    <label>Calle y Número</label>
-                    <input type="text" name="calle" id="campo_calle" value="{{ $clinica->calle }}" class="modern-input"
-                        placeholder="Ej. Av. Reforma 123">
-                </div>
+                    <div style="margin-bottom: 20px;">
+                        <label>Calle y Número</label>
+                        <input type="text" name="calle" id="campo_calle" value="{{ $clinica->calle }}" class="modern-input"
+                            placeholder="Ej. Av. Reforma 123">
+                    </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                    <div>
-                        <label>Ciudad</label>
-                        <input type="text" name="ciudad" id="campo_ciudad" value="{{ $clinica->ciudad }}" class="modern-input"
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div>
+                            <label>Ciudad</label>
+                            <input type="text" name="ciudad" id="campo_ciudad" value="{{ $clinica->ciudad }}" class="modern-input"
+                                oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
+                        </div>
+                        <div>
+                            <label>Municipio / Alcaldía</label>
+                            <input type="text" name="municipio" id="campo_municipio" value="{{ $clinica->municipio }}" class="modern-input"
+                                oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label>Estado / Provincia</label>
+                        <input type="text" name="estado" id="campo_estado" value="{{ $clinica->estado }}" class="modern-input"
                             oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
                     </div>
-                    <div>
-                        <label>Municipio / Alcaldía</label>
-                        <input type="text" name="municipio" id="campo_municipio" value="{{ $clinica->municipio }}" class="modern-input"
-                            oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
+
+                    {{-- Mapa de Google Maps --}}
+                    <div style="border-top: 2px dashed #f1f5f9; padding-top: 20px; margin-top: 10px;">
+                        <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <span>Ubicación en Mapa</span>
+                            <button type="button" onclick="buscarUbicacionEnMapa()" style="background: #eef6fb; color: #0284c7; padding: 6px 16px; font-size: 0.85rem; border-radius: 8px; border: 1px solid #bae6fd; cursor: pointer; font-weight: 700;">
+                                <i class="fa-solid fa-map-location-dot"></i> Buscar por dirección
+                            </button>
+                        </label>
+                        <div id="mapa-clinica" style="width: 100%; height: 300px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);"></div>
+                        <p style="color: #64748b; font-size: 0.8rem; margin-top: 8px; font-style: italic;"><i class="fa-solid fa-circle-info"></i> Arrastra el pin rojo para ajustar con mayor precisión.</p>
+                        <input type="hidden" name="latitud"  id="latitud"  value="{{ $clinica->latitud }}">
+                        <input type="hidden" name="longitud" id="longitud" value="{{ $clinica->longitud }}">
                     </div>
-                </div>
 
-                <div style="margin-bottom: 15px;">
-                    <label>Estado / Provincia</label>
-                    <input type="text" name="estado" id="campo_estado" value="{{ $clinica->estado }}" class="modern-input"
-                        oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')">
-                </div>
+                    <div style="margin-top: 25px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                        <label>Porcentaje de Anticipo por Defecto</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="number" step="0.01" min="0" max="100" name="config_anticipo_pct" value="{{ $clinica->config_anticipo_pct }}" class="modern-input" style="margin-bottom: 0;">
+                            <span style="font-weight: 800; color: #475569; font-size: 1.2rem;">%</span>
+                        </div>
+                    </div>
 
-                {{-- Mapa de Google Maps --}}
-                <div style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 5px;">
-                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span>Ubicación en Mapa</span>
-                        <button type="button" onclick="buscarUbicacionEnMapa()" style="background: #eef6fb; color: #0077b6; padding: 5px 14px; font-size: 0.8rem; border-radius: 6px; border: 1px solid #cce5f5; cursor: pointer;">
-                            <i class="fa-solid fa-map-location-dot"></i> Buscar por dirección
-                        </button>
-                    </label>
-                    <div id="mapa-clinica" style="width: 100%; height: 280px; background: #f0f0f0; border-radius: 8px;"></div>
-                    <p style="color: #999; font-size: 0.78rem; margin-top: 6px;">Arrastra el pin para mayor precisión.</p>
-                    <input type="hidden" name="latitud"  id="latitud"  value="{{ $clinica->latitud }}">
-                    <input type="hidden" name="longitud" id="longitud" value="{{ $clinica->longitud }}">
-                </div>
-
-                <div style="margin-top: 15px;">
-                    <label>Porcentaje de Anticipo</label>
-                    <input type="number" step="0.01" min="0" max="100" name="config_anticipo_pct" value="{{ $clinica->config_anticipo_pct }}" class="modern-input">
-                </div>
-
-                <button type="submit" class="ghost-btn"
-                    style="margin-top: 20px; background: #00b4d8; color: white; width: 100%;">
-                    Guardar Cambios Clínica
-                </button>
-            </form>
+                    <button type="submit" class="ghost-btn-premium" style="width: 100%; margin-top: 30px;">
+                        Guardar Cambios Clínica
+                    </button>
+                </form>
+            </div>
         </div>
 
         {{-- ═══════════════ PERFIL DEL DOCTOR ═══════════════ --}}
         @if($doctorUser)
-            <div class="config-card"
-                style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                <h3 style="color: #0077b6; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-top: 0;">
-                    <i class="fa-solid fa-user-doctor"></i> Perfil del Doctor
-                </h3>
-
-                {{-- Foto de perfil del doctor --}}
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="position: relative; display: inline-block;">
-                        @if($doctorPerfil && $doctorPerfil->foto_perfil)
-                            <img src="{{ route('storage.file', ['path' => $doctorPerfil->foto_perfil]) }}"
-                                 alt="Foto del Doctor"
-                                 style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 15px rgba(0,119,182,0.25); cursor: pointer;"
-                                 onclick="document.getElementById('input-foto-doctor').click()">
-                        @else
-                            <div style="width: 100px; height: 100px; border-radius: 50%; background: #e0fbfc; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,119,182,0.25); cursor: pointer; margin: 0 auto;"
-                                 onclick="document.getElementById('input-foto-doctor').click()">
-                                <i class="fa-solid fa-camera" style="font-size: 2rem; color: #0077b6;"></i>
-                            </div>
-                        @endif
-                    </div>
-                    <form action="{{ route('configuracion.fotoDoctor') }}" method="POST" enctype="multipart/form-data" id="form-foto-doctor">
-                        @csrf
-                        <input type="file" id="input-foto-doctor" name="foto_perfil" accept="image/jpeg,image/png,image/webp" style="display: none;"
-                               onchange="document.getElementById('form-foto-doctor').submit();">
-                    </form>
-                    <p style="color: #888; font-size: 0.75rem; margin-top: 8px;">Haz clic para subir o cambiar la foto</p>
+            <div class="premium-card">
+                <div class="card-header doctor-header">
+                    <h3><i class="fa-solid fa-user-doctor"></i> Perfil del Doctor</h3>
+                    <p>Detalles personales y credenciales</p>
                 </div>
+                <div class="card-body">
 
-                <form action="{{ route('configuracion.updateUsuario') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="id_usuario" value="{{ $doctorUser->id_usuario }}">
-
-                    <div style="margin-bottom: 15px;">
-                        <label>Nombre Completo</label>
-                        <input type="text" name="nombre_completo" value="{{ $doctorUser->nombre_completo }}"
-                            class="modern-input"
-                            oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')" required>
-                    </div>
-
-                    <div style="margin-bottom: 15px;">
-                        <label>Correo Electrónico (Acceso)</label>
-                        <input type="email" name="email" value="{{ $doctorUser->email }}" class="modern-input" required>
-                    </div>
-
-                    {{-- CAMPO AGREGADO --}}
-                    <div style="margin-bottom: 15px;">
-                        <label>Teléfono de Contacto</label>
-                        <input type="text" name="telefono" value="{{ $doctorUser->telefono }}" class="modern-input" 
-                            placeholder="Ej: +52 1 234 567 8900" maxlength="20">
-                    </div>
-
-                    <div style="margin-top: 15px;">
-                        <label>Sobre mí</label>
-                        <textarea name="sobre_mi" id="sobre_mi" class="modern-input" rows="4" 
-                            placeholder="Cuéntale a tus pacientes sobre tu experiencia..."
-                            style="resize: none; font-family: inherit;">{{ old('sobre_mi', $doctorUser->sobre_mi) }}</textarea>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div>
-                            <label>Cédula Profesional</label>
-                            <input type="text" name="cedula_profesional" value="{{ $doctorPerfil->cedula_profesional ?? '' }}"
-                                class="modern-input" placeholder="Ej: 12345678">
+                    {{-- Foto de perfil del doctor --}}
+                    <div style="text-align: center; margin-bottom: 35px;">
+                        <div style="position: relative; display: inline-block;">
+                            @if($doctorPerfil && $doctorPerfil->foto_perfil)
+                                <img src="{{ route('storage.file', ['path' => $doctorPerfil->foto_perfil]) }}"
+                                     alt="Foto del Doctor"
+                                     style="width: 130px; height: 130px; border-radius: 50%; object-fit: cover; box-shadow: 0 8px 25px rgba(220, 38, 38, 0.25); cursor: pointer; border: 4px solid white; transition: transform 0.3s ease;"
+                                     onclick="document.getElementById('input-foto-doctor').click()"
+                                     onmouseover="this.style.transform='scale(1.05)'"
+                                     onmouseout="this.style.transform='scale(1)'">
+                            @else
+                                <div style="width: 130px; height: 130px; border-radius: 50%; background: #fef2f2; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(220, 38, 38, 0.25); cursor: pointer; margin: 0 auto; border: 4px solid white; transition: transform 0.3s ease;"
+                                     onclick="document.getElementById('input-foto-doctor').click()"
+                                     onmouseover="this.style.transform='scale(1.05)'"
+                                     onmouseout="this.style.transform='scale(1)'">
+                                    <i class="fa-solid fa-camera" style="font-size: 3rem; color: #dc2626;"></i>
+                                </div>
+                            @endif
+                            <div style="position: absolute; bottom: 0; right: 0; background: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); pointer-events: none;">
+                                <i class="fa-solid fa-pen" style="color: #64748b; font-size: 0.9rem;"></i>
+                            </div>
                         </div>
-                        <div>
-                            <label>Cambiar Contraseña</label>
-                            <input type="password" name="password" class="modern-input" placeholder="Opcional" autocomplete="new-password">
-                        </div>
+                        <form action="{{ route('configuracion.fotoDoctor') }}" method="POST" enctype="multipart/form-data" id="form-foto-doctor">
+                            @csrf
+                            <input type="file" id="input-foto-doctor" name="foto_perfil" accept="image/jpeg,image/png,image/webp" style="display: none;"
+                                   onchange="document.getElementById('form-foto-doctor').submit();">
+                        </form>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 15px; font-weight: 500;">Haz clic en la imagen para cambiar tu foto</p>
                     </div>
 
-                    <div style="margin-top: 15px;">
-                        <label>Confirmar Nueva Contraseña</label>
-                        <input type="password" name="password_confirmation" class="modern-input"
-                            placeholder="Solo si cambias contraseña" autocomplete="new-password">
+                    <form action="{{ route('configuracion.updateUsuario') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="id_usuario" value="{{ $doctorUser->id_usuario }}">
+
+                        <div style="margin-bottom: 20px;">
+                            <label>Nombre Completo</label>
+                            <input type="text" name="nombre_completo" value="{{ $doctorUser->nombre_completo }}"
+                                class="modern-input"
+                                oninput="this.value=this.value.replace(/[^A-Za-zÀ-ÿÑñ ]/g,'').replace(/  +/g,' ')" required>
                         </div>
 
-                    <button type="submit" class="ghost-btn"
-                        style="margin-top: 20px; background: #0077b6; color: white; width: 100%;">
-                        Actualizar Perfil Doctor
-                    </button>
-                </form>
+                        <div style="margin-bottom: 20px;">
+                            <label>Correo Electrónico (Acceso)</label>
+                            <input type="email" name="email" value="{{ $doctorUser->email }}" class="modern-input" required>
+                        </div>
+
+                        {{-- CAMPO AGREGADO --}}
+                        <div style="margin-bottom: 20px;">
+                            <label>Teléfono de Contacto Móvil</label>
+                            <input type="text" name="telefono" value="{{ $doctorUser->telefono }}" class="modern-input" 
+                                placeholder="Ej: +52 1 234 567 8900" maxlength="20">
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <label>Sobre mí</label>
+                            <textarea name="sobre_mi" id="sobre_mi" class="modern-input" rows="5" 
+                                placeholder="Cuéntale a tus pacientes de tu experiencia, especialidad..."
+                                style="resize: vertical; font-family: inherit;">{{ old('sobre_mi', $doctorUser->sobre_mi) }}</textarea>
+                        </div>
+
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
+                            <div style="margin-bottom: 20px;">
+                                <label><i class="fa-solid fa-id-card-clip"></i> Cédula Profesional</label>
+                                <input type="text" name="cedula_profesional" value="{{ $doctorPerfil->cedula_profesional ?? '' }}"
+                                    class="modern-input" placeholder="Ej: 12345678" style="background: white;">
+                            </div>
+                            
+                            <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 20px 0;">
+                            
+                            <h4 style="margin: 0 0 15px 0; color: #334155; font-size: 0.95rem;">Seguridad y Acceso</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <label style="font-size: 0.8rem;">Nueva Contraseña</label>
+                                    <input type="password" name="password" class="modern-input" placeholder="(Opcional)" autocomplete="new-password" style="background: white; padding: 10px;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.8rem;">Confirmar Contraseña</label>
+                                    <input type="password" name="password_confirmation" class="modern-input" placeholder="Repite contraseña" autocomplete="new-password" style="background: white; padding: 10px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="ghost-btn-premium ghost-btn-premium-red" style="width: 100%;">
+                            Actualizar Perfil Doctor
+                        </button>
+                    </form>
+                </div>
             </div>
         @endif
 
@@ -522,18 +538,95 @@
     <style>
         .modern-input {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background: #fafafa;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            box-sizing: border-box;
         }
-
+        .modern-input:focus {
+            outline: none;
+            border-color: #38bdf8;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
         label {
-            font-weight: 500;
+            font-weight: 600;
             font-size: 0.9rem;
-            color: #555;
-            margin-bottom: 5px;
+            color: #475569;
+            margin-bottom: 6px;
             display: block;
+        }
+        .premium-card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(148, 163, 184, 0.15);
+            border: 1px solid #f1f5f9;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .premium-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 14px 40px rgba(148, 163, 184, 0.2);
+        }
+        .card-header {
+            padding: 24px 30px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .card-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+        .card-header p {
+            margin: 6px 0 0 0;
+            font-size: 0.85rem;
+        }
+        .clinica-header {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+        .clinica-header h3 { color: #0369a1; }
+        .clinica-header p { color: #0284c7; }
+        .doctor-header {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        }
+        .doctor-header h3 { color: #991b1b; }
+        .doctor-header p { color: #b91c1c; }
+        
+        .card-body {
+            padding: 30px;
+        }
+        
+        .ghost-btn-premium {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #0284c7 100%);
+            color: white;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
+            text-align: center;
+            display: inline-block;
+        }
+        .ghost-btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+        }
+        
+        .ghost-btn-premium-red {
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+            box-shadow: 0 4px 15px rgba(185, 28, 28, 0.3);
+        }
+        .ghost-btn-premium-red:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(185, 28, 28, 0.4);
         }
 
         /* ── Tabla de Horarios ── */
