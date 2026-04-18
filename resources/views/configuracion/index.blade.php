@@ -27,7 +27,7 @@
         </div>
     @endif
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 40px;">
+    <div style="display: grid; grid-template-columns: 1fr; gap: 50px; max-width: 1400px;">
 
         {{-- ═══════════════ DATOS DE LA CLÍNICA ═══════════════ --}}
         <div class="premium-card">
