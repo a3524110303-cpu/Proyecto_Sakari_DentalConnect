@@ -394,12 +394,57 @@
                         </label>
                     </div>
 
-                    <div style="background: var(--input-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--white); display:flex; align-items:center; gap: 20px;">
-                        <div>
-                            <label style="font-weight:600; color:var(--text-dark); display:block; margin-bottom:5px;">Color Principal de la Interfaz</label>
-                            <p style="font-size:0.85rem; color:var(--text-light); margin:0;">Elige un color que represente a tu clínica.</p>
+                    <div style="margin-top: 25px; border-top: 1px solid var(--light-bg); padding-top: 20px;">
+                        <strong style="color:var(--text-dark); display:block; margin-bottom: 5px;">Paleta de Colores de la Interfaz</strong>
+                        <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:15px;">Personaliza la apariencia con tus colores corporativos.</p>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 20px;">
+                            {{-- Color Primario (Disponible para todos) --}}
+                            <div style="background: var(--input-bg); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; border: 1px solid var(--light-bg);">
+                                <label style="font-size: 0.85rem; color: var(--text-dark); margin-bottom: 10px; font-weight: 600;">Primario</label>
+                                <input type="color" name="color_primario" value="{{ $clinica->color_primario ?? '#00b4d8' }}" style="width: 50px; height: 50px; padding: 0; border: none; border-radius: 8px; cursor: pointer;">
+                            </div>
+                            
+                            {{-- Colores Premium --}}
+                            @php
+                                $isPremium = $clinica->hasPlanAtLeast('premium');
+                            @endphp
+
+                            <div style="background: var(--input-bg); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; position: relative; border: 1px solid var(--light-bg); {{ !$isPremium ? 'opacity: 0.6;' : '' }}">
+                                <label style="font-size: 0.85rem; color: var(--text-dark); margin-bottom: 10px; font-weight: 600;">Secundario</label>
+                                <input type="color" name="color_secundario" value="{{ $clinica->color_secundario ?? '#023e8a' }}" style="width: 50px; height: 50px; padding: 0; border: none; border-radius: 8px; {{ !$isPremium ? 'cursor: not-allowed; pointer-events: none;' : 'cursor: pointer;' }}">
+                                @if(!$isPremium)
+                                    <div style="position: absolute; top:-10px; right:-10px; background: #f59e0b; color: #fff; font-size: 0.7rem; font-weight: bold; padding: 3px 8px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                                        <i class="fa-solid fa-crown"></i> PRO
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div style="background: var(--input-bg); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; position: relative; border: 1px solid var(--light-bg); {{ !$isPremium ? 'opacity: 0.6;' : '' }}">
+                                <label style="font-size: 0.85rem; color: var(--text-dark); margin-bottom: 10px; font-weight: 600;">Acento</label>
+                                <input type="color" name="color_acento" value="{{ $clinica->color_acento ?? '#00d1ff' }}" style="width: 50px; height: 50px; padding: 0; border: none; border-radius: 8px; {{ !$isPremium ? 'cursor: not-allowed; pointer-events: none;' : 'cursor: pointer;' }}">
+                                @if(!$isPremium)
+                                    <div style="position: absolute; top:-10px; right:-10px; background: #f59e0b; color: #fff; font-size: 0.7rem; font-weight: bold; padding: 3px 8px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                                        <i class="fa-solid fa-crown"></i> PRO
+                                    </div>
+                                @endif
+                            </div>
                         </div>
-                        <input type="color" name="color_primario" value="{{ $clinica->color_primario ?? '#00b4d8' }}" style="width: 60px; height: 60px; padding: 0; border: none; border-radius: 8px; cursor: pointer; margin-left: auto;">
+
+                        @if(!$isPremium)
+                            <div style="margin-top: 15px; padding: 10px 15px; background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(245, 158, 11, 0.5); border-radius: 8px; text-align: center;">
+                                <span style="font-size: 0.85rem; color: #f59e0b;">
+                                    <i class="fa-solid fa-lock" style="margin-right: 5px;"></i> Desbloquea la paleta corporativa completa con un 
+                                    <a href="{{ route('suscripciones.show') }}" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">Plan Premium</a>.
+                                </span>
+                            </div>
+                        @else
+                            <div style="margin-top: 15px; padding: 8px 12px; background: rgba(34, 197, 94, 0.1); border: 1px dashed rgba(34, 197, 94, 0.3); border-radius: 8px; text-align: center;">
+                                <span style="font-size: 0.8rem; color: #16a34a; font-weight: 600;">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Los campos vacíos se autocalcularán en base a tu Color Primario.
+                                </span>
+                            </div>
+                        @endif
                     </div>
 
                     <button type="submit" class="ghost-btn-premium" style="width: 100%; margin-top: 30px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">

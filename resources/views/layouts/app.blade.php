@@ -26,9 +26,17 @@ Incluye:
     @php
         $temaVisual = 'claro';
         $colorPrimario = '#00b4d8';
+        $colorSecundarioPersonalizado = null;
+        $colorAcentoPersonalizado = null;
+
         if (auth()->check() && auth()->user()->clinica) {
-            $temaVisual = auth()->user()->clinica->tema_visual ?? 'claro';
-            $colorPrimario = auth()->user()->clinica->color_primario ?? '#00b4d8';
+            $clinica = auth()->user()->clinica;
+            $temaVisual = $clinica->tema_visual ?? 'claro';
+            $colorPrimario = $clinica->color_primario ?? '#00b4d8';
+            if ($clinica->hasPlanAtLeast('premium')) {
+                $colorSecundarioPersonalizado = $clinica->color_secundario;
+                $colorAcentoPersonalizado = $clinica->color_acento;
+            }
         }
         
         // Helper to generate shades
@@ -46,8 +54,8 @@ Incluye:
             $b = max(0,min(255,$b + $steps));
             return '#'.str_pad(dechex($r), 2, '0', STR_PAD_LEFT).str_pad(dechex($g), 2, '0', STR_PAD_LEFT).str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
         }
-        $secondaryColor = adjustBrightness($colorPrimario, -40);
-        $accentColor = adjustBrightness($colorPrimario, 40);
+        $secondaryColor = $colorSecundarioPersonalizado ?? adjustBrightness($colorPrimario, -40);
+        $accentColor = $colorAcentoPersonalizado ?? adjustBrightness($colorPrimario, 40);
         $lightBg = adjustBrightness($colorPrimario, 230); // Tinted super light background for light mode
     @endphp
     <style>

@@ -45,6 +45,10 @@ class Clinica extends Model
         'latitud',
         'longitud',
         'config_anticipo_pct',
+        'tema_visual',
+        'color_primario',
+        'color_secundario',
+        'color_acento',
     ];
 
     public function usuarios()

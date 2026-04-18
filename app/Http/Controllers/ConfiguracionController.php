@@ -276,12 +276,25 @@ class ConfiguracionController extends Controller
         abort_if(! $clinica, 403, 'No tienes permiso para modificar esta clínica.');
 
         $request->validate([
-            'tema_visual'    => 'required|in:claro,oscuro,invertido',
-            'color_primario' => 'required|string|max:7',
+            'tema_visual'      => 'required|in:claro,oscuro,invertido',
+            'color_primario'   => 'required|string|max:7',
+            'color_secundario' => 'nullable|string|max:7',
+            'color_acento'     => 'nullable|string|max:7',
         ]);
 
         $clinica->tema_visual    = $request->tema_visual;
         $clinica->color_primario = $request->color_primario;
+
+        if ($clinica->hasPlanAtLeast('premium')) {
+            $clinica->color_secundario = $request->color_secundario;
+            $clinica->color_acento     = $request->color_acento;
+        } else {
+            // Si el plan no califica, limpiamos o ignoramos las variables extendidas.
+            // Para asegurar consistencia, las llevamos a null.
+            $clinica->color_secundario = null;
+            $clinica->color_acento     = null;
+        }
+
         $clinica->save();
 
         return back()->with('success', 'Ajustes de apariencia guardados correctamente.');
