@@ -23,11 +23,11 @@ class ConfiguracionController extends Controller
      */
     public function index()
     {
-        $user    = Auth::user();
+        $user = Auth::user();
         $clinica = Clinica::find($user->id_clinica);
-        abort_if(! $clinica, 403, 'No tienes una clínica asignada.');
+        abort_if(!$clinica, 403, 'No tienes una clínica asignada.');
 
-        $doctorUser   = null;
+        $doctorUser = null;
         $doctorPerfil = null;
 
         if ($user->rol === 'doctor') {
@@ -60,7 +60,7 @@ class ConfiguracionController extends Controller
     public function updateClinica(UpdateClinicaRequest $request)
     {
         $clinica = Clinica::find(Auth::user()->id_clinica);
-        abort_if(! $clinica, 403, 'No tienes permiso para modificar esta clínica.');
+        abort_if(!$clinica, 403, 'No tienes permiso para modificar esta clínica.');
 
         $clinica->update($request->validated());
 
@@ -81,12 +81,12 @@ class ConfiguracionController extends Controller
 
         $data = [
             'nombre_completo' => $validated['nombre_completo'],
-            'email'           => $validated['email'],
-            'sobre_mi'        => $validated['sobre_mi'] ?? null,
-            'telefono'        => $validated['telefono'] ?? null,
+            'email' => $validated['email'],
+            'sobre_mi' => $validated['sobre_mi'] ?? null,
+            'telefono' => $validated['telefono'] ?? null,
         ];
 
-        if (! empty($validated['password'])) {
+        if (!empty($validated['password'])) {
             $data['password'] = Hash::make($validated['password']);
         }
 
@@ -98,7 +98,7 @@ class ConfiguracionController extends Controller
                     ['id_usuario' => $usuario->id_usuario],
                     [
                         'cedula_profesional' => $validated['cedula_profesional'] ?? null,
-                        'horario_default'    => $validated['horario_default'] ?? null,
+                        'horario_default' => $validated['horario_default'] ?? null,
                     ]
                 );
             }
@@ -112,15 +112,15 @@ class ConfiguracionController extends Controller
      */
     public function storeRecepcionista(Request $request)
     {
-        $clinica     = Auth::user()->clinica;
+        $clinica = Auth::user()->clinica;
         $suscripcion = $clinica->suscripciones()->where('estado', 'active')->first();
 
-        if (! $suscripcion || ! $suscripcion->plan) {
+        if (!$suscripcion || !$suscripcion->plan) {
             return redirect()->back()
                 ->with('error', 'No tienes una suscripción activa para agregar usuarios.');
         }
 
-        $plan          = $suscripcion->plan;
+        $plan = $suscripcion->plan;
         $totalUsuarios = User::where('id_clinica', $clinica->id_clinica)->count();
 
         if ($totalUsuarios >= $plan->max_doctores) {
@@ -130,17 +130,17 @@ class ConfiguracionController extends Controller
 
         $request->validate([
             'nombre_completo' => 'required|string|max:100',
-            'email'           => 'required|email|unique:usuarios_sistema,email',
-            'password'        => 'required|string|min:8|confirmed',
+            'email' => 'required|email|unique:usuarios_sistema,email',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         User::create([
-            'id_clinica'      => Auth::user()->id_clinica,
+            'id_clinica' => Auth::user()->id_clinica,
             'nombre_completo' => $request->nombre_completo,
-            'email'           => $request->email,
-            'password'        => $request->password,
-            'rol'             => 'recepcionista',
-            'is_active'       => true,
+            'email' => $request->email,
+            'password' => $request->password,
+            'rol' => 'recepcionista',
+            'is_active' => true,
         ]);
 
         return back()->with('success', 'Recepcionista agregada correctamente.');
@@ -151,20 +151,20 @@ class ConfiguracionController extends Controller
      */
     public function updateHorarios(Request $request)
     {
-        $user    = Auth::user();
+        $user = Auth::user();
         $clinica = Clinica::find($user->id_clinica);
-        abort_if(! $clinica, 403, 'No tienes una clínica asignada.');
+        abort_if(!$clinica, 403, 'No tienes una clínica asignada.');
 
         $dias = $request->input('dias', []);
 
         foreach ([1, 2, 3, 4, 5, 6, 0] as $dia) {
-            $activo     = isset($dias[$dia]['activo']) ? 1 : 0;
+            $activo = isset($dias[$dia]['activo']) ? 1 : 0;
             $horaInicio = $dias[$dia]['hora_inicio'] ?? null;
-            $horaFin    = $dias[$dia]['hora_fin'] ?? null;
+            $horaFin = $dias[$dia]['hora_fin'] ?? null;
 
-            if (! $activo) {
+            if (!$activo) {
                 $horaInicio = null;
-                $horaFin    = null;
+                $horaFin = null;
             }
 
             HorarioClinica::updateOrCreate(
@@ -173,9 +173,9 @@ class ConfiguracionController extends Controller
                     'dia_semana' => $dia,
                 ],
                 [
-                    'activo'      => $activo,
+                    'activo' => $activo,
                     'hora_inicio' => $horaInicio,
-                    'hora_fin'    => $horaFin,
+                    'hora_fin' => $horaFin,
                 ]
             );
         }
@@ -251,7 +251,7 @@ class ConfiguracionController extends Controller
         // Busca el perfil del doctor vinculado EXCLUSIVAMENTE al usuario autenticado
         $doctor = Doctor::where('id_usuario', $user->id_usuario)->first();
 
-        if (! $doctor) {
+        if (!$doctor) {
             return back()->with('error', 'No se encontró tu perfil de doctor.');
         }
 
@@ -260,7 +260,7 @@ class ConfiguracionController extends Controller
             Storage::disk('public')->delete($doctor->foto_perfil);
         }
 
-        $ruta           = $request->file('foto_perfil')->store('fotos_doctores', 'public');
+        $ruta = $request->file('foto_perfil')->store('fotos_doctores', 'public');
         $doctor->foto_perfil = $ruta;
         $doctor->save();
 
@@ -273,26 +273,26 @@ class ConfiguracionController extends Controller
     public function updateApariencia(Request $request)
     {
         $clinica = Clinica::find(Auth::user()->id_clinica);
-        abort_if(! $clinica, 403, 'No tienes permiso para modificar esta clínica.');
+        abort_if(!$clinica, 403, 'No tienes permiso para modificar esta clínica.');
 
         $request->validate([
-            'tema_visual'      => 'required|in:claro,oscuro,invertido',
-            'color_primario'   => 'required|string|max:7',
-            'color_secundario' => 'nullable|string|max:7',
-            'color_acento'     => 'nullable|string|max:7',
+            'tema_visual' => 'required|in:claro,oscuro,invertido',
+            'color_primario' => 'required|string|max:25',
+            'color_secundario' => 'nullable|string|max:25',
+            'color_acento' => 'nullable|string|max:25',
         ]);
 
-        $clinica->tema_visual    = $request->tema_visual;
+        $clinica->tema_visual = $request->tema_visual;
         $clinica->color_primario = $request->color_primario;
 
-        if ($clinica->hasPlanAtLeast('premium')) {
+        if ($clinica->hasAnyPlan(['premium', 'ultra'])) {
             $clinica->color_secundario = $request->color_secundario;
-            $clinica->color_acento     = $request->color_acento;
+            $clinica->color_acento = $request->color_acento;
         } else {
             // Si el plan no califica, limpiamos o ignoramos las variables extendidas.
             // Para asegurar consistencia, las llevamos a null.
             $clinica->color_secundario = null;
-            $clinica->color_acento     = null;
+            $clinica->color_acento = null;
         }
 
         $clinica->save();

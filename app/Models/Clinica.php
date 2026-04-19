@@ -103,7 +103,20 @@ class Clinica extends Model
             return false;
         }
 
-        // 3. Comparar niveles (Ej. Si tiene Premium (2), y se requiere Básico (1), devuelve true)
-        return $suscripcionActiva->plan->nivel >= $planRequerido->nivel;
+        // 3. Comparar niveles de forma segura usando optional()
+        // Esto evita un Error 500 si la propiedad plan o nivel llega corrupta
+        return optional($suscripcionActiva->plan)->nivel >= $planRequerido->nivel;
+    }
+    public function hasAnyPlan(array $allowedSlugs): bool
+    {
+        // Usamos la relación que ya tienes definida
+        $suscripcionActiva = $this->suscripcionActiva()->first();
+
+        if (!$suscripcionActiva || !$suscripcionActiva->plan) {
+            return false;
+        }
+
+        // Verifica si el slug del plan actual está dentro del array permitido
+        return in_array($suscripcionActiva->plan->slug, $allowedSlugs);
     }
 }
