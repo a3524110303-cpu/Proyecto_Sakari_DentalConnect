@@ -54,6 +54,16 @@ Incluye:
             $b = max(0,min(255,$b + $steps));
             return '#'.str_pad(dechex($r), 2, '0', STR_PAD_LEFT).str_pad(dechex($g), 2, '0', STR_PAD_LEFT).str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
         }
+        // Extract RGB components for rgba() usage in CSS
+        $hexClean = str_replace('#', '', $colorPrimario);
+        if (strlen($hexClean) == 3) {
+            $hexClean = str_repeat(substr($hexClean,0,1), 2).str_repeat(substr($hexClean,1,1), 2).str_repeat(substr($hexClean,2,1), 2);
+        }
+        $primaryR = hexdec(substr($hexClean,0,2));
+        $primaryG = hexdec(substr($hexClean,2,2));
+        $primaryB = hexdec(substr($hexClean,4,2));
+        $primaryRgb = "{$primaryR}, {$primaryG}, {$primaryB}";
+
         $secondaryColor = $colorSecundarioPersonalizado ?? adjustBrightness($colorPrimario, -40);
         $accentColor = $colorAcentoPersonalizado ?? adjustBrightness($colorPrimario, 40);
         $lightBg = adjustBrightness($colorPrimario, 230); // Tinted super light background for light mode
@@ -61,6 +71,7 @@ Incluye:
     <style>
         :root {
             --primary-color: {{ $colorPrimario }};
+            --primary-rgb: {{ $primaryRgb }};
             --secondary-color: {{ $secondaryColor }};
             --accent-color: {{ $accentColor }};
             --light-bg: {{ $temaVisual === 'oscuro' ? '#0f172a' : $lightBg }};
@@ -137,7 +148,7 @@ Incluye:
         }
 
         .nav-item:hover {
-            background: rgba(0, 180, 216, 0.1);
+            background: rgba(var(--primary-rgb), 0.1);
             color: var(--primary-color);
         }
 
@@ -173,7 +184,7 @@ Incluye:
         .nav-item.active {
             background: var(--primary-color);
             color: white;
-            box-shadow: 0 4px 10px rgba(0, 180, 216, 0.4);
+            box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.4);
         }
 
         /* --- Main Content --- */
@@ -484,7 +495,7 @@ Incluye:
         .modern-input:focus {
             background: white;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.1);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
         }
 
         .form-grid {

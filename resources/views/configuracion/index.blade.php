@@ -294,7 +294,7 @@
                         style="background: #6c757d;">
                         <i class="fa-solid fa-copy"></i> Aplicar Lun-Vie igual
                     </button>
-                    <button type="submit" class="ghost-btn" style="background: #00b4d8;">
+                    <button type="submit" class="ghost-btn" style="background: var(--primary-color);">
                         <i class="fa-solid fa-save"></i> Guardar Horarios
                     </button>
                 </div>
@@ -459,7 +459,7 @@
     <div id="modal-recep"
         style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
         <div style="background: white; padding: 30px; border-radius: 15px; width: 400px;">
-            <h3 style="margin-top: 0; color: #00b4d8;">Nueva Recepcionista</h3>
+            <h3 style="margin-top: 0; color: var(--primary-color);">Nueva Recepcionista</h3>
             <form action="{{ route('configuracion.storeRecepcionista') }}" method="POST">
                 @csrf
                 <label style="display:block; margin-bottom:5px;">Nombre</label>
@@ -482,7 +482,7 @@
                     <button type="button" onclick="document.getElementById('modal-recep').style.display='none'"
                         style="padding: 10px 20px; border: none; background: #eee; cursor: pointer; border-radius: 5px;">Cancelar</button>
                     <button type="submit"
-                        style="padding: 10px 20px; border: none; background: #00b4d8; color: white; cursor: pointer; border-radius: 5px;">Guardar</button>
+                        style="padding: 10px 20px; border: none; background: var(--primary-color); color: white; cursor: pointer; border-radius: 5px;">Guardar</button>
                 </div>
             </form>
         </div>
@@ -668,7 +668,7 @@
             outline: none;
             border-color: var(--primary-color);
             background: var(--white);
-            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
         }
         label {
             font-weight: 600;
@@ -825,7 +825,7 @@
         }
 
         .switch-toggle input:checked + .switch-slider {
-            background-color: #00b4d8;
+            background-color: var(--primary-color);
         }
 
         .switch-toggle input:checked + .switch-slider:before {
